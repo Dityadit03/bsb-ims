@@ -22,7 +22,7 @@ export const NAV: NavGroup[] = [
     { href: '/she/sap', label: 'SAP' },
   ] },
   { code: 'M5', label: 'Plant', ready: true, items: [{ href: '/plant', label: 'Register unit' }, { href: '/plant/wo', label: 'Work order' }] },
-  { code: 'M6', label: 'Produksi', ready: false, items: [{ href: '/produksi', label: 'Hauling' }] },
+  { code: 'M6', label: 'Produksi', ready: true, items: [{ href: '/produksi', label: 'Laporan hauling' }, { href: '/produksi/master', label: 'Rute & target' }] },
   { code: 'M7', label: 'Logistik', ready: false, items: [{ href: '/logistik', label: 'Stok & permintaan' }] },
   { code: 'M8', label: 'HRGA', ready: false, items: [{ href: '/hrga', label: 'Karyawan & kompetensi' }] },
   { code: 'M9', label: 'PJO & Manajemen', ready: false, items: [{ href: '/manajemen', label: 'Tinjauan manajemen' }] },

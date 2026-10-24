@@ -716,6 +716,60 @@ await test('laporan kerusakan oleh pekerja membuat unit breakdown; pembatalan ol
   eq((await db.query(`select status from public.units where id = $1`, [unit.id])).rows[0].status, 'ready');
 });
 
+console.log('Produksi');
+const PRD = await dept('PRD');
+const spvPrd = await createUser('spv.prd@bsb.co.id');
+const dhPrd = await createUser('dh.prd@bsb.co.id');
+await db.query(`insert into public.user_roles(user_id, role_code, department_id) values ($1,'SUPERVISOR',$3), ($2,'DEPT_HEAD',$3)`, [spvPrd, dhPrd, PRD]);
+let route, rep;
+await test('rute dan target produksi hanya oleh pengelola produksi', async () => {
+  await expectError('42501', async () => as(db, spvPrd, `select public.route_save('PIT1-JT', 'Pit 1 ke Jetty', 'Pit 1', 'Jetty', 18.5)`));
+  route = (await as(db, dhPrd, `select (r).* from public.route_save('pit1-jt', 'Pit 1 ke Jetty', 'Pit 1', 'Jetty', 18.5) r`)).rows[0];
+  eq(route.code, 'PIT1-JT');
+  await as(db, pjoId, `select public.production_set_target($1::date, 300000)`, [today]);
+});
+await test('laporan shift bernomor PRD, satu per tanggal & shift, tidak boleh tanggal depan', async () => {
+  await expectError('42501', async () => as(db, spvHse, `select public.production_report_open($1::date, 1)`, [today]));
+  await expectError('22023', async () => as(db, spvPrd, `select public.production_report_open($1::date, 1)`, [await due(1)]));
+  rep = (await as(db, spvPrd, `select (r).* from public.production_report_open($1::date, 1) r`, [today])).rows[0];
+  if (!/^PRD-BSB-\d{8}-S1-\d{2}$/.test(rep.report_no)) throw new Error(rep.report_no);
+  eq((await as(db, spvPrd, `select (r).id from public.production_report_open($1::date, 1) r`, [today])).rows[0].id, rep.id);
+});
+const TRIP_SQL = `select (t).* from public.haul_trip_save($1, $2, $3, 'Budi', $4, $5, 12100, $6) t`;
+await test('ritase ditolak bila unit belum P2H layak pada shift itu; HM unit ikut diperbarui', async () => {
+  await expectError('22023', async () => as(db, spvPrd, TRIP_SQL, [rep.id, unit.id, route.id, 5, 150, 12110]));
+  await as(db, ownerId, `select public.p2h_submit($1::date, 1, $2, 'DT-21', 'DT', $3::jsonb, 'fit', 12100)`, [today, HSE, items()]);
+  await expectError('23514', async () => as(db, spvPrd, TRIP_SQL, [rep.id, unit.id, route.id, 0, 30, 12110]));
+  await as(db, spvPrd, TRIP_SQL, [rep.id, unit.id, route.id, 5, 150, 12110]);
+  eq((await as(db, spvPrd, TRIP_SQL, [rep.id, unit.id, route.id, 6, 180, 12111])).rows[0].trips, 6);
+  eq((await db.query(`select current_hm::int h from public.units where id = $1`, [unit.id])).rows[0].h, 12111);
+});
+await test('hambatan lain-lain wajib keterangan; jam hambatan dibatasi', async () => {
+  await expectError('22023', async () => as(db, spvPrd, `select public.production_delay_add($1, 'other', 1)`, [rep.id]));
+  await expectError('23514', async () => as(db, spvPrd, `select public.production_delay_add($1, 'rain', 13)`, [rep.id]));
+  await as(db, spvPrd, `select public.production_delay_add($1, 'rain', 1.5)`, [rep.id]);
+  const s = (await as(db, spvPrd, `select trips, tonnage::int t, ton_km::float tkm, delay_hours::float d from public.production_summary where id = $1`, [rep.id])).rows[0];
+  eq(s.trips, 6); eq(s.t, 180); eq(s.tkm, 3330); eq(s.d, 1.5);
+});
+await test('laporan kosong tidak bisa dikirim; setelah dikirim terkunci', async () => {
+  const empty = (await as(db, spvPrd, `select (r).id from public.production_report_open($1::date, 2) r`, [today])).rows[0].id;
+  await expectError('22023', async () => as(db, spvPrd, `select public.production_submit($1)`, [empty]));
+  await as(db, spvPrd, `select public.production_submit($1)`, [rep.id]);
+  await expectError('22023', async () => as(db, spvPrd, `select public.production_delay_add($1, 'queue', 1)`, [rep.id]));
+  await expectError('42501', async () => as(db, spvPrd, `select public.production_review($1, true)`, [rep.id]));
+  eq((await as(db, dhPrd, `select 1 from public.notifications where kind = 'prod.submitted'`)).rowCount, 1);
+});
+await test('pengembalian wajib alasan; pengirim tidak boleh menyetujui laporannya sendiri', async () => {
+  await expectError('22023', async () => as(db, dhPrd, `select public.production_review($1, false, '')`, [rep.id]));
+  eq((await as(db, dhPrd, `select (r).status from public.production_review($1, false, 'Tonase DT-21 cek timbangan') r`, [rep.id])).rows[0].status, 'draft');
+  eq((await as(db, spvPrd, `select 1 from public.notifications where kind = 'prod.returned'`)).rowCount, 1);
+  await as(db, dhPrd, `select public.production_submit($1)`, [rep.id]);
+  await expectError('42501', async () => as(db, dhPrd, `select public.production_review($1, true)`, [rep.id]));
+  eq((await as(db, pjoId, `select (r).status from public.production_review($1, true) r`, [rep.id])).rows[0].status, 'approved');
+  const m = (await as(db, spvPrd, `select tonnage_approved::int a, tonnage_target::int t from public.production_month where month = date_trunc('month', $1::date)`, [today])).rows[0];
+  eq(m.a, 180); eq(m.t, 300000);
+});
+
 await test('anon hanya bisa memanggil verifikasi dokumen', async () => {
   const r = await db.query(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')`);
