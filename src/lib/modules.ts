@@ -24,7 +24,7 @@ export const NAV: NavGroup[] = [
   { code: 'M5', label: 'Plant', ready: true, items: [{ href: '/plant', label: 'Register unit' }, { href: '/plant/wo', label: 'Work order' }] },
   { code: 'M6', label: 'Produksi', ready: true, items: [{ href: '/produksi', label: 'Laporan hauling' }, { href: '/produksi/master', label: 'Rute & target' }] },
   { code: 'M7', label: 'Logistik', ready: true, items: [{ href: '/logistik', label: 'Stok & gudang' }, { href: '/logistik/mr', label: 'Material request' }, { href: '/logistik/supplier', label: 'Supplier' }] },
-  { code: 'M8', label: 'HRGA', ready: false, items: [{ href: '/hrga', label: 'Karyawan & kompetensi' }] },
+  { code: 'M8', label: 'HRGA', ready: true, items: [{ href: '/hrga', label: 'Karyawan' }, { href: '/hrga/kompetensi', label: 'Kompetensi & SIMPER' }, { href: '/hrga/pelatihan', label: 'Pelatihan' }, { href: '/hrga/roster', label: 'Roster' }, { href: '/hrga/ga', label: 'Permintaan GA' }] },
   { code: 'M9', label: 'PJO & Manajemen', ready: false, items: [{ href: '/manajemen', label: 'Tinjauan manajemen' }] },
   { code: 'ADM', label: 'Administrasi', ready: true, items: [
     { href: '/master/organisasi', label: 'Organisasi' },

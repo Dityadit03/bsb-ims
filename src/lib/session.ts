@@ -14,6 +14,7 @@ export type Session = {
   profile: Profile;
   permissions: Set<string>;
   can: (perm: string) => boolean;
+  canIn: (perm: string, deptCode: string) => boolean;
 };
 
 // Satu kali per request: profil + izin efektif. Izin dipakai UI untuk menampilkan menu;
@@ -30,9 +31,17 @@ export const getSession = cache(async (): Promise<Session> => {
     .single<Profile>();
   if (!profile || profile.status !== 'active') redirect('/menunggu');
 
-  const { data: perms } = await supabase.rpc('my_permissions');
-  const permissions = new Set<string>((perms ?? []).map((p: { permission_code: string }) => p.permission_code));
-  return { profile, permissions, can: perm => permissions.has(perm) };
+  const [{ data: perms }, { data: depts }] = await Promise.all([
+    supabase.rpc('my_permissions'),
+    supabase.from('departments').select('id, code'),
+  ]);
+  const rows = (perms ?? []) as { permission_code: string; department_id: string | null }[];
+  const permissions = new Set<string>(rows.map(p => p.permission_code));
+  const deptCode = new Map((depts ?? []).map(d => [d.id as string, d.code as string]));
+  // Izin yang berlaku di departemen tertentu (peran tanpa departemen berlaku di semua departemen)
+  const canIn = (perm: string, code: string) =>
+    rows.some(p => p.permission_code === perm && (p.department_id == null || deptCode.get(p.department_id) === code));
+  return { profile, permissions, can: perm => permissions.has(perm), canIn };
 });
 
 export async function requirePermission(perm: string) {

@@ -27,7 +27,7 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
   ]);
   const all = rows ?? [];
   const fuels = all.filter(r => r.category === 'fuel' || r.category === 'lubricant');
-  const wh = s.can('log.warehouse');
+  const wh = s.canIn('log.warehouse', 'LOG');
 
   return (
     <>
@@ -94,7 +94,7 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
           </Panel>
         </div>
       )}
-      {s.can('log.manage') && (
+      {s.canIn('log.manage', 'LOG') && (
         <Panel title="Daftarkan / perbarui barang">
           <ActionForm action={saveMaterial} label="Simpan barang" className="max-w-3xl">
             <div className="grid gap-3 sm:grid-cols-3">

@@ -15,7 +15,8 @@ Menggantikan dan menyatukan [Document Control BSB](https://github.com/Dityadit03
 | M5 Plant | Register unit, work order (breakdown/PM/perbaikan), P2H tidak layak → WO breakdown otomatis, PM berbasis HM, physical availability 30 hari | Selesai |
 | M6 Produksi | Laporan shift hauling (PRD), ritase & tonase per unit/rute (wajib P2H layak), hambatan, target bulanan, persetujuan oleh orang lain | Selesai |
 | M7 Logistik | Master barang, MR (suku cadang wajib WO, batas nilai), penerimaan GR, pengeluaran GI, BBM/oli per unit + HM, stok opname, evaluasi supplier | Selesai |
-| M8–M10 | HRGA, Audit & MR, migrasi | Dijadwalkan |
+| M8 HRGA | Karyawan & jabatan, matriks kompetensi, sertifikat/SIMPER dengan masa berlaku (SIMPER wajib induksi + MCU), pelatihan → kompetensi otomatis, roster, permintaan GA, karyawan keluar → akun nonaktif | Selesai |
+| M9–M10 | Audit & MR, migrasi | Dijadwalkan |
 
 ## Menjalankan
 1. Buat project Supabase (region Singapura), lalu jalankan semua file di `supabase/migrations` secara berurutan

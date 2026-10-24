@@ -41,7 +41,7 @@ export default async function ProduksiPage({ searchParams }: { searchParams: Pro
         <Stat label="Ritase" value={m?.trips ?? 0} />
         <Stat label="Menunggu persetujuan" value={waiting} />
       </div>
-      {s.can('prod.report') && (
+      {s.canIn('prod.report', 'PRD') && (
         <Panel title="Buka laporan shift">
           <ActionForm action={openReport} label="Buka laporan" primary className="max-w-xl">
             <div className="grid grid-cols-2 gap-3">

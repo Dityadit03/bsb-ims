@@ -26,8 +26,8 @@ export default async function MrDetail({ params }: { params: Promise<{ id: strin
   ]);
   const mine = r.requested_by === s.profile.id;
   const review = r.status === 'submitted' && !mine && (s.can('log.approve') || s.can('log.approve_high'));
-  const issue = ['approved', 'partial'].includes(r.status) && s.can('log.warehouse');
-  const cancel = ['submitted', 'approved'].includes(r.status) && (mine || s.can('log.manage'));
+  const issue = ['approved', 'partial'].includes(r.status) && s.canIn('log.warehouse', 'LOG');
+  const cancel = ['submitted', 'approved'].includes(r.status) && (mine || s.canIn('log.manage', 'LOG'));
 
   return (
     <>

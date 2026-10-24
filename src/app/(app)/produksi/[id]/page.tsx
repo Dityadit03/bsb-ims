@@ -29,8 +29,8 @@ export default async function ReportDetail({ params }: { params: Promise<{ id: s
     supabase.from('p2h_checks').select('unit_no').eq('check_date', r.report_date).eq('shift', r.shift).in('conclusion', ['fit', 'fit_with_notes']),
   ]);
   const fitSet = new Set((fit ?? []).map(p => p.unit_no));
-  const edit = r.status === 'draft' && s.can('prod.report');
-  const review = r.status === 'submitted' && s.can('prod.approve') && r.submitted_by !== s.profile.id;
+  const edit = r.status === 'draft' && s.canIn('prod.report', 'PRD');
+  const review = r.status === 'submitted' && s.canIn('prod.approve', 'PRD') && r.submitted_by !== s.profile.id;
   const h = { report: r.id };
 
   return (

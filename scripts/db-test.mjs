@@ -853,6 +853,98 @@ await test('evaluasi supplier: nilai rendah wajib catatan; grade dari rata-rata'
   eq(s.sc, 3.6); eq(s.grade, 'B');
 });
 
+console.log('HRGA');
+const HRGA = await dept('HRGA');
+const hrStaff = await createUser('hrd@bsb.co.id');
+const hrHead = await createUser('dh.hrga@bsb.co.id');
+const opUser = await createUser('operator.dt@bsb.co.id');
+await db.query(`insert into public.user_roles(user_id, role_code, department_id) values ($1,'STAFF',$4), ($2,'DEPT_HEAD',$4), ($3,'STAFF',$5)`,
+  [hrStaff, hrHead, opUser, HRGA, PRD]);
+const comp = async code => (await db.query(`select id from public.competencies where code = $1`, [code])).rows[0].id;
+const pos = async code => (await db.query(`select id from public.positions where code = $1`, [code])).rows[0].id;
+const OPRDT = await pos('OPR-DT'), MEK = await pos('MEK');
+const INDUKSI = await comp('INDUKSI'), MCU = await comp('MCU'), SIMDT = await comp('SIMPER-DT'), DDT = await comp('DDT');
+const EMP_SQL = `select (e).* from public.employee_save($1, $2, $3, $4, $5, $6, null, $7) e`;
+let emp, emp2, empHse;
+await test('data karyawan hanya oleh HRGA; jabatan sesuai departemen; akun ditautkan lewat email', async () => {
+  await expectError('42501', async () => as(db, spvPrd, EMP_SQL, ['BSB-001', 'Andi', PRD, OPRDT, 'permanent', null, null]));
+  await expectError('22023', async () => as(db, hrStaff, EMP_SQL, ['BSB-001', 'Andi', PRD, MEK, 'permanent', null, null]));
+  await expectError('22023', async () => as(db, hrStaff, EMP_SQL, ['BSB-001', 'Andi', PRD, OPRDT, 'permanent', null, 'tidakada@bsb.co.id']));
+  await expectError('23514', async () => as(db, hrStaff, EMP_SQL, ['BSB-009', 'Subkon', PRD, OPRDT, 'subcon', null, null]));
+  emp = (await as(db, hrStaff, EMP_SQL, ['bsb-001', 'Andi Saputra', PRD, OPRDT, 'permanent', null, 'operator.dt@bsb.co.id'])).rows[0];
+  eq(emp.nrp, 'BSB-001'); eq(emp.profile_id, opUser);
+  emp2 = (await as(db, hrStaff, EMP_SQL, ['SUB-001', 'Budi', PRD, OPRDT, 'subcon', 'PT Mitra Hauling', null])).rows[0];
+  empHse = (await as(db, hrStaff, EMP_SQL, ['BSB-002', 'Citra', HSE, null, 'permanent', null, null])).rows[0];
+});
+const ADD_SQL = `select (c).* from public.employee_competency_add($1, $2, $3::date, $4::date, $5) c`;
+await test('SIMPER wajib induksi & MCU berlaku; masa berlaku dihitung dari master', async () => {
+  await expectError('22023', async () => as(db, hrStaff, ADD_SQL, [emp.id, SIMDT, today, null, 'SIM-1']));
+  await as(db, hrStaff, ADD_SQL, [emp.id, INDUKSI, today, null, null]);
+  await as(db, hrStaff, ADD_SQL, [emp.id, MCU, today, null, 'MCU-1']);
+  const s = (await as(db, hrStaff, ADD_SQL, [emp.id, SIMDT, today, null, 'SIM-1'])).rows[0];
+  eq((await db.query(`select valid_until = ($1::date + interval '12 months' - interval '1 day')::date ok from public.employee_competencies where id = $2`, [today, s.id])).rows[0].ok, true);
+  await expectError('22023', async () => as(db, hrStaff, ADD_SQL, [emp.id, MCU, await due(1), null, null]));
+});
+await test('matriks kompetensi: kepatuhan per karyawan, register SIMPER, status segera habis / kedaluwarsa', async () => {
+  const r = (await as(db, spvPrd, `select required, compliant, compliance_pct::int p from public.employee_register where id = $1`, [emp.id])).rows[0];
+  eq(r.required, 4); eq(r.compliant, 3); eq(r.p, 75);
+  eq((await as(db, spvPrd, `select unit_type from public.authorization_register where employee_id = $1`, [emp.id])).rows[0].unit_type, 'DT');
+  const soon = (await as(db, hrStaff, ADD_SQL, [emp2.id, MCU, await due(-300), await due(10), null])).rows[0];
+  const old = (await as(db, hrStaff, ADD_SQL, [emp2.id, INDUKSI, await due(-700), await due(-335), null])).rows[0];
+  const v = async id => (await db.query(`select validity from public.employee_competency_view where id = $1`, [id])).rows[0].validity;
+  eq(await v(soon.id), 'expiring'); eq(await v(old.id), 'expired');
+  eq((await db.query(`select status from public.competency_matrix where employee_id = $1 and competency_code = 'INDUKSI'`, [emp2.id])).rows[0].status, 'expired');
+  await expectError('22023', async () => as(db, hrStaff, ADD_SQL, [emp2.id, SIMDT, today, null, null]));
+});
+await test('pelatihan selesai: semua peserta wajib dinilai, yang lulus otomatis mendapat kompetensi', async () => {
+  const future = (await as(db, hrStaff, `select (t).id from public.training_save('Defensive driving', $1::date, 8, 'Trainer HSE', $2) t`, [await due(3), DDT])).rows[0].id;
+  await expectError('22023', async () => as(db, hrStaff, `select public.training_complete($1, '[]')`, [future]));
+  const t = (await as(db, hrStaff, `select (t).id from public.training_save('Defensive driving', $1::date, 8, 'Trainer HSE', $2, 'Ruang training', $3::uuid[]) t`,
+    [today, DDT, [emp.id, emp2.id]])).rows[0].id;
+  await expectError('22023', async () => as(db, hrStaff, `select public.training_complete($1, $2::jsonb)`, [t, JSON.stringify([{ employee: emp.id, passed: true, score: 85 }])]));
+  await as(db, hrStaff, `select public.training_complete($1, $2::jsonb)`, [t, JSON.stringify([{ employee: emp.id, passed: true, score: 85 }, { employee: emp2.id, passed: false, score: 50 }])]);
+  eq((await db.query(`select compliance_pct::int p from public.employee_register where id = $1`, [emp.id])).rows[0].p, 100);
+  eq((await db.query(`select count(*)::int c from public.employee_competencies where employee_id = $1 and competency_id = $2`, [emp2.id, DDT])).rows[0].c, 0);
+  await expectError('22023', async () => as(db, hrStaff, `select public.training_complete($1, '[]')`, [t]));
+});
+await test('pencabutan SIMPER oleh atasan wajib alasan dan menurunkan kepatuhan', async () => {
+  const id = (await db.query(`select id from public.employee_competencies where employee_id = $1 and competency_id = $2`, [emp.id, SIMDT])).rows[0].id;
+  await expectError('42501', async () => as(db, spvHse, `select public.employee_competency_revoke($1, 'Ngebut')`, [id]));
+  await expectError('22023', async () => as(db, spvPrd, `select public.employee_competency_revoke($1, '')`, [id]));
+  await as(db, spvPrd, `select public.employee_competency_revoke($1, 'Melanggar batas kecepatan berulang')`, [id]);
+  eq((await db.query(`select count(*)::int c from public.authorization_register where employee_id = $1`, [emp.id])).rows[0].c, 0);
+  eq((await db.query(`select compliance_pct::int p from public.employee_register where id = $1`, [emp.id])).rows[0].p, 75);
+});
+await test('roster disusun atasan departemen karyawan; rentang dibatasi', async () => {
+  eq((await as(db, spvPrd, `select public.roster_set($1::uuid[], $2::date, $2::date + 6, 'D')`, [[emp.id, emp2.id], today])).rows[0].roster_set, 14);
+  await as(db, spvPrd, `select public.roster_set($1::uuid[], $2::date, $2::date, 'OFF')`, [[emp.id], today]);
+  eq((await db.query(`select code from public.roster_entries where employee_id = $1 and work_date = $2`, [emp.id, today])).rows[0].code, 'OFF');
+  await expectError('42501', async () => as(db, spvPrd, `select public.roster_set($1::uuid[], $2::date, $2::date, 'D')`, [[empHse.id], today]));
+  await expectError('22023', async () => as(db, spvPrd, `select public.roster_set($1::uuid[], $2::date, $2::date + 70, 'D')`, [[emp.id], today]));
+});
+await test('permintaan GA: bernomor, hanya terlihat peminta & petugas GA, selesai wajib keterangan', async () => {
+  const g = (await as(db, ownerId, `select (g).* from public.ga_request_create('mess', 'AC kamar mess B-12 mati', 'Mess B') g`)).rows[0];
+  if (!/^GA-BSB-\d{4}-\d{5}$/.test(g.request_no)) throw new Error(g.request_no);
+  eq((await as(db, spvHse, `select 1 from public.ga_requests where id = $1`, [g.id])).rowCount, 0);
+  eq((await as(db, hrStaff, `select 1 from public.ga_register where id = $1`, [g.id])).rowCount, 1);
+  await expectError('42501', async () => as(db, ownerId, `select public.ga_request_process($1, 'start')`, [g.id]));
+  await as(db, hrStaff, `select public.ga_request_process($1, 'start')`, [g.id]);
+  await expectError('22023', async () => as(db, ownerId, `select public.ga_request_cancel($1)`, [g.id]));
+  await expectError('22023', async () => as(db, hrStaff, `select public.ga_request_process($1, 'done')`, [g.id]));
+  eq((await as(db, hrStaff, `select (g).status from public.ga_request_process($1, 'done', 'Freon diisi ulang') g`, [g.id])).rows[0].status, 'done');
+  eq((await as(db, ownerId, `select 1 from public.notifications where kind = 'ga.request'`)).rowCount, 1);
+});
+await test('karyawan keluar: akun dinonaktifkan dan semua perannya berakhir', async () => {
+  await as(db, opUser, `select public.ga_request_create('office', 'Minta ATK')`);
+  await expectError('42501', async () => as(db, hrStaff, `select public.employee_exit($1, $2::date, 'Resign')`, [emp.id, today]));
+  await expectError('22023', async () => as(db, hrHead, `select public.employee_exit($1, $2::date, 'Resign')`, [emp.id, await due(1)]));
+  await as(db, hrHead, `select public.employee_exit($1, $2::date, 'Mengundurkan diri')`, [emp.id, today]);
+  eq((await db.query(`select status from public.profiles where id = $1`, [opUser])).rows[0].status, 'exited');
+  eq((await db.query(`select count(*)::int c from public.user_roles where user_id = $1 and valid_until is null`, [opUser])).rows[0].c, 0);
+  await expectError('42501', async () => as(db, opUser, `select public.ga_request_create('office', 'Minta ATK lagi')`));
+  await expectError('22023', async () => as(db, hrHead, `select public.employee_exit($1, $2::date, 'Lagi')`, [emp.id, today]));
+});
+
 await test('anon hanya bisa memanggil verifikasi dokumen', async () => {
   const r = await db.query(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')`);

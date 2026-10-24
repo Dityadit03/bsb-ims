@@ -15,7 +15,7 @@ type Row = { id: string; code: string; name: string; category: string | null; co
 const CRITERIA = [['quality', 'Mutu'], ['delivery', 'Ketepatan kirim'], ['price', 'Harga'], ['service', 'Layanan'], ['safety', 'Kepatuhan K3']] as const;
 
 export default async function SupplierPage() {
-  const manage = (await getSession()).can('log.manage');
+  const manage = (await getSession()).canIn('log.manage', 'LOG');
   const supabase = await createClient();
   const { data: rows } = await supabase.from('supplier_score').select('*').order('name').returns<Row[]>();
   const active = (rows ?? []).filter(r => r.active);
