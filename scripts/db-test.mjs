@@ -656,6 +656,66 @@ await test('SAP menghitung act mingguan (Selasa–Senin) terhadap target, nol sa
   eq((await as(db, hseMgr, `select obs_target from public.sap_weekly where user_id = $1 and week_start = app.sap_week(app.site_today())`, [spvHse])).rows[0].obs_target, 0);
 });
 
+console.log('Plant');
+const dhPlt = await createUser('dh.plt@bsb.co.id');
+await db.query(`insert into public.user_roles(user_id, role_code, department_id) values ($1,'DEPT_HEAD',$2)`, [dhPlt, PLT]);
+let unit;
+await test('register unit hanya oleh pengelola Plant; unit rental wajib vendor', async () => {
+  await expectError('42501', async () => as(db, spvPlt, `select public.unit_save('DT-21', 'DT', $1)`, [PLT]));
+  await expectError('23514', async () => as(db, dhPlt, `select public.unit_save('DT-21', 'DT', $1, 'rental')`, [PLT]));
+  unit = (await as(db, dhPlt, `select (u).* from public.unit_save('dt-21', 'DT', $1, 'owned', null, 'Hino', 'FM260', null, 2022, 12000) u`, [PLT])).rows[0];
+  eq(unit.unit_no, 'DT-21'); eq(unit.status, 'ready');
+});
+let autoWo;
+await test('HM P2H tidak boleh mundur dari HM unit', async () => {
+  await expectError('22023', async () => as(db, ownerId, `select public.p2h_submit($1::date, 2, $2, 'DT-21', 'DT', $3::jsonb, 'fit', 11000)`, [today, HSE, items()]));
+});
+await test('P2H tidak layak membuka WO breakdown otomatis dan unit jadi breakdown', async () => {
+  await as(db, ownerId, `select public.p2h_submit($1::date, 2, $2, 'DT-21', 'DT', $3::jsonb, 'fit', 12010, 'Rem bocor')`, [today, HSE, items({ brake: 'not_ok' })]);
+  autoWo = (await db.query(`select * from public.work_order_register where unit_no = 'DT-21' and source_table = 'p2h_checks'`)).rows[0];
+  eq(autoWo.wo_type, 'breakdown'); eq(autoWo.priority, 'urgent');
+  if (!/^WO-BSB-\d{4}-\d{6}$/.test(autoWo.wo_no)) throw new Error(autoWo.wo_no);
+  const u = (await db.query(`select status, current_hm::int hm from public.units where id = $1`, [unit.id])).rows[0];
+  eq(u.status, 'breakdown'); eq(u.hm, 12010);
+  eq((await as(db, spvPlt, `select 1 from public.notifications where kind = 'plant.wo'`)).rowCount, 1);
+});
+await test('unit breakdown tidak bisa dinyatakan layak di P2H atau diset siap manual', async () => {
+  await expectError('22023', async () => as(db, ownerId, `select public.p2h_submit($1::date, 1, $2, 'DT-21', 'DT', $3::jsonb, 'fit', 12010)`, [today, HSE, items()]));
+  await expectError('22023', async () => as(db, dhPlt, `select public.unit_set_status($1, 'ready')`, [unit.id]));
+});
+await test('WO dikerjakan mekanik Plant, selesai wajib uraian, unit kembali siap', async () => {
+  await expectError('42501', async () => as(db, spvHse, `select public.wo_start($1)`, [autoWo.id]));
+  await expectError('22023', async () => as(db, spvPlt, `select public.wo_complete($1, 'Ganti seal')`, [autoWo.id]));
+  await as(db, spvPlt, `select public.wo_start($1)`, [autoWo.id]);
+  await as(db, spvPlt, `select public.wo_wait_part($1, 'Seal master rem')`, [autoWo.id]);
+  await as(db, spvPlt, `select public.wo_start($1)`, [autoWo.id]);
+  await expectError('22023', async () => as(db, spvPlt, `select public.wo_complete($1, '')`, [autoWo.id]));
+  await expectError('22023', async () => as(db, spvPlt, `select public.wo_complete($1, 'Ganti seal', 100)`, [autoWo.id]));
+  eq((await as(db, spvPlt, `select (w).status from public.wo_complete($1, 'Ganti seal master rem', 12015) w`, [autoWo.id])).rows[0].status, 'done');
+  eq((await db.query(`select status from public.units where id = $1`, [unit.id])).rows[0].status, 'ready');
+  const a = (await as(db, spvPlt, `select pa_30d::float pa, breakdown_hours_30d::float h from public.unit_availability where unit_id = $1`, [unit.id])).rows[0];
+  if (!(a.pa <= 100 && a.pa > 99)) throw new Error(JSON.stringify(a));
+});
+await test('WO PM wajib rencana PM; penyelesaian mencatat HM servis terakhir', async () => {
+  const plan = (await as(db, dhPlt, `select (p).* from public.pm_plan_save($1, 'Servis 250 jam', 250, 11780) p`, [unit.id])).rows[0];
+  eq((await as(db, dhPlt, `select count(*)::int c from public.pm_due where unit_id = $1`, [unit.id])).rows[0].c, 1);
+  await expectError('42501', async () => as(db, spvPlt, `select public.wo_create($1, 'pm', 'Servis', 'medium', null, $2)`, [unit.id, plan.id]));
+  await expectError('23514', async () => as(db, dhPlt, `select public.wo_create($1, 'pm', 'Servis')`, [unit.id]));
+  const wo = (await as(db, dhPlt, `select (w).* from public.wo_create($1, 'pm', 'Servis 250 jam', 'medium', null, $2) w`, [unit.id, plan.id])).rows[0];
+  eq((await db.query(`select status from public.units where id = $1`, [unit.id])).rows[0].status, 'ready');
+  await as(db, spvPlt, `select public.wo_start($1)`, [wo.id]);
+  await as(db, spvPlt, `select public.wo_complete($1, 'Ganti oli dan filter', 12050)`, [wo.id]);
+  eq((await db.query(`select last_service_hm::int h from public.pm_plans where id = $1`, [plan.id])).rows[0].h, 12050);
+  eq((await as(db, dhPlt, `select count(*)::int c from public.pm_due where unit_id = $1`, [unit.id])).rows[0].c, 0);
+});
+await test('laporan kerusakan oleh pekerja membuat unit breakdown; pembatalan oleh pengelola', async () => {
+  const wo = (await as(db, ownerId, `select (w).* from public.wo_create($1, 'breakdown', 'Ban kempis', 'high', 12060) w`, [unit.id])).rows[0];
+  eq((await db.query(`select status from public.units where id = $1`, [unit.id])).rows[0].status, 'breakdown');
+  await expectError('42501', async () => as(db, spvPlt, `select public.wo_cancel($1, 'dobel')`, [wo.id]));
+  await as(db, dhPlt, `select public.wo_cancel($1, 'Laporan ganda')`, [wo.id]);
+  eq((await db.query(`select status from public.units where id = $1`, [unit.id])).rows[0].status, 'ready');
+});
+
 await test('anon hanya bisa memanggil verifikasi dokumen', async () => {
   const r = await db.query(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')`);

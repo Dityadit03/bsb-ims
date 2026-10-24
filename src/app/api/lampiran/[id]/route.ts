@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 // Lampiran rekaman operasional (SHE, action plan). Dokumen terkendali tetap lewat /api/dokumen agar dicap "tidak terkendali".
-const OWNERS = ['hazard_reports', 'observations', 'inspections', 'inspection_findings', 'p2h_checks', 'incidents', 'corrective_actions'];
+const OWNERS = ['hazard_reports', 'observations', 'inspections', 'inspection_findings', 'p2h_checks', 'incidents', 'corrective_actions', 'work_orders'];
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

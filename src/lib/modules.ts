@@ -21,7 +21,7 @@ export const NAV: NavGroup[] = [
     { href: '/she/risiko', label: 'Risk register' },
     { href: '/she/sap', label: 'SAP' },
   ] },
-  { code: 'M5', label: 'Plant', ready: false, items: [{ href: '/plant', label: 'Unit & work order' }] },
+  { code: 'M5', label: 'Plant', ready: true, items: [{ href: '/plant', label: 'Register unit' }, { href: '/plant/wo', label: 'Work order' }] },
   { code: 'M6', label: 'Produksi', ready: false, items: [{ href: '/produksi', label: 'Hauling' }] },
   { code: 'M7', label: 'Logistik', ready: false, items: [{ href: '/logistik', label: 'Stok & permintaan' }] },
   { code: 'M8', label: 'HRGA', ready: false, items: [{ href: '/hrga', label: 'Karyawan & kompetensi' }] },
