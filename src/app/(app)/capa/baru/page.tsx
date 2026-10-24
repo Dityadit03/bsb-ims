@@ -61,7 +61,7 @@ export default async function NewCapaPage({ searchParams }: { searchParams: Prom
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">Departemen penanggung jawab
-              <select name="department" required className={input} defaultValue={s.profile.department_id ?? ''}>
+              <select name="department" required className={input} defaultValue={sp.dept ?? s.profile.department_id ?? ''}>
                 <option value="" disabled>Pilih</option>
                 {(depts ?? []).map(d => <option key={d.id} value={d.id}>{d.code} · {d.name}</option>)}
               </select>

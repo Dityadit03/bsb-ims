@@ -945,6 +945,67 @@ await test('karyawan keluar: akun dinonaktifkan dan semua perannya berakhir', as
   await expectError('22023', async () => as(db, hrHead, `select public.employee_exit($1, $2::date, 'Lagi')`, [emp.id, today]));
 });
 
+console.log('Audit internal & tinjauan manajemen');
+const auditor = await createUser('auditor.internal@bsb.co.id');
+await db.query(`insert into public.user_roles(user_id, role_code) values ($1, 'INTERNAL_AUDITOR')`, [auditor]);
+const PLAN_SQL = `select (a).* from public.audit_plan('Audit SMKP Produksi', 'Elemen 4 & 5 di Pit 1', $1::date, $2::date, $3, $4, $5::uuid[]) a`;
+let aud, fMajor;
+await test('program audit: auditor berwenang dan independen dari departemen auditee; nomor AUD', async () => {
+  await expectError('42501', async () => as(db, spvPrd, PLAN_SQL, [today, today, auditor, PRD, []]));
+  await expectError('22023', async () => as(db, hseMgr, PLAN_SQL, [today, today, auditor, PLT, [dhPlt]]));
+  await expectError('22023', async () => as(db, hseMgr, PLAN_SQL, [today, today, auditor, PRD, [spvHse]]));
+  aud = (await as(db, hseMgr, PLAN_SQL, [today, await due(2), auditor, PRD, [dhPlt]])).rows[0];
+  if (!/^AUD-BSB-\d{4}-\d{3}$/.test(aud.audit_no)) throw new Error(aud.audit_no);
+  eq((await db.query(`select count(*)::int c from public.audit_team where audit_id = $1`, [aud.id])).rows[0].c, 2);
+});
+await test('audit dimulai ketua tim sesuai jadwal; temuan hanya oleh tim selama audit berlangsung', async () => {
+  const later = (await as(db, hseMgr, PLAN_SQL, [await due(5), await due(6), auditor, PRD, []])).rows[0];
+  await expectError('22023', async () => as(db, auditor, `select public.audit_start($1)`, [later.id]));
+  await expectError('42501', async () => as(db, dhPlt, `select public.audit_start($1)`, [aud.id]));
+  await expectError('22023', async () => as(db, auditor, `select public.audit_finding_add($1, $2, 'major', 'x', 'y')`, [aud.id, C57]));
+  await as(db, auditor, `select public.audit_start($1)`, [aud.id]);
+  await expectError('42501', async () => as(db, spvHse, `select public.audit_finding_add($1, $2, 'minor', 'x', 'y')`, [aud.id, C57]));
+  await expectError('22023', async () => as(db, dhPlt, `select public.audit_finding_add($1, $2, 'minor', 'Tidak ada bukti', '')`, [aud.id, C57]));
+  fMajor = (await as(db, dhPlt, `select (f).* from public.audit_finding_add($1, $2, 'major', 'Action plan temuan inspeksi tidak dipantau', 'Register ACT: 5 lewat target') f`, [aud.id, C57])).rows[0];
+  await as(db, auditor, `select public.audit_finding_add($1, $2, 'ofi', 'Papan informasi KPI belum ada', 'Observasi lapangan')`, [aud.id, C22]);
+  eq((await db.query(`select finding_ref from public.audit_finding_register where id = $1`, [fMajor.id])).rows[0].finding_ref, `${aud.audit_no}-F01`);
+  eq((await as(db, dhPrd, `select 1 from public.notifications where kind = 'audit.finding'`)).rowCount, 1);
+});
+await test('laporan oleh ketua tim mengunci temuan; audit ditutup pengelola setelah temuan mayor/minor punya action plan', async () => {
+  await expectError('42501', async () => as(db, dhPlt, `select public.audit_report($1, 'Ringkasan')`, [aud.id]));
+  await as(db, auditor, `select public.audit_report($1, '1 mayor, 1 peluang perbaikan')`, [aud.id]);
+  await expectError('22023', async () => as(db, auditor, `select public.audit_finding_remove($1)`, [fMajor.id]));
+  await expectError('22023', async () => as(db, hseMgr, `select public.audit_close($1)`, [aud.id]));
+  await as(db, dhPrd, `select public.capa_create('Pantau action plan mingguan', 'Temuan audit mayor', 'audit', $1, 'medium', $2, $3, $4, $5::date,
+    'corrective', null, 'audit_findings', $6)`, [C57, PRD, spvPrd, dhPrd, await due(14), fMajor.id]);
+  eq((await db.query(`select action_no is not null ok from public.audit_finding_register where id = $1`, [fMajor.id])).rows[0].ok, true);
+  eq((await as(db, hseMgr, `select (a).status from public.audit_close($1) a`, [aud.id])).rows[0].status, 'closed');
+  eq((await db.query(`select without_capa from public.audit_register where id = $1`, [aud.id])).rows[0].without_capa, 0);
+});
+await test('tinjauan manajemen: semua masukan wajib dibahas, keputusan bertindak wajib action plan, ditutup pimpinan rapat', async () => {
+  await expectError('42501', async () => as(db, spvPrd, `select public.mgmt_review_create('RTM', $1::date, $2)`, [today, pjoId]));
+  const m = (await as(db, pjoId, `select (m).* from public.mgmt_review_create('Tinjauan manajemen semester II', $1::date, $2) m`, [today, pjoId])).rows[0];
+  if (!/^RTM-BSB-\d{4}-\d{2}$/.test(m.review_no)) throw new Error(m.review_no);
+  await expectError('22023', async () => as(db, pjoId, `select public.mgmt_review_hold($1, 'PJO, HSE Mgr')`, [m.id]));
+  await expectError('23514', async () => as(db, pjoId, `select public.mgmt_review_item_save($1, 'resources', 'Mekanik kurang', 'Tambah 2 mekanik', true)`, [m.id]));
+  const topics = (await db.query(`select code from public.management_review_topics where required`)).rows.map(r => r.code);
+  for (const t of topics) await as(db, hseMgr, `select public.mgmt_review_item_save($1, $2, 'Dibahas', null, false)`, [m.id, t]);
+  const item = (await as(db, pjoId, `select (i).id from public.mgmt_review_item_save($1, 'resources', 'Mekanik kurang', 'Tambah 2 mekanik', true, $2, $3) i`, [m.id, C23, PLT])).rows[0].id;
+  await as(db, pjoId, `select public.mgmt_review_hold($1, 'PJO, HSE Manager, Dept Head PRD/PLT')`, [m.id]);
+  eq((await db.query(`select performance_snapshot ? 'capa_open' ok from public.management_reviews where id = $1`, [m.id])).rows[0].ok, true);
+  await expectError('42501', async () => as(db, hseMgr, `select public.mgmt_review_close($1, 'Selesai')`, [m.id]));
+  await expectError('22023', async () => as(db, pjoId, `select public.mgmt_review_close($1, 'Selesai')`, [m.id]));
+  await as(db, pjoId, `select public.capa_create('Rekrut 2 mekanik', 'Keputusan tinjauan manajemen', 'management_review', $1, 'medium', $2, $3, $4, $5::date,
+    'improvement', null, 'management_review_items', $6)`, [C23, PLT, spvPlt, dhPlt, await due(30), item]);
+  eq((await as(db, pjoId, `select (m).status from public.mgmt_review_close($1, 'Sistem berjalan; sumber daya Plant ditambah') m`, [m.id])).rows[0].status, 'closed');
+});
+await test('dashboard eksekutif & capaian elemen SMKP terbaca pengguna aktif', async () => {
+  const k = (await as(db, spvPrd, `select * from public.executive_kpi`)).rows[0];
+  eq(k.review_overdue, false); eq(k.findings_without_capa, 0);
+  if (!(k.capa_open > 0 && k.audits_ytd >= 1)) throw new Error(JSON.stringify(k));
+  eq((await as(db, spvPrd, `select count(*)::int c from public.smkp_element_status`)).rows[0].c, 7);
+});
+
 await test('anon hanya bisa memanggil verifikasi dokumen', async () => {
   const r = await db.query(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')`);

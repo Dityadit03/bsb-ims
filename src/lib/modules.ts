@@ -25,7 +25,7 @@ export const NAV: NavGroup[] = [
   { code: 'M6', label: 'Produksi', ready: true, items: [{ href: '/produksi', label: 'Laporan hauling' }, { href: '/produksi/master', label: 'Rute & target' }] },
   { code: 'M7', label: 'Logistik', ready: true, items: [{ href: '/logistik', label: 'Stok & gudang' }, { href: '/logistik/mr', label: 'Material request' }, { href: '/logistik/supplier', label: 'Supplier' }] },
   { code: 'M8', label: 'HRGA', ready: true, items: [{ href: '/hrga', label: 'Karyawan' }, { href: '/hrga/kompetensi', label: 'Kompetensi & SIMPER' }, { href: '/hrga/pelatihan', label: 'Pelatihan' }, { href: '/hrga/roster', label: 'Roster' }, { href: '/hrga/ga', label: 'Permintaan GA' }] },
-  { code: 'M9', label: 'PJO & Manajemen', ready: false, items: [{ href: '/manajemen', label: 'Tinjauan manajemen' }] },
+  { code: 'M9', label: 'PJO & Manajemen', ready: true, items: [{ href: '/manajemen', label: 'Dashboard eksekutif' }, { href: '/manajemen/audit', label: 'Audit internal' }, { href: '/manajemen/tinjauan', label: 'Tinjauan manajemen' }] },
   { code: 'ADM', label: 'Administrasi', ready: true, items: [
     { href: '/master/organisasi', label: 'Organisasi' },
     { href: '/admin/penomoran', label: 'Penomoran' },
