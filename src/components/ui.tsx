@@ -15,7 +15,7 @@ export function PageHeader({ eyebrow, title, children }: { eyebrow?: string; tit
 
 export function Panel({ title, children, action }: { title?: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <section className="grid min-w-0 gap-3 rounded-xl border border-line bg-panel p-4 shadow-soft sm:p-5">
+    <section className="grid min-w-0 content-start gap-3 rounded-xl border border-line bg-panel p-4 shadow-soft sm:p-5">
       {(title || action) && (
         <div className="flex items-center justify-between gap-3">
           {title && <h2 className="text-xl font-semibold">{title}</h2>}

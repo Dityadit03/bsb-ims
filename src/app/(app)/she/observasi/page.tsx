@@ -5,7 +5,7 @@ import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { fmtDate } from '@/lib/documents';
 import { closeObservation, recordObservation } from '../actions';
-import { AreaSelect, DeptSelect, Files, SheTabs, sheMasters, today } from '../fields';
+import { AreaSelect, DeptSelect, Files, SheTabs, sheMasters, today, EmployeeDatalist, EmployeeInput } from '../fields';
 
 export const metadata = { title: 'Observasi PTO' };
 
@@ -47,7 +47,11 @@ export default async function ObservationPage({ searchParams }: { searchParams: 
             </label>
             <label className="grid gap-1 text-sm">Perilaku tidak aman / catatan<textarea name="unsafe" rows={2} className={input} /></label>
             <label className="grid gap-1 text-sm">Coaching / tindakan yang diberikan<textarea name="coaching" rows={2} className={input} /></label>
-            <Files label="Foto" />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <EmployeeInput name="credit" label="Atas nama (opsional)" hint="Untuk SAP: isi bila formulir ini milik pengawas lain" />
+              <Files label="Foto" />
+            </div>
+            <EmployeeDatalist />
             <p className="text-xs text-muted">Observasi dihitung sebagai Act Observasi di SAP Anda. Perilaku tidak aman tanpa coaching tetap open.</p>
           </ActionForm>
         </Panel>

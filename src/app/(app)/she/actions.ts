@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { uploadFormFiles } from '@/lib/attachments';
+import { employeeIdFrom } from '@/lib/employee-ref';
 
 export type ActionState = { error?: string; ok?: string };
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim() || null;
@@ -20,6 +21,15 @@ async function call(fn: string, args: Record<string, unknown>, f?: FormData, fol
   return data as { id: string } & Record<string, unknown>;
 }
 
+// Formulir diisi atas nama karyawan lain (pengawas tanpa akun): kreditkan untuk SAP
+async function credit(table: string, id: string, f: FormData) {
+  const supabase = await createClient();
+  const emp = await employeeIdFrom(supabase, str(f, 'credit'));
+  if (!emp) return;
+  const { error } = await supabase.rpc('she_credit', { p_table: table, p_id: id, p_employee: emp });
+  if (error) throw new Error(error.message);
+}
+
 async function run(path: string, ok: string, fn: () => Promise<unknown>): Promise<ActionState> {
   try { await fn(); } catch (e) { return { error: (e as Error).message }; }
   revalidatePath(path);
@@ -35,6 +45,7 @@ export async function reportHazard(_: ActionState, f: FormData): Promise<ActionS
       p_pic_department: str(f, 'pic_department'), p_due: str(f, 'due'), p_work_area: str(f, 'area'), p_location_note: str(f, 'location'),
       p_recommendation: str(f, 'recommendation'), p_risk: str(f, 'risk') ?? 'medium', p_idempotency_key: str(f, 'idem'),
     }, f, 'hazard')).id;
+    await credit('hazard_reports', id, f);
   } catch (e) { return { error: (e as Error).message }; }
   redirect(`/she/hazard/${id}`);
 }
@@ -46,11 +57,14 @@ export async function closeHazard(_: ActionState, f: FormData) {
 
 // ---------------------------------------------------------------- observasi PTO
 export async function recordObservation(_: ActionState, f: FormData) {
-  return run('/she/observasi', 'Observasi tersimpan', () => call('observation_record', {
-    p_observed_on: str(f, 'date'), p_department: str(f, 'department'), p_activity: str(f, 'activity'), p_result: str(f, 'result'),
-    p_work_area: str(f, 'area'), p_worker_name: str(f, 'worker'), p_worker_count: num(f, 'count'),
-    p_unsafe_behaviour: str(f, 'unsafe'), p_coaching: str(f, 'coaching'), p_idempotency_key: str(f, 'idem'),
-  }, f, 'observasi'));
+  return run('/she/observasi', 'Observasi tersimpan', async () => {
+    const o = await call('observation_record', {
+      p_observed_on: str(f, 'date'), p_department: str(f, 'department'), p_activity: str(f, 'activity'), p_result: str(f, 'result'),
+      p_work_area: str(f, 'area'), p_worker_name: str(f, 'worker'), p_worker_count: num(f, 'count'),
+      p_unsafe_behaviour: str(f, 'unsafe'), p_coaching: str(f, 'coaching'), p_idempotency_key: str(f, 'idem'),
+    }, f, 'observasi');
+    await credit('observations', o.id, f);
+  });
 }
 
 export async function closeObservation(_: ActionState, f: FormData) {
@@ -70,6 +84,7 @@ export async function recordInspection(_: ActionState, f: FormData): Promise<Act
       p_inspected_on: str(f, 'date'), p_department: str(f, 'department'), p_type: str(f, 'type'), p_object: str(f, 'object'),
       p_findings: findings, p_work_area: str(f, 'area'), p_note: str(f, 'note'), p_idempotency_key: str(f, 'idem'),
     }, f, 'inspeksi')).id;
+    await credit('inspections', id, f);
   } catch (e) { return { error: (e as Error).message }; }
   redirect(`/she/inspeksi/${id}`);
 }
@@ -165,14 +180,3 @@ export async function retireRisk(_: ActionState, f: FormData) {
   return run(`/she/risiko/${str(f, 'id')}`, 'Risiko dinonaktifkan', () => call('risk_retire', { p_id: str(f, 'id'), p_reason: str(f, 'reason') }));
 }
 
-// ---------------------------------------------------------------- SAP
-export async function setSapTarget(_: ActionState, f: FormData) {
-  return run('/she/sap', 'Target tersimpan', () => call('sap_set_target', {
-    p_user: str(f, 'user'), p_valid_from: str(f, 'from'), p_obs: num(f, 'obs') ?? 0, p_insp: num(f, 'insp') ?? 0, p_hazard: num(f, 'haz') ?? 0,
-  }));
-}
-
-export async function setSapLeave(_: ActionState, f: FormData) {
-  return run('/she/sap', 'Status cuti diperbarui', () =>
-    call('sap_set_leave', { p_user: str(f, 'user'), p_week_start: str(f, 'week'), p_on_leave: f.get('leave') === 'yes' }));
-}

@@ -645,17 +645,6 @@ await test('LTI hanya bisa ditutup setelah pelaporan ke KaIT dicatat', async () 
   await as(db, hseMgr, `select public.incident_close($1, 'Selesai', now())`, [x.id]);
 });
 
-await test('SAP menghitung act mingguan (Selasa–Senin) terhadap target, nol saat cuti', async () => {
-  eq((await db.query(`select app.sap_week('2026-10-13')::text a, app.sap_week('2026-10-19')::text b, app.sap_week('2026-10-20')::text c`)).rows[0].b, '2026-10-13');
-  eq((await db.query(`select app.sap_week('2026-10-20')::text c`)).rows[0].c, '2026-10-20');
-  await expectError('42501', async () => as(db, spvHse, `select public.sap_set_target($1, '2026-01-06', 3, 2, 2)`, [spvHse]));
-  await as(db, hseMgr, `select public.sap_set_target($1, '2026-01-06', 3, 2, 2)`, [spvHse]);
-  const w = (await as(db, hseMgr, `select * from public.sap_weekly where user_id = $1 and week_start = app.sap_week(app.site_today())`, [spvHse])).rows[0];
-  eq(w.obs_target, 3); eq(w.obs_act, 2); eq(w.insp_act, 1);
-  await as(db, hseMgr, `select public.sap_set_leave($1, app.sap_week(app.site_today()), true)`, [spvHse]);
-  eq((await as(db, hseMgr, `select obs_target from public.sap_weekly where user_id = $1 and week_start = app.sap_week(app.site_today())`, [spvHse])).rows[0].obs_target, 0);
-});
-
 console.log('Plant');
 const dhPlt = await createUser('dh.plt@bsb.co.id');
 await db.query(`insert into public.user_roles(user_id, role_code, department_id) values ($1,'DEPT_HEAD',$2)`, [dhPlt, PLT]);
@@ -943,6 +932,91 @@ await test('karyawan keluar: akun dinonaktifkan dan semua perannya berakhir', as
   eq((await db.query(`select count(*)::int c from public.user_roles where user_id = $1 and valid_until is null`, [opUser])).rows[0].c, 0);
   await expectError('42501', async () => as(db, opUser, `select public.ga_request_create('office', 'Minta ATK lagi')`));
   await expectError('22023', async () => as(db, hrHead, `select public.employee_exit($1, $2::date, 'Lagi')`, [emp.id, today]));
+});
+
+console.log('Adaptasi Portal SHE');
+await test('pelanggaran: dicatat HSE, ditutup hanya setelah sanksi, SP dan konseling lengkap; hitungan berulang', async () => {
+  const V = `select (v).* from public.violation_record($1::date, $2, $3, 'Melanggar batas kecepatan', $4) v`;
+  await expectError('42501', async () => as(db, spvPrd, V, [today, PRD, 'SPDK_OVERSPEED', emp2.id]));
+  const v = (await as(db, spvHse, V, [today, PRD, 'SPDK_OVERSPEED', emp2.id])).rows[0];
+  if (!/^PLG-BSB-\d{4}-0001$/.test(v.violation_no)) throw new Error(v.violation_no);
+  eq(v.offender_name, 'Budi'); eq(v.company, 'PT Mitra Hauling');
+  await expectError('22023', async () => as(db, spvHse, `select public.violation_close($1, null)`, [v.id]));
+  await as(db, spvHse, `select public.violation_followup($1, 'sp1', null, null, $2::date, 'Spv HSE', 'Memahami dan berkomitmen')`, [v.id, today]);
+  await expectError('22023', async () => as(db, spvHse, `select public.violation_close($1, null)`, [v.id]));
+  await as(db, spvHse, `select public.violation_followup($1, 'sp1', 'SP/001/HRGA/X/2026', $2::date, $2::date, 'Spv HSE', 'Memahami')`, [v.id, today]);
+  eq((await as(db, spvHse, `select (v).status from public.violation_close($1, 'Selesai') v`, [v.id])).rows[0].status, 'closed');
+  const v2 = (await as(db, spvHse, V, [today, PRD, 'APD', emp2.id])).rows[0];
+  eq((await as(db, spvHse, `select repeat_no from public.violation_register where id = $1`, [v2.id])).rows[0].repeat_no, 2);
+  eq((await as(db, spvPrd, `select count(*)::int c from public.violations`)).rows[0].c, 2);
+  const staffLog = await createUser('staff.log2@bsb.co.id');
+  await db.query(`insert into public.user_roles(user_id, role_code, department_id) values ($1, 'STAFF', $2)`, [staffLog, await dept('LOG')]);
+  eq((await as(db, staffLog, `select count(*)::int c from public.violations`)).rows[0].c, 0);
+});
+await test('induksi lulus memperbarui kompetensi INDUKSI; nilai di bawah batas ditolak; tamu tanpa data karyawan', async () => {
+  const I = `select (i).* from public.induction_record($1::date, $2, 'Spv HSE', $3, $4, $5, null, null, null, $6) i`;
+  await expectError('42501', async () => as(db, spvPrd, I, [today, 'reinduction', 'pass', empHse.id, null, 90]));
+  await expectError('22023', async () => as(db, spvHse, I, [today, 'reinduction', 'pass', empHse.id, null, 60]));
+  await expectError('22023', async () => as(db, spvHse, I, [today, 'new_hire', 'pass', null, 'Tanpa data', 90]));
+  const i = (await as(db, spvHse, I, [today, 'reinduction', 'pass', empHse.id, null, 85])).rows[0];
+  if (!i.employee_competency_id) throw new Error('kompetensi INDUKSI tidak dibuat');
+  eq((await db.query(`select app.competency_valid($1, $2)`, [empHse.id, INDUKSI])).rows[0].competency_valid, true);
+  eq((await as(db, spvHse, I, [today, 'visitor', 'pass', null, 'Tamu Vendor', null])).rows[0].participant_name, 'Tamu Vendor');
+});
+await test('izin masuk area: pemohon tidak menyetujui sendiri, wajib pendamping, penolakan beralasan', async () => {
+  const R = `select (p).* from public.area_permit_request('Tamu', 'PT Vendor', 'Servis genset', $1::date, $1::date, 2) p`;
+  const p = (await as(db, spvHse, R, [today])).rows[0];
+  if (!/^IMA-BSB-\d{4}-0001$/.test(p.permit_no)) throw new Error(p.permit_no);
+  await expectError('42501', async () => as(db, spvHse, `select public.area_permit_decide($1, true, null, $2)`, [p.id, empHse.id]));
+  await expectError('22023', async () => as(db, hseMgr, `select public.area_permit_decide($1, true)`, [p.id]));
+  await expectError('42501', async () => as(db, spvPrd, `select public.area_permit_decide($1, true, null, $2)`, [p.id, empHse.id]));
+  eq((await as(db, hseMgr, `select (p).status from public.area_permit_decide($1, true, null, $2) p`, [p.id, empHse.id])).rows[0].status, 'approved');
+  eq((await as(db, spvHse, `select on_site_today from public.area_permit_register where id = $1`, [p.id])).rows[0].on_site_today, true);
+  const p2 = (await as(db, spvHse, R, [today])).rows[0];
+  await expectError('22023', async () => as(db, hseMgr, `select public.area_permit_decide($1, false)`, [p2.id]));
+});
+await test('register komisioning (SPIP): oleh Plant/HSE, status berlaku dihitung', async () => {
+  const C = `select (c).* from public.commissioning_save(null, 'tool', $1, 'Stand jack', 'Tool workshop', $2, $3::date, $4::date) c`;
+  await expectError('42501', async () => as(db, spvPrd, C, ['SJ-01', null, null, null]));
+  const c = (await as(db, spvHse, C, ['sj-01', 'REG/1', '2025-01-01', '2025-07-01'])).rows[0];
+  eq(c.ref_code, 'SJ-01');
+  eq((await as(db, spvPrd, `select validity from public.commissioning_register where id = $1`, [c.id])).rows[0].validity, 'expired');
+  await expectError('23514', async () => as(db, spvHse, C, ['SJ-02', 'REG/2', '2025-07-01', '2025-01-01']));
+});
+await test('Pusat Data: tautan harus https dan hanya dikelola pengelola pustaka', async () => {
+  const L = `select (l).* from public.resource_link_save('dt-mcu', 'Pusat Data SHE', 'Medical check up', 'Database MCU', $1, 'sheet') l`;
+  await expectError('42501', async () => as(db, spvHse, L, ['https://docs.google.com/spreadsheets/d/x']));
+  await expectError('23514', async () => as(db, hseMgr, L, ['http://contoh']));
+  eq((await as(db, hseMgr, L, ['https://docs.google.com/spreadsheets/d/x'])).rows[0].code, 'dt-mcu');
+});
+await test('SAP per karyawan: act dari formulir sendiri atau atas nama, cuti nol, minggu terkunci, nomor minggu', async () => {
+  eq((await db.query(`select app.sap_week('2026-10-19')::text w, app.sap_week_no('2026-10-13') n, app.sap_week_no('2026-10-20') m`)).rows[0].n, 41);
+  eq((await db.query(`select app.sap_week_no('2026-10-20') m`)).rows[0].m, 42);
+  const spvEmp = (await as(db, hrStaff, EMP_SQL, ['BSB-010', 'Spv HSE', HSE, null, 'permanent', null, 'spv.hse@bsb.co.id'])).rows[0];
+  await expectError('42501', async () => as(db, spvHse, `select public.sap_participant_save($1, 'SH', 'HSE', '2026-01-06')`, [spvEmp.id]));
+  await as(db, hseMgr, `select public.sap_participant_save($1, 'SH', 'HSE', '2026-01-06')`, [spvEmp.id]);
+  await as(db, hseMgr, `select public.sap_participant_save($1, 'FOR', 'HSE', '2026-01-06')`, [empHse.id]);
+  await as(db, hseMgr, `select public.sap_set_target($1, '2026-01-06', 2, 1, 1)`, [spvEmp.id]);
+  await as(db, hseMgr, `select public.sap_set_target($1, '2026-01-06', 1, 1, 1)`, [empHse.id]);
+  const O = `select (o).* from public.observation_record(app.site_today(), $1, 'Observasi SAP', 'safe') o`;
+  const o1 = (await as(db, spvHse, O, [HSE])).rows[0];
+  eq(o1.employee_id, spvEmp.id);
+  const o2 = (await as(db, spvHse, O, [HSE])).rows[0];
+  await expectError('42501', async () => as(db, spvPrd, `select public.she_credit('observations', $1, $2)`, [o2.id, empHse.id]));
+  await as(db, spvHse, `select public.she_credit('observations', $1, $2)`, [o2.id, empHse.id]);
+  const W = `select * from public.sap_weekly where employee_id = $1 and week_start = app.sap_week(app.site_today())`;
+  const w = (await as(db, spvPrd, W, [spvEmp.id])).rows[0];
+  eq(w.obs_target, 2); eq(w.obs_act, 1); eq(w.level, 'SH');
+  eq((await as(db, spvPrd, W, [empHse.id])).rows[0].obs_act, 1);
+  await as(db, hseMgr, `select public.sap_set_leave($1, app.sap_week(app.site_today()), true)`, [empHse.id]);
+  eq((await as(db, spvPrd, W, [empHse.id])).rows[0].obs_target, 0);
+  await expectError('22023', async () => as(db, hseMgr, `select public.sap_lock_week(app.sap_week(app.site_today()))`));
+  const prev = `app.sap_week(app.site_today()) - 7`;
+  await as(db, hseMgr, `select public.sap_set_leave($1, ${prev}, true)`, [spvEmp.id]);
+  eq((await as(db, hseMgr, `select public.sap_lock_week(${prev}) n`)).rows[0].n, 2);
+  eq((await as(db, spvPrd, `select locked, on_leave, obs_target from public.sap_weekly where employee_id = $1 and week_start = ${prev}`, [spvEmp.id])).rows[0].locked, true);
+  await expectError('22023', async () => as(db, hseMgr, `select public.sap_set_leave($1, ${prev}, false)`, [spvEmp.id]));
+  await as(db, hseMgr, `select public.sap_participant_end($1, app.site_today(), 'Mutasi')`, [empHse.id]);
 });
 
 console.log('Audit internal & tinjauan manajemen');

@@ -8,7 +8,7 @@ import { RISK } from '@/lib/compliance';
 import { fmtDate } from '@/lib/documents';
 import { HAZARD_TYPE, OPEN_CLOSED } from '@/lib/she';
 import { reportHazard } from '../actions';
-import { AreaSelect, DeptSelect, Files, RiskSelect, SheTabs, sheMasters, today } from '../fields';
+import { AreaSelect, DeptSelect, Files, RiskSelect, SheTabs, sheMasters, today, EmployeeDatalist, EmployeeInput } from '../fields';
 
 export const metadata = { title: 'Hazard report' };
 
@@ -49,7 +49,11 @@ export default async function HazardPage({ searchParams }: { searchParams: Promi
               <DeptSelect name="pic_department" label="Departemen PIC" depts={depts} />
               <label className="grid gap-1 text-sm">Due date perbaikan<input type="date" name="due" required min={today()} className={input} /></label>
             </div>
-            <Files label="Foto temuan" />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <EmployeeInput name="credit" label="Atas nama (opsional)" hint="Untuk SAP: isi bila formulir ini milik pengawas lain" />
+              <Files label="Foto temuan" />
+            </div>
+            <EmployeeDatalist />
           </ActionForm>
         </Panel>
       )}

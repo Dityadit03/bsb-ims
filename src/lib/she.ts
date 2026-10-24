@@ -49,3 +49,25 @@ export function sapWeek(d = new Date()) {
   t.setUTCDate(t.getUTCDate() - ((isoDow + 5) % 7));
   return t.toISOString().slice(0, 10);
 }
+
+// Adaptasi Portal SHE: pelanggaran, induksi, izin masuk area, komisioning, SAP per karyawan
+export const VIOLATION_TYPE: Record<string, string> = {
+  GR1: 'Golden Rule 1', GR2: 'Golden Rule 2', GR3: 'Golden Rule 3', GR4: 'Golden Rule 4', GR5: 'Golden Rule 5', GR6: 'Golden Rule 6',
+  GR7: 'Golden Rule 7', GR8: 'Golden Rule 8', SPDK_OVERSPEED: 'SPDK · Overspeed', SPDK_PROSEDUR: 'SPDK · Pelanggaran prosedur',
+  APD: 'Tidak memakai APD', SAFETY_BELT: 'Tidak memakai safety belt', FATIGUE: 'Fatigue / tidur saat kerja', OTHER: 'Lainnya',
+};
+export const SANCTION: Record<string, string> = {
+  verbal: 'Teguran lisan', coaching: 'Pembinaan', sp1: 'SP 1', sp2: 'SP 2', sp3: 'SP 3', suspension: 'Skorsing', termination: 'PHK',
+};
+export const INDUCTION_TYPE: Record<string, string> = {
+  new_hire: 'Induksi karyawan baru', reinduction: 'Reinduksi (kembali cuti)', transfer: 'Induksi mutasi', visitor: 'Induksi tamu',
+};
+export const PERMIT_STATUS: Record<string, [Tone, string]> = {
+  submitted: ['warn', 'Diajukan'], approved: ['ok', 'Disetujui'], rejected: ['crit', 'Ditolak'], closed: ['muted', 'Selesai'],
+};
+export const VALIDITY: Record<string, [Tone, string]> = {
+  valid: ['ok', 'Berlaku'], expiring: ['warn', 'Segera habis'], expired: ['crit', 'Expired'], none: ['muted', 'Belum ada'],
+};
+export const OBJECT_TYPE: Record<string, string> = { unit: 'Unit / sarana', tool: 'Alat workshop', installation: 'Instalasi / prasarana' };
+export const SAP_LEVEL: Record<string, string> = { PJO: 'PJO', DH: 'Dept Head', SH: 'Section Head', FOR: 'Foreman / GL' };
+export const SAP_SECTION = ['PJO', 'HSE', 'PRO', 'PLANT', 'LOG', 'HRGA', 'ENG'] as const;

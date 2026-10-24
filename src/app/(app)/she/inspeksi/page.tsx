@@ -8,7 +8,7 @@ import { RISK } from '@/lib/compliance';
 import { fmtDate } from '@/lib/documents';
 import { INSPECTION_TYPE, OPEN_CLOSED } from '@/lib/she';
 import { recordInspection } from '../actions';
-import { AreaSelect, DeptSelect, Files, SheTabs, sheMasters, today } from '../fields';
+import { AreaSelect, DeptSelect, Files, SheTabs, sheMasters, today, EmployeeDatalist, EmployeeInput } from '../fields';
 
 export const metadata = { title: 'Inspeksi' };
 
@@ -64,7 +64,11 @@ export default async function InspectionPage({ searchParams }: { searchParams: P
               ))}
             </fieldset>
             <label className="grid gap-1 text-sm">Catatan<textarea name="note" rows={2} className={input} /></label>
-            <Files label="Foto / checklist" />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <EmployeeInput name="credit" label="Atas nama (opsional)" hint="Untuk SAP: isi bila formulir ini milik pengawas lain" />
+              <Files label="Foto / checklist" />
+            </div>
+            <EmployeeDatalist />
           </ActionForm>
         </Panel>
       )}

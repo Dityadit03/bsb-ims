@@ -57,7 +57,24 @@ export function Files({ label = 'Foto / lampiran' }: { label?: string }) {
 const TABS = [
   ['/she', 'Ringkasan'], ['/she/hazard', 'Hazard'], ['/she/observasi', 'Observasi'], ['/she/inspeksi', 'Inspeksi'],
   ['/she/p2h', 'P2H'], ['/she/ftw', 'Fit to work'], ['/she/insiden', 'Insiden'], ['/she/risiko', 'Risk register'], ['/she/sap', 'SAP'],
+  ['/she/pelanggaran', 'Pelanggaran'], ['/she/induksi', 'Induksi'], ['/she/izin', 'Izin area'],
 ] as const;
+
+// Daftar karyawan aktif untuk isian "NRP · Nama" (dipakai bersama EmployeeInput)
+export async function EmployeeDatalist() {
+  const supabase = await createClient();
+  const { data } = await supabase.from('employees').select('nrp, full_name').eq('status', 'active').order('full_name');
+  return <datalist id="emp-list">{(data ?? []).map(e => <option key={e.nrp} value={`${e.nrp} · ${e.full_name}`} />)}</datalist>;
+}
+
+export function EmployeeInput({ name = 'employee', label = 'Karyawan', required = false, hint }: { name?: string; label?: string; required?: boolean; hint?: string }) {
+  return (
+    <label className="grid gap-1 text-sm">{label}
+      <input name={name} list="emp-list" required={required} autoComplete="off" placeholder="Ketik nama atau NRP" className={input} />
+      {hint && <span className="text-xs text-muted">{hint}</span>}
+    </label>
+  );
+}
 
 export function SheTabs({ active }: { active: string }) {
   return <Tabs items={TABS} active={active} />;
