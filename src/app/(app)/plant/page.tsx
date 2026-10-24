@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ActionForm } from '@/components/action-form';
-import { PageHeader, Panel, Pill, Stat, Table, input } from '@/components/ui';
+import { PageHeader, Panel, Pill, Stat, Table, input, Pager, paginate } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { UNIT_STATUS, paTone } from '@/lib/plant';
@@ -27,6 +27,7 @@ export default async function PlantPage({ searchParams }: { searchParams: Promis
   const all = rows ?? [];
   const bd = all.filter(r => r.status === 'breakdown').length;
   const pa = all.length ? all.reduce((t, r) => t + Number(r.pa_30d), 0) / all.length : 0;
+  const pg = paginate(all, sp.hal);
   const plt = depts.find(d => d.code === 'PLT')?.id;
 
   return (
@@ -51,7 +52,7 @@ export default async function PlantPage({ searchParams }: { searchParams: Promis
       </form>
       {all.length ? (
         <Table head={['Unit', 'Jenis', 'HM', 'Kepemilikan', 'Breakdown 30 hari', 'PA 30 hari', 'Status']}>
-          {all.map(r => (
+          {pg.rows.map(r => (
             <tr key={r.unit_id}>
               <td className="font-mono text-xs"><Link href={`/plant/${r.unit_id}`} className="font-medium hover:text-accent">{r.unit_no}</Link></td>
               <td className="text-xs">{UNIT_TYPE[r.unit_type]}</td>
@@ -64,6 +65,7 @@ export default async function PlantPage({ searchParams }: { searchParams: Promis
           ))}
         </Table>
       ) : <p className="text-sm text-muted">Belum ada unit terdaftar.</p>}
+      <Pager {...pg} params={sp} />
       {s.can('plant.manage') && (
         <Panel title="Daftarkan / perbarui unit">
           <ActionForm action={saveUnit} label="Simpan unit" primary className="max-w-3xl">

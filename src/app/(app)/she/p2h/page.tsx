@@ -14,16 +14,24 @@ type Row = {
   conclusion: string; notes: string | null; operator: { full_name: string | null } | null;
 };
 
+// Pilihan checklist dibuat sebagai tombol besar agar mudah ditekan dengan jari / sarung tangan
+const CHOICES = [
+  ['ok', 'OK', 'peer-checked:border-ok peer-checked:bg-ok peer-checked:text-white'],
+  ['not_ok', 'Tidak OK', 'peer-checked:border-crit peer-checked:bg-crit peer-checked:text-white'],
+  ['na', 'N/A', 'peer-checked:border-muted peer-checked:bg-muted peer-checked:text-white'],
+] as const;
+
 export default async function P2hPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const s = await getSession();
   const sp = await searchParams;
   const supabase = await createClient();
   const date = sp.tanggal ?? today();
-  const [{ data: items }, { data: rows }, { depts }] = await Promise.all([
+  const [{ data: items }, { data: rows }, { depts }, { data: units }] = await Promise.all([
     supabase.from('p2h_items').select('code, label, is_critical').eq('active', true).order('sort_order'),
     supabase.from('p2h_checks').select('id, p2h_no, check_date, shift, unit_no, unit_type, hour_meter, conclusion, notes, operator:operator_id(full_name)')
       .eq('check_date', date).order('conclusion', { ascending: false }).order('unit_no').returns<Row[]>(),
     sheMasters(),
+    supabase.from('units').select('unit_no, unit_type').neq('status', 'retired').order('unit_no'),
   ]);
 
   return (
@@ -37,7 +45,8 @@ export default async function P2hPage({ searchParams }: { searchParams: Promise<
               <label className="grid gap-1 text-sm">Tanggal<input type="date" name="date" required defaultValue={today()} max={today()} className={input} /></label>
               <label className="grid gap-1 text-sm">Shift<select name="shift" className={input}><option value="1">Shift 1</option><option value="2">Shift 2</option></select></label>
               <DeptSelect depts={depts} value={s.profile.department_id} />
-              <label className="grid gap-1 text-sm">No. lambung unit<input name="unit" required className={`${input} uppercase`} placeholder="mis. DT-021" /></label>
+              <label className="grid gap-1 text-sm">No. lambung unit<input name="unit" required list="unit-list" autoComplete="off" className={`${input} uppercase`} placeholder="mis. DTS-7011" />
+                <datalist id="unit-list">{(units ?? []).map(u => <option key={u.unit_no} value={u.unit_no}>{u.unit_type}</option>)}</datalist></label>
               <label className="grid gap-1 text-sm">Jenis unit
                 <select name="unit_type" className={input}>{Object.entries(UNIT_TYPE).map(([k, l]) => <option key={k} value={k}>{k} · {l}</option>)}</select>
               </label>
@@ -48,9 +57,12 @@ export default async function P2hPage({ searchParams }: { searchParams: Promise<
               {(items ?? []).map(it => (
                 <div key={it.code} className="flex flex-wrap items-center justify-between gap-2 border-b border-line py-1.5 text-sm last:border-0">
                   <span>{it.label}{it.is_critical && <span className="ml-2 font-mono text-[10px] uppercase text-crit">kritis</span>}</span>
-                  <span className="flex gap-3">
-                    {[['ok', 'OK'], ['not_ok', 'Tidak OK'], ['na', 'N/A']].map(([v, l]) => (
-                      <label key={v} className="flex items-center gap-1"><input type="radio" name={`item_${it.code}`} value={v} required defaultChecked={v === 'ok'} />{l}</label>
+                  <span className="grid w-full grid-cols-3 gap-1 sm:w-auto">
+                    {CHOICES.map(([v, l, on]) => (
+                      <label key={v} className="cursor-pointer">
+                        <input type="radio" name={`item_${it.code}`} value={v} required defaultChecked={v === 'ok'} className="peer sr-only" />
+                        <span className={`block rounded-md border border-line px-3 py-2 text-center peer-focus-visible:outline-2 peer-focus-visible:outline-accent ${on}`}>{l}</span>
+                      </label>
                     ))}
                   </span>
                 </div>

@@ -21,13 +21,15 @@ export type Session = {
 // pengecekan sebenarnya tetap dilakukan database lewat RLS dan fungsi RPC.
 export const getSession = cache(async (): Promise<Session> => {
   const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) redirect('/login');
+  // getClaims memverifikasi JWT secara lokal (kunci publik di-cache), tanpa bolak-balik ke server Auth
+  const { data: auth } = await supabase.auth.getClaims();
+  const userId = auth?.claims?.sub;
+  if (!userId) redirect('/login');
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, email, full_name, status, department_id')
-    .eq('id', auth.user.id)
+    .eq('id', userId)
     .single<Profile>();
   if (!profile || profile.status !== 'active') redirect('/menunggu');
 

@@ -49,7 +49,7 @@ export function Table({ head, children }: { head: string[]; children: React.Reac
             ))}
           </tr>
         </thead>
-        <tbody className="[&_td]:border-b [&_td]:border-line [&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_tr:last-child_td]:border-0">{children}</tbody>
+        <tbody className="[&_td:first-child]:sticky [&_td:first-child]:left-0 [&_td:first-child]:bg-panel [&_td]:border-b [&_td]:border-line [&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_tr:last-child_td]:border-0">{children}</tbody>
       </table>
     </div>
   );
@@ -70,3 +70,45 @@ export const btn = 'inline-flex items-center justify-center gap-2 rounded-md px-
 export const btnPrimary = `${btn} bg-accent text-white hover:bg-accent/90`;
 export const btnGhost = `${btn} border border-line bg-panel hover:border-accent`;
 export const input = 'w-full rounded-md border border-line bg-panel px-3 py-2 text-sm';
+
+// Pagination sederhana lewat parameter ?hal= agar daftar panjang tidak dirender sekaligus (berat di HP).
+export function paginate<T>(items: T[], hal: string | undefined, size = 50) {
+  const pages = Math.max(1, Math.ceil(items.length / size));
+  const page = Math.min(pages, Math.max(1, Number(hal) || 1));
+  return { rows: items.slice((page - 1) * size, page * size), page, pages, total: items.length, size };
+}
+
+export function Pager({ page, pages, total, size, params, param = 'hal' }: {
+  page: number; pages: number; total: number; size: number; params: Record<string, string | undefined>; param?: string;
+}) {
+  if (pages <= 1) return null;
+  const href = (n: number) => {
+    const q = new URLSearchParams(Object.entries({ ...params, [param]: String(n) }).filter((e): e is [string, string] => !!e[1]));
+    return `?${q}`;
+  };
+  const from = (page - 1) * size + 1;
+  return (
+    <nav className="flex items-center justify-between gap-3 text-sm" aria-label="Halaman">
+      <span className="text-muted">{from}–{Math.min(total, page * size)} dari {total}</span>
+      <span className="flex gap-2">
+        {page > 1 ? <Link href={href(page - 1)} className={btnGhost}>‹ Sebelumnya</Link> : null}
+        {page < pages ? <Link href={href(page + 1)} className={btnGhost}>Berikutnya ›</Link> : null}
+      </span>
+    </nav>
+  );
+}
+
+// Daftar panjang: tampilkan beberapa baris pertama, sisanya bisa dibuka.
+export function Clamp({ items, limit = 10, className = '' }: { items: React.ReactNode[]; limit?: number; className?: string }) {
+  return (
+    <div>
+      <ul className={className}>{items.slice(0, limit)}</ul>
+      {items.length > limit && (
+        <details className="group">
+          <summary className="cursor-pointer list-none py-2 text-sm text-accent group-open:hidden">Tampilkan semua ({items.length})</summary>
+          <ul className={className}>{items.slice(limit)}</ul>
+        </details>
+      )}
+    </div>
+  );
+}

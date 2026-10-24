@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ActionForm } from '@/components/action-form';
-import { PageHeader, Panel, Pill, Stat, Table, input } from '@/components/ui';
+import { PageHeader, Pager, Panel, Pill, Stat, Table, input, paginate } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { EMPLOYMENT, pctTone } from '@/lib/hrga';
@@ -27,6 +27,7 @@ export default async function HrgaPage({ searchParams }: { searchParams: Promise
   ]);
   const all = rows ?? [];
   const req = all.filter(r => r.required > 0);
+  const pg = paginate(all, sp.hal);
   const avg = req.length ? req.reduce((t, r) => t + Number(r.compliance_pct), 0) / req.length : null;
 
   return (
@@ -49,7 +50,7 @@ export default async function HrgaPage({ searchParams }: { searchParams: Promise
       </form>
       {all.length ? (
         <Table head={['NRP', 'Nama', 'Dept', 'Jabatan', 'Status kerja', 'Akun', 'Kompetensi wajib']}>
-          {all.map(r => (
+          {pg.rows.map(r => (
             <tr key={r.id}>
               <td className="font-mono text-xs"><Link href={`/hrga/${r.id}`} className="font-medium hover:text-accent">{r.nrp}</Link></td>
               <td className="text-sm"><Link href={`/hrga/${r.id}`} className="hover:text-accent">{r.full_name}</Link></td>
@@ -62,6 +63,9 @@ export default async function HrgaPage({ searchParams }: { searchParams: Promise
             </tr>
           ))}
         </Table>
+      ) : null}
+      {all.length ? (
+        <Pager {...pg} params={sp} />
       ) : <p className="text-sm text-muted">Belum ada data karyawan.</p>}
       {s.canIn('hr.manage', 'HRGA') && (
         <Panel title="Tambah / perbarui karyawan">
