@@ -65,16 +65,16 @@ with sub(parent, code, title, dept, sort) as (values
   ('6','6.4','Penetapan jenis dokumen dan rekaman','MGT',4),
   ('7','7.1','Tinjauan manajemen','MGT',1),
   ('7','7.2','Tindak lanjut tinjauan dan peningkatan kinerja berkelanjutan','MGT',2))
-insert into public.compliance_clauses(framework_code, parent_id, code, level, title, owner_department_id, sort_order)
-select 'SMKP', p.id, s.code, 'subelement', s.title, d.id, s.sort
+-- Bahan peledak (4.11): BSB jasa hauling, penerapan ditetapkan setelah lingkup aktual dikonfirmasi.
+insert into public.compliance_clauses(framework_code, parent_id, code, level, title, owner_department_id, sort_order,
+                                      applicability, applicability_note)
+select 'SMKP', p.id, s.code, 'subelement', s.title, d.id, s.sort,
+       case when s.code = '4.11' then 'to_confirm' else 'applicable' end,
+       case when s.code = '4.11' then 'Hauling batubara; konfirmasi apakah BSB menangani bahan peledak' end
   from sub s
   join public.compliance_clauses p on p.framework_code = 'SMKP' and p.code = s.parent
   join public.departments d on d.code = s.dept;
 
--- Bahan peledak: BSB jasa hauling, penerapan ditetapkan setelah lingkup aktual dikonfirmasi.
-update public.compliance_clauses set applicability = 'to_confirm',
-  applicability_note = 'Hauling batubara; konfirmasi apakah BSB menangani bahan peledak'
- where framework_code = 'SMKP' and code = '4.11';
 
 -- Struktur tingkat atas ISO (Annex SL) dan SMK3 untuk pemetaan silang.
 insert into public.compliance_clauses(framework_code, code, level, title, sort_order, source_verified)

@@ -499,6 +499,12 @@ await test('kode persyaratan yang sudah dirujuk tidak bisa diubah', async () => 
   await expectError('42501', async () => as(db, dhHse, `update public.compliance_clauses set title = 'x' where id = $1`, [C22]).then(r => { if (!r.rowCount) { const e = new Error('rls'); e.code = '42501'; throw e; } }));
 });
 
+await test('anon hanya bisa memanggil verifikasi dokumen', async () => {
+  const r = await db.query(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')`);
+  eq(r.rows.map(x => x.proname).join(','), 'verify_document');
+});
+
 console.log('audit trail');
 await test('setiap penerbitan nomor tercatat', async () => {
   const r = await db.query(`select count(*)::int c from public.audit_logs where action = 'numbering.issue'`);
