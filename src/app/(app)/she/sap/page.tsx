@@ -76,7 +76,7 @@ function Ring({ value, size = 64, stroke = 7, children }: { value: number | null
 }
 
 const Pct = ({ v }: { v: number | null }) => (
-  <span className={`inline-block min-w-12 rounded-full px-2 py-0.5 text-center font-mono text-[11px] font-semibold ${pill(v)}`}>{fmtPct(v)}</span>
+  <span className={`inline-block min-w-11 rounded-full px-1.5 py-0.5 text-center font-mono text-[11px] font-semibold ${pill(v)}`}>{fmtPct(v)}</span>
 );
 
 export default async function SapPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -198,7 +198,7 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
             </div>
           </div>
 
-          <Panel title={`SAP Performance (%) · W-${no}`} sub="Capaian minggu ini per section dan level · P = plan, A = aktual (warna = capaian) · N/A = semua cuti">
+          <Panel title={`SAP Performance (%) · W-${no}`} sub="Capaian minggu ini per section dan level · P = % peserta onsite yang punya plan, A = % capaian aktual ÷ plan · N/A = semua cuti">
             {sections.length ? (
               <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
                 <div className="overflow-x-auto rounded-xl border border-line">
@@ -231,9 +231,11 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
                       {METRICS.flatMap(m => {
                         const t = sum(xs, m.key);
                         const v = t.on ? ach(t.act, t.plan) : null;
+                        const on = xs.filter(r => !r.on_leave);
+                        const planned = on.length ? on.filter(r => r[`${m.key}_target`] > 0).length / on.length : null;
                         return [
-                          <td key={`${m.key}p`} className="tabular text-center text-xs text-muted">{t.on ? t.plan : '–'}</td>,
-                          <td key={`${m.key}a`} className="text-center"><span className={`inline-block min-w-8 rounded-full px-1.5 py-0.5 font-mono text-[11px] font-semibold ${pill(v)}`}>{t.on ? t.act : 'N/A'}</span></td>,
+                          <td key={`${m.key}p`} className="text-center" title={`Plan ${t.plan}`}><Pct v={planned} /></td>,
+                          <td key={`${m.key}a`} className="text-center" title={`Aktual ${t.act} dari ${t.plan}`}><Pct v={v} /></td>,
                         ];
                       })}
                     </tr>
