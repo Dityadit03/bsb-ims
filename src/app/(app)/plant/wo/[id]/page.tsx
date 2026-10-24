@@ -38,6 +38,7 @@ export default async function WoDetail({ params }: { params: Promise<{ id: strin
             {w.action_taken && <div className="rounded border border-line bg-ground p-3 text-sm"><div className="mb-1 text-xs text-muted">Tindakan · {fmtDateTime(w.completed_at)}</div>{w.action_taken}</div>}
             {w.cancel_reason && <p className="text-sm text-crit">Dibatalkan: {w.cancel_reason}</p>}
             <AttachmentList table="work_orders" ids={[w.id]} />
+            {open && s.can('log.request') && <Link href={`/logistik/mr?wo=${w.id}`} className="text-sm text-accent hover:underline">Minta suku cadang (MR) →</Link>}
           </Panel>
           {work && (w.status === 'open' || w.status === 'waiting_part') && (
             <Panel title="Mulai kerjakan"><ActionForm action={startWo} label={w.status === 'open' ? 'Mulai kerjakan' : 'Part tersedia, lanjutkan'} primary hidden={{ id: w.id }} /></Panel>

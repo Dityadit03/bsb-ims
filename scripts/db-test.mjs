@@ -770,6 +770,89 @@ await test('pengembalian wajib alasan; pengirim tidak boleh menyetujui laporanny
   eq(m.a, 180); eq(m.t, 300000);
 });
 
+console.log('Logistik');
+const LOG = await dept('LOG');
+const logStaff = await createUser('gudang@bsb.co.id');
+const logHead = await createUser('dh.log@bsb.co.id');
+const pltStaff = await createUser('mekanik@bsb.co.id');
+await db.query(`insert into public.user_roles(user_id, role_code, department_id) values ($1,'STAFF',$4), ($2,'DEPT_HEAD',$4), ($3,'STAFF',$5)`,
+  [logStaff, logHead, pltStaff, LOG, PLT]);
+let sp, solar, sup, woLog, mrBig, mrSmall;
+const stock = async id => Number((await db.query(`select stock_qty from public.materials where id = $1`, [id])).rows[0].stock_qty);
+await test('master barang & supplier hanya oleh pengelola Logistik', async () => {
+  await expectError('42501', async () => as(db, spvPlt, `select public.material_save('SP-FLT-01', 'Filter oli', 'spare_part', 'pcs')`));
+  sp = (await as(db, logHead, `select (m).* from public.material_save('sp-flt-01', 'Filter oli HD785', 'spare_part', 'pcs', 5) m`)).rows[0];
+  solar = (await as(db, logHead, `select (m).* from public.material_save('SOLAR', 'Solar B40', 'fuel', 'L', 1000) m`)).rows[0];
+  sup = (await as(db, logHead, `select (s).* from public.supplier_save('sup-01', 'CV Mitra Teknik', 'Suku cadang') s`)).rows[0];
+  eq(sp.code, 'SP-FLT-01'); eq(sup.code, 'SUP-01');
+});
+await test('penerimaan barang bernomor GR, wajib no. surat jalan, harga rata-rata bergerak', async () => {
+  await expectError('42501', async () => as(db, spvPlt, `select public.goods_receive($1, $2, 10, 500000, 'SJ-1')`, [sp.id, sup.id]));
+  await expectError('22023', async () => as(db, logStaff, `select public.goods_receive($1, $2, 10, 500000, '')`, [sp.id, sup.id]));
+  const g = (await as(db, logStaff, `select (g).* from public.goods_receive($1, $2, 10, 500000, 'SJ-001') g`, [sp.id, sup.id])).rows[0];
+  if (!/^GR-BSB-\d{4}-\d{6}$/.test(g.movement_no)) throw new Error(g.movement_no);
+  await as(db, logStaff, `select public.goods_receive($1, $2, 10, 700000, 'SJ-002')`, [sp.id, sup.id]);
+  const m = (await db.query(`select stock_qty::int q, avg_cost::int c from public.materials where id = $1`, [sp.id])).rows[0];
+  eq(m.q, 20); eq(m.c, 600000);
+});
+await test('MR suku cadang wajib terkait WO terbuka; nomor MR; nilai dihitung dari harga rata-rata', async () => {
+  woLog = (await as(db, dhPlt, `select (w).* from public.wo_create($1, 'repair', 'Ganti filter oli') w`, [unit.id])).rows[0];
+  const lines = q => JSON.stringify([{ material: sp.id, qty: q }]);
+  await expectError('22023', async () => as(db, pltStaff, `select public.mr_create($1, 'Servis', $2::jsonb)`, [PLT, lines(2)]));
+  await expectError('42501', async () => as(db, pltStaff, `select public.mr_create($1, 'Servis', $2::jsonb, null, $3)`, [HSE, lines(2), woLog.id]));
+  mrBig = (await as(db, pltStaff, `select (r).* from public.mr_create($1, 'Overhaul filter', $2::jsonb, null, $3) r`, [PLT, lines(20), woLog.id])).rows[0];
+  if (!/^MR-BSB-\d{4}-\d{6}$/.test(mrBig.mr_no)) throw new Error(mrBig.mr_no);
+  eq(Number(mrBig.total_value), 12000000);
+  mrSmall = (await as(db, pltStaff, `select (r).* from public.mr_create($1, 'Servis', $2::jsonb, null, $3) r`, [PLT, lines(2), woLog.id])).rows[0];
+});
+await test('MR disetujui orang lain; di atas batas nilai wajib Dept Head; penolakan wajib alasan', async () => {
+  await expectError('22023', async () => as(db, logStaff, `select public.goods_issue($1, '[]'::jsonb)`, [mrSmall.id]));
+  await expectError('42501', async () => as(db, spvPlt, `select public.mr_review($1, true)`, [mrBig.id]));
+  await expectError('22023', async () => as(db, spvPlt, `select public.mr_review($1, false, '')`, [mrBig.id]));
+  eq((await as(db, dhPlt, `select (r).status from public.mr_review($1, true) r`, [mrBig.id])).rows[0].status, 'approved');
+  eq((await as(db, spvPlt, `select (r).status from public.mr_review($1, true) r`, [mrSmall.id])).rows[0].status, 'approved');
+  const own = (await as(db, spvPlt, `select (r).id from public.mr_create($1, 'Pribadi', $2::jsonb, null, $3) r`, [PLT, JSON.stringify([{ material: sp.id, qty: 1 }]), woLog.id])).rows[0].id;
+  await expectError('42501', async () => as(db, spvPlt, `select public.mr_review($1, true)`, [own]));
+  eq((await as(db, dhPlt, `select (r).status from public.mr_review($1, false, 'Pakai stok bengkel') r`, [own])).rows[0].status, 'rejected');
+});
+await test('pengeluaran barang (GI) tidak melebihi sisa MR maupun stok; tercatat ke WO & unit', async () => {
+  const line = async mr => (await db.query(`select id from public.material_request_lines where mr_id = $1`, [mr])).rows[0].id;
+  const L = await line(mrBig.id), S = await line(mrSmall.id);
+  await expectError('42501', async () => as(db, spvPlt, `select public.goods_issue($1, $2::jsonb)`, [mrBig.id, JSON.stringify([{ line: L, qty: 1 }])]));
+  await expectError('22023', async () => as(db, logStaff, `select public.goods_issue($1, $2::jsonb)`, [mrBig.id, JSON.stringify([{ line: L, qty: 21 }])]));
+  eq((await as(db, logStaff, `select (r).status from public.goods_issue($1, $2::jsonb) r`, [mrBig.id, JSON.stringify([{ line: L, qty: 15 }])])).rows[0].status, 'partial');
+  eq((await as(db, logStaff, `select (r).status from public.goods_issue($1, $2::jsonb) r`, [mrSmall.id, JSON.stringify([{ line: S, qty: 2 }])])).rows[0].status, 'issued');
+  eq(await stock(sp.id), 3);
+  await expectError('22023', async () => as(db, logStaff, `select public.goods_issue($1, $2::jsonb)`, [mrBig.id, JSON.stringify([{ line: L, qty: 5 }])]));
+  const mv = (await db.query(`select movement_no, wo_no, unit_no from public.stock_ledger where mr_id = $1`, [mrBig.id])).rows[0];
+  if (!/^GI-BSB-\d{4}-\d{6}$/.test(mv.movement_no)) throw new Error(mv.movement_no);
+  eq(mv.wo_no, woLog.wo_no); eq(mv.unit_no, 'DT-21');
+  eq((await as(db, logHead, `select low_stock from public.material_stock where id = $1`, [sp.id])).rows[0].low_stock, true);
+  await expectError('22023', async () => as(db, pltStaff, `select public.mr_cancel($1, 'batal')`, [mrBig.id]));
+});
+await test('BBM langsung ke unit wajib HM yang tidak mundur; hanya BBM/pelumas', async () => {
+  await as(db, logStaff, `select public.goods_receive($1, $2, 5000, 14000, 'DO-PERTAMINA-01')`, [solar.id, sup.id]);
+  const hm = Number((await db.query(`select current_hm from public.units where id = $1`, [unit.id])).rows[0].current_hm);
+  await expectError('22023', async () => as(db, logStaff, `select public.fuel_issue($1, $2, 300, $3)`, [unit.id, solar.id, hm - 1]));
+  await expectError('22023', async () => as(db, logStaff, `select public.fuel_issue($1, $2, 1, $3)`, [unit.id, sp.id, hm + 1]));
+  await as(db, logStaff, `select public.fuel_issue($1, $2, 300, $3)`, [unit.id, solar.id, hm + 10]);
+  eq(await stock(solar.id), 4700);
+  eq(Number((await db.query(`select current_hm from public.units where id = $1`, [unit.id])).rows[0].current_hm), hm + 10);
+});
+await test('stok opname: selisih wajib keterangan dan tercatat sebagai penyesuaian', async () => {
+  await expectError('22023', async () => as(db, logStaff, `select public.stock_opname($1, 4650)`, [solar.id]));
+  await as(db, logStaff, `select public.stock_opname($1, 4650, 'Penguapan & kalibrasi flowmeter')`, [solar.id]);
+  eq(await stock(solar.id), 4650);
+  eq(Number((await db.query(`select qty from public.stock_movements where material_id = $1 and movement_type = 'adjust'`, [solar.id])).rows[0].qty), -50);
+});
+await test('evaluasi supplier: nilai rendah wajib catatan; grade dari rata-rata', async () => {
+  await expectError('22023', async () => as(db, logHead, `select public.supplier_evaluate($1, $2::date, 4, 2, 4, 4, 4)`, [sup.id, today]));
+  await expectError('42501', async () => as(db, logStaff, `select public.supplier_evaluate($1, $2::date, 4, 4, 4, 4, 4)`, [sup.id, today]));
+  await as(db, logHead, `select public.supplier_evaluate($1, $2::date, 4, 2, 4, 4, 4, 'Pengiriman terlambat 3 hari')`, [sup.id, today]);
+  const s = (await as(db, logStaff, `select score::float sc, grade from public.supplier_score where id = $1`, [sup.id])).rows[0];
+  eq(s.sc, 3.6); eq(s.grade, 'B');
+});
+
 await test('anon hanya bisa memanggil verifikasi dokumen', async () => {
   const r = await db.query(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')`);

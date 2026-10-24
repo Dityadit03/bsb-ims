@@ -1,0 +1,90 @@
+'use server';
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+
+export type ActionState = { error?: string; ok?: string };
+const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim() || null;
+const num = (f: FormData, k: string) => (str(f, k) == null ? null : Number(str(f, k)));
+
+async function rpc(fn: string, args: Record<string, unknown>) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc(fn, args);
+  if (error) throw new Error(error.message);
+  return data as { id: string };
+}
+
+async function run(path: string, ok: string, fn: () => Promise<unknown>): Promise<ActionState> {
+  try { await fn(); } catch (e) { return { error: (e as Error).message }; }
+  revalidatePath(path);
+  return { ok };
+}
+
+export async function saveMaterial(_: ActionState, f: FormData) {
+  return run('/logistik', 'Barang disimpan', () => rpc('material_save', {
+    p_code: str(f, 'code'), p_name: str(f, 'name'), p_category: str(f, 'category'), p_uom: str(f, 'uom'),
+    p_min_stock: num(f, 'min_stock') ?? 0, p_active: str(f, 'active') !== 'false',
+  }));
+}
+
+export async function receiveGoods(_: ActionState, f: FormData) {
+  return run('/logistik', 'Penerimaan dicatat', () => rpc('goods_receive', {
+    p_material: str(f, 'material'), p_supplier: str(f, 'supplier'), p_qty: num(f, 'qty'), p_unit_cost: num(f, 'cost'),
+    p_doc_ref: str(f, 'doc_ref'), p_note: str(f, 'note'), p_idempotency_key: str(f, 'idem'),
+  }));
+}
+
+export async function issueFuel(_: ActionState, f: FormData) {
+  return run('/logistik', 'Pengisian dicatat', () => rpc('fuel_issue', {
+    p_unit: str(f, 'unit'), p_material: str(f, 'material'), p_qty: num(f, 'qty'), p_hm: num(f, 'hm'), p_note: str(f, 'note'),
+    p_idempotency_key: str(f, 'idem'),
+  }));
+}
+
+export async function opname(_: ActionState, f: FormData) {
+  return run('/logistik', 'Hasil opname disimpan', () =>
+    rpc('stock_opname', { p_material: str(f, 'material'), p_counted: num(f, 'counted'), p_note: str(f, 'note') }));
+}
+
+export async function createMr(_: ActionState, f: FormData): Promise<ActionState> {
+  const lines = [1, 2, 3, 4, 5].map(i => ({ material: str(f, `material_${i}`), qty: num(f, `qty_${i}`), note: str(f, `note_${i}`) }))
+    .filter(l => l.material && l.qty);
+  let id: string;
+  try {
+    id = (await rpc('mr_create', {
+      p_department: str(f, 'department'), p_purpose: str(f, 'purpose'), p_lines: lines, p_need_date: str(f, 'need_date'),
+      p_wo: str(f, 'wo'), p_idempotency_key: str(f, 'idem'),
+    })).id;
+  } catch (e) { return { error: (e as Error).message }; }
+  redirect(`/logistik/mr/${id}`);
+}
+
+export async function reviewMr(_: ActionState, f: FormData) {
+  const approve = str(f, 'decision') === 'approve';
+  return run(`/logistik/mr/${str(f, 'id')}`, approve ? 'MR disetujui' : 'MR ditolak', () =>
+    rpc('mr_review', { p_mr: str(f, 'id'), p_approve: approve, p_note: str(f, 'note') }));
+}
+
+export async function cancelMr(_: ActionState, f: FormData) {
+  return run(`/logistik/mr/${str(f, 'id')}`, 'MR dibatalkan', () => rpc('mr_cancel', { p_mr: str(f, 'id'), p_reason: str(f, 'reason') }));
+}
+
+export async function issueGoods(_: ActionState, f: FormData) {
+  const lines = f.getAll('line').map(String).map(line => ({ line, qty: num(f, `qty_${line}`) ?? 0 }));
+  return run(`/logistik/mr/${str(f, 'id')}`, 'Barang dikeluarkan', () =>
+    rpc('goods_issue', { p_mr: str(f, 'id'), p_lines: lines, p_note: str(f, 'note'), p_idempotency_key: str(f, 'idem') }));
+}
+
+export async function saveSupplier(_: ActionState, f: FormData) {
+  return run('/logistik/supplier', 'Supplier disimpan', () => rpc('supplier_save', {
+    p_code: str(f, 'code'), p_name: str(f, 'name'), p_category: str(f, 'category'), p_contact: str(f, 'contact'),
+    p_phone: str(f, 'phone'), p_active: str(f, 'active') !== 'false',
+  }));
+}
+
+export async function evaluateSupplier(_: ActionState, f: FormData) {
+  return run('/logistik/supplier', 'Evaluasi disimpan', () => rpc('supplier_evaluate', {
+    p_supplier: str(f, 'supplier'), p_period: `${str(f, 'period')}-01`, p_quality: num(f, 'quality'), p_delivery: num(f, 'delivery'),
+    p_price: num(f, 'price'), p_service: num(f, 'service'), p_safety: num(f, 'safety'), p_note: str(f, 'note'),
+  }));
+}

@@ -14,7 +14,8 @@ Menggantikan dan menyatukan [Document Control BSB](https://github.com/Dityadit03
 | M4 SHE | Risk register/IBPR 5x5 dengan persetujuan independen, hazard report KTA/TTA, observasi PTO, inspeksi + temuan, P2H (item kritis → tidak layak), fit to work, insiden dengan investigasi & wajib action plan, SAP mingguan Selasa–Senin | Selesai |
 | M5 Plant | Register unit, work order (breakdown/PM/perbaikan), P2H tidak layak → WO breakdown otomatis, PM berbasis HM, physical availability 30 hari | Selesai |
 | M6 Produksi | Laporan shift hauling (PRD), ritase & tonase per unit/rute (wajib P2H layak), hambatan, target bulanan, persetujuan oleh orang lain | Selesai |
-| M7–M10 | Logistik, HRGA, Audit & MR, migrasi | Dijadwalkan |
+| M7 Logistik | Master barang, MR (suku cadang wajib WO, batas nilai), penerimaan GR, pengeluaran GI, BBM/oli per unit + HM, stok opname, evaluasi supplier | Selesai |
+| M8–M10 | HRGA, Audit & MR, migrasi | Dijadwalkan |
 
 ## Menjalankan
 1. Buat project Supabase (region Singapura), lalu jalankan semua file di `supabase/migrations` secara berurutan
