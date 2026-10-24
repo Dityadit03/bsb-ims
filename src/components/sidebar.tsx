@@ -1,0 +1,62 @@
+'use client';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useState } from 'react';
+import { NAV } from '@/lib/modules';
+
+export function Sidebar({ permissions, name, email }: { permissions: string[]; name: string; email: string }) {
+  const path = usePathname();
+  const [open, setOpen] = useState(false);
+  const perms = new Set(permissions);
+
+  return (
+    <>
+      <div className="sticky top-0 z-20 flex items-center justify-between bg-coal px-4 py-3 text-coal-ink lg:hidden">
+        <span className="font-display text-xl font-bold tracking-wide">BSB IMS</span>
+        <button onClick={() => setOpen(o => !o)} className="rounded border border-white/20 px-3 py-1 text-sm" aria-expanded={open} aria-controls="nav">
+          Menu
+        </button>
+      </div>
+      <aside id="nav" className={`${open ? 'block' : 'hidden'} bg-coal text-coal-ink lg:sticky lg:top-0 lg:block lg:h-dvh lg:w-64 lg:shrink-0 lg:overflow-y-auto`}>
+        <div className="hidden px-5 pb-2 pt-6 lg:block">
+          <div className="font-display text-2xl font-bold tracking-wide">BSB IMS</div>
+          <div className="font-mono text-[11px] uppercase tracking-wider text-coal-ink/60">Integrated Management System</div>
+        </div>
+        <nav className="grid gap-4 px-3 py-4" aria-label="Menu utama">
+          {NAV.map(group => (
+            <div key={group.code} className="grid gap-0.5">
+              <div className="flex items-center justify-between px-2 pb-1">
+                <span className="font-mono text-[11px] uppercase tracking-wider text-coal-ink/50">{group.label}</span>
+                {!group.ready && <span className="font-mono text-[10px] text-coal-ink/40">{group.code}</span>}
+              </div>
+              {group.items
+                .filter(i => !i.perm || perms.has(i.perm))
+                .map(item => {
+                  const active = item.href === '/' ? path === '/' : path.startsWith(item.href);
+                  if (!group.ready)
+                    return (
+                      <span key={item.href} className="cursor-not-allowed rounded px-2 py-1.5 text-sm text-coal-ink/35" title="Modul belum dibangun">
+                        {item.label}
+                      </span>
+                    );
+                  return (
+                    <Link key={item.href} href={item.href} onClick={() => setOpen(false)}
+                      className={`rounded px-2 py-1.5 text-sm ${active ? 'bg-accent text-white' : 'text-coal-ink/85 hover:bg-white/5'}`}>
+                      {item.label}
+                    </Link>
+                  );
+                })}
+            </div>
+          ))}
+        </nav>
+        <div className="mt-auto border-t border-white/10 px-5 py-4 text-sm">
+          <div className="truncate font-medium">{name}</div>
+          <div className="truncate text-xs text-coal-ink/60">{email}</div>
+          <form action="/auth/keluar" method="post" className="mt-2">
+            <button className="text-xs text-accent hover:underline">Keluar</button>
+          </form>
+        </div>
+      </aside>
+    </>
+  );
+}
