@@ -93,7 +93,7 @@ await test('staff tidak bisa mengubah master data', async () => {
   eq(r.rowCount, 0);
 });
 await test('admin tidak bisa memberi peran untuk dirinya sendiri', async () => {
-  await expectError('42501', () => as(db, adminId, `insert into public.user_roles(user_id, role_code) values ($1, 'PJO')`, [adminId]));
+  await expectError('42501', async () => as(db, adminId, `insert into public.user_roles(user_id, role_code) values ($1, 'PJO')`, [adminId]));
 });
 await test('admin mengaktifkan akun pending dengan peran', async () => {
   await as(db, adminId, `select public.activate_user($1, 'VIEWER', null, 'uji')`, [outsiderId]);
@@ -107,10 +107,10 @@ await test('pratinjau SOP mengikuti pola Document Control v4', async () => {
   eq(r.rows[0].n, 'SOP-BSB-HSE-SFT-001');
 });
 await test('parameter wajib yang kosong ditolak', async () => {
-  await expectError('22023', () => as(db, dcId, `select public.issue_number('SOP', '{"D":"HSE"}')`));
+  await expectError('22023', async () => as(db, dcId, `select public.issue_number('SOP', '{"D":"HSE"}')`));
 });
 await test('staff tidak berwenang menerbitkan nomor', async () => {
-  await expectError('42501', () => as(db, staffId, `select public.issue_number('SRK', '{"D":"HSE"}')`));
+  await expectError('42501', async () => as(db, staffId, `select public.issue_number('SRK', '{"D":"HSE"}')`));
 });
 await test('IK & formulir berurut per dokumen induk', async () => {
   const a = await as(db, dcId, `select (public.issue_number('F', '{"P":"SOP-BSB-HSE-SFT-018"}')).number n`);
@@ -141,10 +141,10 @@ await test('nomor yang dibatalkan tidak dipakai ulang', async () => {
   eq(b.rows[0].n, 'KBJ-BSB-HSE-002');
 });
 await test('pola yang sudah dipakai tidak bisa diubah', async () => {
-  await expectError('42501', () => as(db, dcId, `update public.numbering_schemes set pattern = 'KBJ-{D}-{N3}' where code = 'KBJ'`));
+  await expectError('42501', async () => as(db, dcId, `update public.numbering_schemes set pattern = 'KBJ-{D}-{N3}' where code = 'KBJ'`));
 });
 await test('klien tidak bisa menulis counter langsung', async () => {
-  await expectError('42501', () => as(db, dcId, `update public.numbering_counters set last_value = 0`));
+  await expectError('42501', async () => as(db, dcId, `update public.numbering_counters set last_value = 0`));
 });
 await test('200 permintaan serentak dari 20 koneksi: tanpa duplikat & tanpa lompatan', async () => {
   const pool = new pg.Pool({ connectionString: dbUrl, max: 20 });
@@ -211,7 +211,7 @@ async function runApproval(ver, sha, actors) {
 }
 let sop, sopVer, sopSha;
 await test('pengajuan SOP tanpa seksi ditolak', async () => {
-  await expectError('22023', () => as(db, ownerId, `select public.document_request('SOP', $1, 'Prosedur Pengelolaan Limbah B3')`, [HSE]));
+  await expectError('22023', async () => as(db, ownerId, `select public.document_request('SOP', $1, 'Prosedur Pengelolaan Limbah B3')`, [HSE]));
 });
 await test('pengajuan SOP mendapat nomor registrasi, belum nomor resmi', async () => {
   const r = await as(db, ownerId, `select (d).id, (d).registration_no, (d).document_number, (d).current_version_id from public.document_request('SOP', $1, 'Prosedur Pengelolaan Limbah B3', $2) d`, [HSE, ENV]);
@@ -220,10 +220,10 @@ await test('pengajuan SOP mendapat nomor registrasi, belum nomor resmi', async (
   eq(r.rows[0].document_number, null);
 });
 await test('staff departemen lain tidak bisa mengajukan untuk HSE', async () => {
-  await expectError('42501', () => as(db, spvPlt, `select public.document_request('SOP', $1, 'Prosedur Lain Lagi', $2)`, [HSE, ENV]));
+  await expectError('42501', async () => as(db, spvPlt, `select public.document_request('SOP', $1, 'Prosedur Lain Lagi', $2)`, [HSE, ENV]));
 });
 await test('tidak bisa diajukan tanpa berkas draf', async () => {
-  await expectError('22023', () => as(db, ownerId, `select public.document_submit($1)`, [sopVer]));
+  await expectError('22023', async () => as(db, ownerId, `select public.document_submit($1)`, [sopVer]));
 });
 await test('draf diajukan → tugas review untuk Supervisor HSE', async () => {
   const a = await upload(ownerId); sopSha = a.sha256;
@@ -236,23 +236,23 @@ await test('draf diajukan → tugas review untuk Supervisor HSE', async () => {
 });
 await test('draf terkunci setelah diajukan', async () => {
   const a = await upload(ownerId);
-  await expectError('22023', () => as(db, ownerId, `select public.document_attach_draft($1, $2)`, [sopVer, a.id]));
+  await expectError('22023', async () => as(db, ownerId, `select public.document_attach_draft($1, $2)`, [sopVer, a.id]));
 });
 await test('pemohon tidak bisa memproses pengajuannya sendiri', async () => {
   const t = await openTask(sopVer);
-  await expectError('42501', () => as(db, ownerId, `select public.act_on_task($1, 'approve', null, $2)`, [t.id, sopSha]));
+  await expectError('42501', async () => as(db, ownerId, `select public.act_on_task($1, 'approve', null, $2)`, [t.id, sopSha]));
 });
 await test('supervisor departemen lain tidak berwenang', async () => {
   const t = await openTask(sopVer);
-  await expectError('42501', () => as(db, spvPlt, `select public.act_on_task($1, 'approve', null, $2)`, [t.id, sopSha]));
+  await expectError('42501', async () => as(db, spvPlt, `select public.act_on_task($1, 'approve', null, $2)`, [t.id, sopSha]));
 });
 await test('approval atas isi berbeda (hash) ditolak', async () => {
   const t = await openTask(sopVer);
-  await expectError('40001', () => as(db, spvHse, `select public.act_on_task($1, 'approve', null, $2)`, [t.id, 'f'.repeat(64)]));
+  await expectError('40001', async () => as(db, spvHse, `select public.act_on_task($1, 'approve', null, $2)`, [t.id, 'f'.repeat(64)]));
 });
 await test('mengembalikan tanpa alasan ditolak', async () => {
   const t = await openTask(sopVer);
-  await expectError('22023', () => as(db, spvHse, `select public.act_on_task($1, 'return', '')`, [t.id]));
+  await expectError('22023', async () => as(db, spvHse, `select public.act_on_task($1, 'return', '')`, [t.id]));
 });
 await test('dikembalikan → revisi draf → diajukan ulang', async () => {
   const t = await openTask(sopVer);
@@ -265,7 +265,7 @@ await test('dikembalikan → revisi draf → diajukan ulang', async () => {
 });
 await test('belum disetujui → tidak bisa diterbitkan', async () => {
   const a = await upload(dcId);
-  await expectError('22023', () => as(db, dcId, `select public.document_release($1, '2026-10-24', $2)`, [sopVer, a.id]));
+  await expectError('22023', async () => as(db, dcId, `select public.document_release($1, '2026-10-24', $2)`, [sopVer, a.id]));
 });
 await test('review → verifikasi DC → approval Dept Head', async () => {
   await runApproval(sopVer, sopSha, [spvHse]);
@@ -277,7 +277,7 @@ await test('review → verifikasi DC → approval Dept Head', async () => {
 });
 await test('selain Document Controller tidak bisa menerbitkan', async () => {
   const a = await upload(dhHse);
-  await expectError('42501', () => as(db, dhHse, `select public.document_release($1, '2026-10-24', $2)`, [sopVer, a.id]));
+  await expectError('42501', async () => as(db, dhHse, `select public.document_release($1, '2026-10-24', $2)`, [sopVer, a.id]));
 });
 let sopNumber;
 await test('rilis: nomor resmi SOP terbit, jadwal tinjauan 3 tahun', async () => {
@@ -350,7 +350,7 @@ await test('rekaman (REK) langsung terdaftar dengan nomor tahunan', async () => 
   eq(r.rows[0].n, 'REK-BSB-HSE-SFT-2026-0001'); eq(r.rows[0].status, 'effective');
 });
 await test('SOP wajib lewat approval, tidak bisa diregistrasi langsung', async () => {
-  await expectError('22023', () => as(db, ownerId, `select public.document_register_record('SOP', $1, 'Prosedur Tanpa Approval', $2)`, [HSE, SFT]));
+  await expectError('22023', async () => as(db, ownerId, `select public.document_register_record('SOP', $1, 'Prosedur Tanpa Approval', $2)`, [HSE, SFT]));
 });
 await test('dokumen terbatas tidak terlihat oleh pengguna lain', async () => {
   await as(db, ownerId, `select public.document_request('KBJ', $1, 'Kebijakan Remunerasi Rahasia', null, null, 'confidential')`, [HSE]);
@@ -358,9 +358,145 @@ await test('dokumen terbatas tidak terlihat oleh pengguna lain', async () => {
   eq((await as(db, ownerId, `select 1 from public.documents where title = 'Kebijakan Remunerasi Rahasia'`)).rowCount, 1);
 });
 await test('pencabutan dokumen dengan alasan', async () => {
-  await expectError('22023', () => as(db, dcId, `select public.document_obsolete($1, '')`, [sop]));
+  await expectError('22023', async () => as(db, dcId, `select public.document_obsolete($1, '')`, [sop]));
   const r = await as(db, dcId, `select (d).status from public.document_obsolete($1, 'Digabung ke SOP Lingkungan') d`, [sop]);
   eq(r.rows[0].status, 'obsolete');
+});
+
+console.log('SMKP, legal register & CAPA');
+const hseMgr = await createUser('hse.mgr@bsb.co.id');
+await db.query(`update public.profiles set department_id = $1 where id = $2`, [HSE, hseMgr]);
+await db.query(`insert into public.user_roles(user_id, role_code, department_id) values ($1,'HSE_MANAGER',$2)`, [hseMgr, HSE]);
+const clause = async code => (await db.query(`select id from public.compliance_clauses where framework_code = 'SMKP' and code = $1`, [code])).rows[0].id;
+const C57 = await clause('5.7'), C22 = await clause('2.2'), C23 = await clause('2.3');
+const due = n => db.query(`select (app.site_today() + $1::int)::text d`, [n]).then(r => r.rows[0].d);
+const capaArgs = async (o = {}) => [o.title ?? 'Pasang rambu batas kecepatan di jalan hauling KM 12', 'Temuan inspeksi: rambu hilang',
+  'inspection', o.clause ?? C57, o.risk ?? 'high', HSE, o.pic ?? ownerId, o.verifier ?? spvHse, o.due ?? await due(10)];
+const CAPA_SQL = `select (a).* from public.capa_create($1,$2,$3,$4,$5,$6,$7,$8,$9::date) a`;
+const capaStatus = async id => (await db.query(`select status from public.corrective_actions where id = $1`, [id])).rows[0].status;
+
+await test('master SMKP berisi 7 elemen dan subelemennya, menjadi kerangka inti', async () => {
+  const r = await as(db, staffId, `select level, count(*)::int c from public.compliance_clauses where framework_code = 'SMKP' group by level order by level`);
+  eq(r.rows.find(x => x.level === 'element').c, 7);
+  eq(r.rows.find(x => x.level === 'subelement').c, 41);
+  eq((await db.query(`select is_core from public.compliance_frameworks where code = 'SMKP'`)).rows[0].is_core, true);
+});
+await test('elemen SMKP terpetakan ke ISO 45001 dan SMK3', async () => {
+  const r = await db.query(`select count(*)::int c from public.clause_mappings m join public.compliance_clauses t on t.id = m.mapped_clause_id
+    where t.framework_code in ('ISO45001','SMK3')`);
+  if (r.rows[0].c < 14) throw new Error(`hanya ${r.rows[0].c} pemetaan`);
+});
+await test('staff tanpa capa.create tidak bisa membuat action plan', async () => {
+  await expectError('42501', async () => as(db, ownerId, CAPA_SQL, await capaArgs()));
+});
+await test('action plan wajib menunjuk persyaratan yang valid', async () => {
+  await expectError('22023', async () => as(db, spvHse, CAPA_SQL, await capaArgs({ clause: randomUUID(), verifier: dhHse })));
+});
+await test('verifikator harus independen dan berwenang', async () => {
+  await expectError('22023', async () => as(db, dhHse, CAPA_SQL, await capaArgs({ pic: spvHse, verifier: spvHse })));
+  await expectError('22023', async () => as(db, dhHse, CAPA_SQL, await capaArgs({ verifier: otherId })));
+  await expectError('22023', async () => as(db, dhHse, CAPA_SQL, await capaArgs({ verifier: spvPlt })));
+});
+await test('target melebihi batas hari untuk risiko ekstrem ditolak', async () => {
+  await expectError('22023', async () => as(db, dhHse, CAPA_SQL, await capaArgs({ risk: 'extreme', due: await due(30) })));
+});
+let act;
+await test('action plan bernomor ACT dan PIC menerima notifikasi', async () => {
+  act = (await as(db, dhHse, CAPA_SQL, await capaArgs())).rows[0];
+  eq(act.action_no, `ACT-BSB-${new Date().getFullYear()}-000001`); eq(act.status, 'open');
+  eq((await as(db, ownerId, `select 1 from public.notifications where kind = 'capa.assigned'`)).rowCount, 1);
+});
+await test('tabel action plan tidak bisa diubah langsung oleh klien', async () => {
+  await expectError('42501', async () => as(db, dhHse, `update public.corrective_actions set status = 'closed' where id = $1`, [act.id]));
+});
+await test('hanya PIC yang melapor selesai, dan wajib dengan bukti', async () => {
+  const ev = await upload(ownerId);
+  await expectError('42501', async () => as(db, otherId, `select public.capa_submit($1, 'Rambu terpasang', $2)`, [act.id, [ev.id]]));
+  await expectError('22023', async () => as(db, ownerId, `select public.capa_submit($1, 'Rambu terpasang', '{}')`, [act.id]));
+  const foreign = await upload(otherId);
+  await expectError('22023', async () => as(db, ownerId, `select public.capa_submit($1, 'Rambu terpasang', $2)`, [act.id, [foreign.id]]));
+  await as(db, ownerId, `select public.capa_start($1)`, [act.id]);
+  await as(db, ownerId, `select public.capa_submit($1, 'Rambu terpasang', $2)`, [act.id, [ev.id]]);
+  eq(await capaStatus(act.id), 'submitted');
+});
+await test('pengembalian verifikator wajib beralasan dan kembali ke PIC', async () => {
+  await expectError('42501', async () => as(db, dhHse, `select public.capa_verify($1, true)`, [act.id]));
+  await expectError('22023', async () => as(db, spvHse, `select public.capa_verify($1, false, '')`, [act.id]));
+  await as(db, spvHse, `select public.capa_verify($1, false, 'Foto belum menunjukkan lokasi KM 12')`, [act.id]);
+  eq(await capaStatus(act.id), 'in_progress');
+  const ev = await upload(ownerId);
+  await as(db, ownerId, `select public.capa_submit($1, 'Foto lokasi ditambahkan', $2)`, [act.id, [ev.id]]);
+});
+await test('verifikasi menutup action plan dan otomatis menjadi bukti SMKP', async () => {
+  const r = await as(db, spvHse, `select (a).* from public.capa_verify($1, true, 'Sesuai') a`, [act.id]);
+  eq(r.rows[0].status, 'closed');
+  if (!r.rows[0].effectiveness_due) throw new Error('jadwal cek efektivitas kosong untuk risiko tinggi');
+  const e = await db.query(`select status from public.evidence_links where source_table = 'corrective_actions' and source_id = $1 and clause_id = $2`, [act.id, C57]);
+  eq(e.rows[0]?.status, 'accepted');
+  const h = await db.query(`select string_agg(event, ',' order by id) s from public.capa_events where action_id = $1`, [act.id]);
+  eq(h.rows[0].s, 'created,started,submitted,returned,submitted,verified');
+});
+await test('tindakan tidak efektif membuat action plan lanjutan', async () => {
+  await as(db, spvHse, `select public.capa_review_effectiveness($1, false, 'Rambu dicuri lagi, perlu rambu permanen')`, [act.id]);
+  const r = await db.query(`select action_no, status, pic_id from public.corrective_actions where parent_id = $1`, [act.id]);
+  eq(r.rowCount, 1); eq(r.rows[0].status, 'open'); eq(r.rows[0].pic_id, ownerId);
+  await expectError('22023', async () => as(db, spvHse, `select public.capa_review_effectiveness($1, true, 'ulang')`, [act.id]));
+});
+await test('perpanjangan target oleh atasan, maksimal dua kali, bukan oleh PIC', async () => {
+  const a = (await as(db, dhHse, CAPA_SQL, await capaArgs({ title: 'Perbaiki drainase', risk: 'medium', pic: spvHse, verifier: hseMgr }))).rows[0];
+  await expectError('42501', async () => as(db, spvHse, `select public.capa_extend($1, $2::date, 'hujan')`, [a.id, await due(40)]));
+  await expectError('22023', async () => as(db, dhHse, `select public.capa_extend($1, $2::date, '')`, [a.id, await due(40)]));
+  await as(db, dhHse, `select public.capa_extend($1, $2::date, 'Menunggu material')`, [a.id, await due(40)]);
+  await as(db, hseMgr, `select public.capa_extend($1, $2::date, 'Hujan')`, [a.id, await due(50)]);
+  await expectError('22023', async () => as(db, dhHse, `select public.capa_extend($1, $2::date, 'Lagi')`, [a.id, await due(60)]));
+  const r = await db.query(`select original_due_date < due_date x, extension_count from public.corrective_actions where id = $1`, [a.id]);
+  eq(r.rows[0].x, true); eq(r.rows[0].extension_count, 2);
+});
+await test('status kepatuhan per persyaratan dihitung dari bukti dan action plan', async () => {
+  const r = await as(db, staffId, `select evidence_accepted, capa_open from public.compliance_clause_status where id = $1`, [C57]);
+  eq(r.rows[0].evidence_accepted, 1); eq(r.rows[0].capa_open, 2);
+});
+await test('bukti harus rekaman sah dan tidak dinilai pengirimnya sendiri', async () => {
+  const draft = (await db.query(`select id from public.documents where status in ('draft','in_process','cancelled') limit 1`)).rows[0].id;
+  await expectError('22023', async () => as(db, ownerId, `select public.evidence_link($1, 'documents', $2, 'Draf')`, [C22, draft]));
+  const doc = (await db.query(`select id from public.documents where status = 'effective' limit 1`)).rows[0].id;
+  const l = (await as(db, hseMgr, `select (e).* from public.evidence_link($1, 'documents', $2, 'Rekaman IBPR') e`, [C22, doc])).rows[0];
+  eq(l.status, 'submitted');
+  await expectError('42501', async () => as(db, hseMgr, `select public.evidence_review($1, true)`, [l.id]));
+  await expectError('42501', async () => as(db, staffId, `select public.evidence_review($1, true)`, [l.id]));
+  const ia = await createUser('auditor@bsb.co.id');
+  await db.query(`insert into public.user_roles(user_id, role_code) values ($1, 'INTERNAL_AUDITOR')`, [ia]);
+  eq((await as(db, ia, `select (e).status from public.evidence_review($1, true) e`, [l.id])).rows[0].status, 'accepted');
+});
+let obligation;
+await test('legal register bernomor LGL dan menolak regulasi ganda', async () => {
+  const r = await as(db, hseMgr, `select (l).* from public.legal_register('Pedoman pelaksanaan kaidah teknik pertambangan yang baik',
+    'Kepmen ESDM 1827 K/30/MEM/2018', 'KEPMEN', $1, 'Menteri ESDM', '2018-05-08', 'https://jdih.esdm.go.id') l`, [HSE]);
+  eq(r.rows[0].register_no, 'LGL-BSB-0001');
+  await expectError('23505', async () => as(db, hseMgr, `select public.legal_register('x', 'kepmen esdm 1827 k/30/mem/2018', 'KEPMEN', $1)`, [HSE]));
+  await expectError('42501', async () => as(db, dhHse, `select public.legal_register('y', 'PP 50/2012', 'PP', $1)`, [HSE]));
+  obligation = (await as(db, hseMgr, `select (o).id from public.legal_add_obligation($1, 'Menerapkan SMKP Minerba', 'Lampiran IV', $2) o`,
+    [r.rows[0].id, C23])).rows[0].id;
+});
+await test('evaluasi tidak patuh wajib beralasan; patuh menjadi bukti', async () => {
+  await expectError('23514', async () => as(db, hseMgr, `select public.legal_evaluate($1, 'non_compliant')`, [obligation]));
+  await as(db, hseMgr, `select public.legal_evaluate($1, 'compliant')`, [obligation]);
+  const r = await db.query(`select compliance_status, next_evaluation_at > last_evaluated_at x from public.legal_obligations where id = $1`, [obligation]);
+  eq(r.rows[0].compliance_status, 'compliant'); eq(r.rows[0].x, true);
+  eq((await db.query(`select 1 from public.evidence_links where clause_id = $1 and source_table = 'legal_evaluations'`, [C23])).rowCount, 1);
+});
+await test('penilaian hanya bisa ditutup setelah semua persyaratan dinilai', async () => {
+  const a = (await as(db, hseMgr, `select (a).id from public.assessment_start('SMKP', 'Self assessment SMKP 2026', 'self', '2026-01-01', '2026-12-31') a`)).rows[0].id;
+  await expectError('23514', async () => as(db, hseMgr, `select public.assessment_record($1, $2, 'partial')`, [a, C57]));
+  await as(db, hseMgr, `select public.assessment_record($1, $2, 'partial', 'Efektivitas belum terbukti')`, [a, C57]);
+  await expectError('22023', async () => as(db, hseMgr, `select public.assessment_complete($1, 'ringkas')`, [a]));
+  await as(db, hseMgr, `select public.assessment_record($1, c.id, 'fulfilled') from public.compliance_clauses c
+    where c.framework_code = 'SMKP' and c.level = 'subelement' and c.applicability = 'applicable' and c.id <> $2`, [a, C57]);
+  eq((await as(db, hseMgr, `select (a).status from public.assessment_complete($1, 'Baseline') a`, [a])).rows[0].status, 'completed');
+});
+await test('kode persyaratan yang sudah dirujuk tidak bisa diubah', async () => {
+  await expectError('22023', async () => as(db, hseMgr, `update public.compliance_clauses set code = '5.9' where id = $1`, [C57]));
+  await expectError('42501', async () => as(db, dhHse, `update public.compliance_clauses set title = 'x' where id = $1`, [C22]).then(r => { if (!r.rowCount) { const e = new Error('rls'); e.code = '42501'; throw e; } }));
 });
 
 console.log('audit trail');
