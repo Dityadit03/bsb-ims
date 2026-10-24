@@ -4,20 +4,10 @@ import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { sha256, stampControlled } from '@/lib/pdf-stamp';
+import { MAX_BYTES, uploadAttachment } from '@/lib/attachments';
 
 export type ActionState = { error?: string; ok?: string };
-const MAX_BYTES = 25 * 1024 * 1024;
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim() || null;
-
-async function uploadAttachment(supabase: Awaited<ReturnType<typeof createClient>>, path: string, bytes: Uint8Array, name: string, mime: string) {
-  const { error: upErr } = await supabase.storage.from('records').upload(path, bytes, { contentType: mime, upsert: false });
-  if (upErr) throw new Error(`Gagal mengunggah berkas: ${upErr.message}`);
-  const { data, error } = await supabase.from('attachments')
-    .insert({ bucket: 'records', storage_path: path, file_name: name, mime_type: mime, size_bytes: bytes.byteLength, sha256: sha256(bytes) })
-    .select('id, sha256').single();
-  if (error) throw new Error(error.message);
-  return data;
-}
 
 export async function requestDocument(_: ActionState, form: FormData): Promise<ActionState> {
   const supabase = await createClient();

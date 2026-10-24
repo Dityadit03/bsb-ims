@@ -8,9 +8,10 @@ export const NAV: NavGroup[] = [
     { href: '/dokumen', label: 'Register dokumen' },
     { href: '/dokumen/ajukan', label: 'Ajukan / registrasi' },
   ] },
-  { code: 'M3', label: 'SMKP & CAPA', ready: false, items: [
+  { code: 'M3', label: 'SMKP & CAPA', ready: true, items: [
     { href: '/smkp', label: 'Matriks 7 elemen' },
     { href: '/capa', label: 'Action plan' },
+    { href: '/legal', label: 'Legal register' },
   ] },
   { code: 'M4', label: 'SHE', ready: false, items: [
     { href: '/she/p2h', label: 'P2H & inspeksi' },

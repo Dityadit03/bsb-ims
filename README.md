@@ -10,7 +10,8 @@ Menggantikan dan menyatukan [Document Control BSB](https://github.com/Dityadit03
 | M0 Fondasi | Login Google, pengguna & peran per departemen, master organisasi, audit trail, lampiran | Selesai |
 | M1 Penomoran & workflow | Skema nomor DC v4, alokasi atomik, impor nomor lama; approval berjenjang berversi, pemisahan tugas, delegasi, SLA, notifikasi | Selesai |
 | M2 Document Control | Pengajuan, review, verifikasi DC, approval, rilis PDF berstempel + QR + SHA-256, distribusi & tanda terima, revisi, pencabutan, registrasi rekaman/izin/surat, halaman verifikasi publik | Selesai (impor data DC v4 menyusul) |
-| M3–M10 | SMKP & CAPA, SHE, Plant, Produksi, Logistik, HRGA, Audit & MR, migrasi | Dijadwalkan |
+| M3 SMKP & CAPA | Matriks 7 elemen SMKP + pemetaan ISO/SMK3, bukti objektif, legal register & evaluasi kepatuhan, action plan dengan verifikator independen dan cek efektivitas, self-assessment | Selesai (rincian subelemen perlu validasi Lampiran IV) |
+| M4–M10 | SHE, Plant, Produksi, Logistik, HRGA, Audit & MR, migrasi | Dijadwalkan |
 
 ## Menjalankan
 1. Buat project Supabase (region Singapura), lalu jalankan semua file di `supabase/migrations` secara berurutan
