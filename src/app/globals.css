@@ -2,7 +2,7 @@
 
 /* Palet dari logo BSB: plum gelap untuk navigasi, magenta sebagai aksen, gradien magenta-ungu-oranye hanya sebagai garis penanda. */
 @theme {
-  --color-ground: #f6f5f9;
+  --color-ground: #f4f4f7;
   --color-panel: #ffffff;
   --color-ink: #1c1726;
   --color-muted: #625c70;
@@ -11,13 +11,14 @@
   --color-coal-ink: #ece8f3;
   --color-accent: #c2125a;
   --color-accent-soft: #fce6ef;
-  --color-violet: #6a1fc0;
+  --color-violet: #5b21b6;
+  --color-orange: #e8891a;
   --color-flame: #f95a11;
   --color-ok: #2f7d4f;
   --color-warn: #b07a00;
   --color-crit: #b3261e;
-  --font-sans: var(--font-plex), system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: var(--font-barlow), 'Arial Narrow', Arial, sans-serif;
+  --font-sans: var(--font-jakarta), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: var(--font-jakarta), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, Menlo, monospace;
 }
 
@@ -31,7 +32,8 @@
     --color-coal: #0f0b18;
     --color-accent: #f2588f;
     --color-accent-soft: #3d1a2a;
-    --color-violet: #a77bf0;
+    --color-violet: #8b5cf6;
+    --color-orange: #f0a04b;
     --color-ok: #5fbf86;
     --color-warn: #e0ad3a;
     --color-crit: #ef6b62;
@@ -40,7 +42,7 @@
 }
 
 body { background: var(--color-ground); color: var(--color-ink); }
-h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; letter-spacing: -0.02em; }
 :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .tabular { font-variant-numeric: tabular-nums; }
 @utility brand-line { background-image: linear-gradient(90deg, #ea0b60, #900fb3 55%, #f95a11); }

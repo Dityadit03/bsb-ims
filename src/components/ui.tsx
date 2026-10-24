@@ -2,23 +2,25 @@ import Link from 'next/link';
 
 export function PageHeader({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: React.ReactNode }) {
   return (
-    <header className="relative flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
-      <div className="grid gap-1">
-        {eyebrow && <span className="font-mono text-xs uppercase tracking-wider text-accent">{eyebrow}</span>}
-        <h1 className="text-4xl font-bold leading-none">{title}</h1>
+    <header className="flex flex-wrap items-end justify-between gap-4">
+      <div className="grid gap-1.5">
+        {eyebrow && <span className="font-mono text-xs uppercase tracking-wider text-muted">{eyebrow}</span>}
+        <h1 className="text-3xl font-extrabold leading-tight sm:text-4xl">{title}</h1>
       </div>
       {children}
-      <span aria-hidden className="brand-line absolute -bottom-px left-0 h-0.5 w-16 rounded-full" />
     </header>
   );
 }
 
-export function Panel({ title, children, action }: { title?: string; children: React.ReactNode; action?: React.ReactNode }) {
+export function Panel({ title, sub, children, action }: { title?: string; sub?: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <section className="grid min-w-0 content-start gap-3 rounded-xl border border-line bg-panel p-4 shadow-soft sm:p-5">
+    <section className="grid min-w-0 content-start gap-3 rounded-2xl border border-line bg-panel p-4 shadow-soft sm:p-5">
       {(title || action) && (
-        <div className="flex items-center justify-between gap-3">
-          {title && <h2 className="text-xl font-semibold">{title}</h2>}
+        <div className="flex items-start justify-between gap-3">
+          <div className="grid min-w-0 gap-0.5">
+            {title && <h2 className="text-base font-bold tracking-tight">{title}</h2>}
+            {sub && <p className="text-xs text-muted">{sub}</p>}
+          </div>
           {action}
         </div>
       )}
@@ -41,7 +43,7 @@ export function Pill({ tone = 'muted', children }: { tone?: keyof typeof TONES; 
 
 export function Table({ head, children }: { head: string[]; children: React.ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-line">
+    <div className="overflow-x-auto rounded-xl border border-line bg-panel">
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr>
@@ -56,12 +58,15 @@ export function Table({ head, children }: { head: string[]; children: React.Reac
   );
 }
 
-export function Stat({ label, value, href, note }: { label: string; value: number | string; href?: string; note?: string }) {
+const BAR = { crit: 'before:bg-crit', warn: 'before:bg-orange', ok: 'before:bg-ok', accent: 'before:bg-accent' } as const;
+const VALUE = { crit: 'text-crit', warn: 'text-orange', ok: '', accent: '' } as const;
+
+// Kartu angka; tone memberi garis warna di kiri (merah = perlu tindakan, oranye = segera)
+export function Stat({ label, value, href, note, tone }: { label: string; value: number | string; href?: string; note?: string; tone?: keyof typeof BAR }) {
   const body = (
-    <div className="relative grid gap-1 overflow-hidden rounded-xl border border-line bg-panel p-4 shadow-soft transition-colors">
-      <span aria-hidden className="brand-line absolute inset-x-0 top-0 h-0.5 opacity-70" />
-      <span className="font-mono text-xs uppercase tracking-wider text-muted">{label}</span>
-      <span className="tabular font-display text-4xl font-bold leading-none">{value}</span>
+    <div className={`relative grid h-full content-start gap-1.5 overflow-hidden rounded-2xl border border-line bg-panel p-4 shadow-soft transition-colors ${tone ? `before:absolute before:inset-y-0 before:left-0 before:w-1 ${BAR[tone]}` : ''}`}>
+      <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted">{label}</span>
+      <span className={`tabular text-3xl font-extrabold leading-none tracking-tight sm:text-4xl ${tone ? VALUE[tone] : ''}`}>{value}</span>
       {note && <span className="text-xs text-muted">{note}</span>}
     </div>
   );
@@ -69,8 +74,8 @@ export function Stat({ label, value, href, note }: { label: string; value: numbe
 }
 
 export const btn = 'inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50';
-export const btnPrimary = `${btn} bg-accent text-white shadow-sm hover:bg-accent/90`;
-export const btnGhost = `${btn} border border-line bg-panel hover:border-accent`;
+export const btnPrimary = `${btn} bg-violet text-white shadow-sm hover:bg-violet/90`;
+export const btnGhost = `${btn} border border-line bg-panel hover:border-violet/60`;
 export const input = 'w-full rounded-lg border border-line bg-panel px-3 py-2 text-sm transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20';
 
 // Pagination sederhana lewat parameter ?hal= agar daftar panjang tidak dirender sekaligus (berat di HP).
