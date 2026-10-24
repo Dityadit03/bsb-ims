@@ -58,6 +58,12 @@ export default async function PenggunaPage() {
                       </span>
                     )) : <span className="text-xs text-muted">Belum ada</span>}
                   </div>
+                  {u.status === 'active' && u.id !== s.profile.id && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-xs text-accent">Tambah peran</summary>
+                      <div className="mt-2"><ActivateForm userId={u.id} roles={roles ?? []} departments={depts ?? []} label="Tambah peran" /></div>
+                    </details>
+                  )}
                 </td>
                 <td><Pill tone={tone}>{label}</Pill></td>
               </tr>

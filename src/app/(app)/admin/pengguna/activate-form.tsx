@@ -3,8 +3,8 @@ import { useActionState } from 'react';
 import { btnPrimary, input } from '@/components/ui';
 import { activateUser } from './actions';
 
-export function ActivateForm({ userId, roles, departments }: {
-  userId: string; roles: { code: string; name: string }[]; departments: { id: string; code: string; name: string }[];
+export function ActivateForm({ userId, roles, departments, label = 'Aktifkan' }: {
+  userId: string; label?: string; roles: { code: string; name: string }[]; departments: { id: string; code: string; name: string }[];
 }) {
   const [state, action, pending] = useActionState(activateUser, {});
   return (
@@ -24,7 +24,7 @@ export function ActivateForm({ userId, roles, departments }: {
       <label className="grid gap-1 text-sm">Dasar penunjukan
         <input id={`basis-${userId}`} name="basis" className={input} placeholder="mis. SK No. 012/BSB/2026" />
       </label>
-      <button className={btnPrimary} disabled={pending}>Aktifkan</button>
+      <button className={btnPrimary} disabled={pending}>{label}</button>
       {state.error && <p className="text-sm text-crit sm:col-span-4">{state.error}</p>}
     </form>
   );
