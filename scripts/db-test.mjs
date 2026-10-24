@@ -499,6 +499,163 @@ await test('kode persyaratan yang sudah dirujuk tidak bisa diubah', async () => 
   await expectError('42501', async () => as(db, dhHse, `update public.compliance_clauses set title = 'x' where id = $1`, [C22]).then(r => { if (!r.rowCount) { const e = new Error('rls'); e.code = '42501'; throw e; } }));
 });
 
+console.log('SHE');
+const area = (await db.query(`select id from public.work_areas where code = 'HAUL'`)).rows[0].id;
+const today = await due(0);
+const RISK_SQL = `select (r).* from public.risk_save($1, $2, 'Hauling batubara', 'Jalan licin saat hujan', 'Unit tergelincir', $3, $4, $5, $6, 'SOP hauling', $7) r`;
+let risk;
+await test('risk register bernomor RSK per departemen, skor dan tingkat 5x5 dihitung', async () => {
+  await expectError('42501', async () => as(db, ownerId, RISK_SQL, [null, HSE, 4, 5, 2, 4, 'Grading dan water truck']));
+  await expectError('22023', async () => as(db, spvHse, RISK_SQL, [null, HSE, 4, 5, 3, 4, null]));
+  risk = (await as(db, spvHse, RISK_SQL, [null, HSE, 4, 5, 2, 4, 'Grading dan water truck'])).rows[0];
+  eq(risk.risk_no, 'RSK-BSB-HSE-0001'); eq(risk.initial_score, 20); eq(risk.residual_score, 8);
+  const v = (await as(db, spvHse, `select initial_level, residual_level from public.risk_register_view where id = $1`, [risk.id])).rows[0];
+  eq(v.initial_level, 'extreme'); eq(v.residual_level, 'medium');
+});
+await test('risiko residual tidak boleh lebih besar dari risiko awal', async () => {
+  await expectError('23514', async () => as(db, spvHse, RISK_SQL, [null, HSE, 1, 2, 3, 3, null]));
+});
+await test('penyusun tidak bisa menyetujui risikonya sendiri; persetujuan tercatat dan jadi bukti SMKP 2.2', async () => {
+  await expectError('42501', async () => as(db, spvHse, `select public.risk_approve($1)`, [risk.id]));
+  await expectError('42501', async () => as(db, dhHse, `select public.risk_approve($1)`, [risk.id]));
+  const r = (await as(db, hseMgr, `select (r).* from public.risk_approve($1) r`, [risk.id])).rows[0];
+  eq(r.status, 'approved'); if (!r.review_due) throw new Error('review_due kosong');
+  const e = await as(db, hseMgr, `select (e).status from public.evidence_link($1, 'risk_register', $2, 'IBPR hauling') e`, [C22, risk.id]);
+  eq(e.rows[0].status, 'submitted');
+});
+await test('mengubah risiko yang disetujui membuka revisi baru', async () => {
+  const r = (await as(db, spvHse, RISK_SQL, [risk.id, HSE, 4, 5, 2, 3, 'Grading, water truck, batas kecepatan'])).rows[0];
+  eq(r.status, 'draft'); eq(r.revision, 1); eq(r.risk_no, risk.risk_no);
+});
+await test('risiko residual ekstrem tidak bisa disetujui', async () => {
+  const r = (await as(db, spvHse, RISK_SQL, [null, HSE, 5, 5, 4, 5, 'Belum ada'])).rows[0];
+  await expectError('22023', async () => as(db, hseMgr, `select public.risk_approve($1)`, [r.id]));
+});
+
+let hz;
+const HZ_SQL = `select (h).* from public.hazard_report($1::date, $2, 'KTA', 'Rambu batas kecepatan KM 12 roboh', $3, $4::date, $5, null, 'Pasang ulang', $6, $7) h`;
+await test('hazard report bernomor HZD dan pengawas departemen PIC diberi tahu', async () => {
+  await expectError('42501', async () => as(db, otherId, HZ_SQL, [today, HSE, PLT, await due(3), area, 'high', []]));
+  await expectError('22023', async () => as(db, ownerId, HZ_SQL, [await due(1), HSE, PLT, await due(3), area, 'high', []]));
+  hz = (await as(db, ownerId, HZ_SQL, [today, HSE, PLT, await due(3), area, 'high', []])).rows[0];
+  eq(hz.hazard_no, `HZD-BSB-${new Date().getFullYear()}-00001`); eq(hz.status, 'open');
+  eq((await as(db, spvPlt, `select 1 from public.notifications where kind = 'she.hazard'`)).rowCount, 1);
+});
+await test('hazard ditutup oleh pengawas PIC; risiko tinggi wajib bukti foto', async () => {
+  await expectError('42501', async () => as(db, spvHse, `select public.hazard_close($1, 'Sudah dipasang')`, [hz.id]));
+  await expectError('22023', async () => as(db, spvPlt, `select public.hazard_close($1, 'Sudah dipasang')`, [hz.id]));
+  const foreign = await upload(ownerId);
+  await expectError('22023', async () => as(db, spvPlt, `select public.hazard_close($1, 'Sudah dipasang', $2)`, [hz.id, [foreign.id]]));
+  const ev = await upload(spvPlt);
+  eq((await as(db, spvPlt, `select (h).status from public.hazard_close($1, 'Sudah dipasang', $2) h`, [hz.id, [ev.id]])).rows[0].status, 'closed');
+  eq((await db.query(`select owner_table from public.attachments where id = $1`, [ev.id])).rows[0].owner_table, 'hazard_reports');
+});
+await test('hazard report tidak bisa diubah langsung oleh klien', async () => {
+  await expectError('42501', async () => as(db, spvPlt, `update public.hazard_reports set status = 'open' where id = $1`, [hz.id]));
+});
+
+await test('observasi tidak aman wajib uraian; tanpa coaching tetap open', async () => {
+  const O = `select (o).* from public.observation_record($1::date, $2, 'Pengisian fuel', $3, $4, 'Budi', 1, $5, $6) o`;
+  await expectError('23514', async () => as(db, spvHse, O, [today, HSE, 'unsafe', area, null, null]));
+  const o = (await as(db, spvHse, O, [today, HSE, 'unsafe', area, 'Tidak memakai sarung tangan', null])).rows[0];
+  eq(o.status, 'open'); eq(o.obs_no, `OBS-BSB-${new Date().getFullYear()}-00001`);
+  eq((await as(db, spvHse, `select (o).status from public.observation_close($1, 'Coaching APD') o`, [o.id])).rows[0].status, 'closed');
+  eq((await as(db, spvHse, O, [today, HSE, 'safe', area, null, null])).rows[0].status, 'closed');
+});
+
+let insp;
+await test('inspeksi mencatat temuan dan memakai nomor INS harian', async () => {
+  const findings = [{ description: 'APAR kadaluarsa', risk_level: 'medium', pic_department_id: PLT, due_date: await due(7) },
+                    { description: 'Kabel terkelupas', risk_level: 'high', pic_department_id: PLT, due_date: await due(2) }];
+  await expectError('22023', async () => as(db, spvHse, `select public.inspection_record($1::date, $2, 'workshop', 'Workshop', $3::jsonb)`,
+    [today, HSE, JSON.stringify([{ ...findings[0], due_date: await due(-1) }])]));
+  insp = (await as(db, spvHse, `select (i).* from public.inspection_record($1::date, $2, 'workshop', 'Workshop Plant', $3::jsonb, $4) i`,
+    [today, HSE, JSON.stringify(findings), area])).rows[0];
+  if (!/^INS-BSB-\d{8}-\d{4}$/.test(insp.inspection_no)) throw new Error(insp.inspection_no);
+  const f = (await as(db, spvHse, `select seq, status from public.she_finding_register where inspection_id = $1 order by seq`, [insp.id])).rows;
+  eq(f.length, 2); eq(f[1].status, 'open');
+});
+await test('temuan inspeksi ditutup pengawas PIC dengan bukti untuk risiko tinggi', async () => {
+  const f = (await db.query(`select id from public.inspection_findings where inspection_id = $1 and seq = 2`, [insp.id])).rows[0];
+  await expectError('42501', async () => as(db, spvHse, `select public.finding_close($1, 'Diganti')`, [f.id]));
+  await expectError('22023', async () => as(db, spvPlt, `select public.finding_close($1, 'Diganti')`, [f.id]));
+  const ev = await upload(spvPlt);
+  eq((await as(db, spvPlt, `select (x).status from public.finding_close($1, 'Kabel diganti', $2) x`, [f.id, [ev.id]])).rows[0].status, 'closed');
+});
+
+const items = (over = {}) => JSON.stringify(Object.assign({ brake: 'ok', lights: 'ok', horn: 'ok', seatbelt: 'ok', extinguisher: 'ok',
+  wheel_chock: 'ok', tyre: 'ok', glass_wiper: 'ok', cone: 'ok', radio: 'ok', leak: 'ok', reverse_alarm: 'ok' }, over));
+const P2H_SQL = `select (p).* from public.p2h_submit($1::date, 1, $2, $3, 'DT', $4::jsonb, 'fit', 12500, $5) p`;
+await test('P2H wajib checklist lengkap', async () => {
+  await expectError('22023', async () => as(db, ownerId, P2H_SQL, [today, HSE, 'DT-01', JSON.stringify({ brake: 'ok' }), null]));
+});
+await test('item kritis tidak OK memaksa unit tidak layak dan memberi tahu Plant', async () => {
+  await expectError('22023', async () => as(db, ownerId, P2H_SQL, [today, HSE, 'DT-02', items({ brake: 'not_ok' }), null]));
+  const p = (await as(db, ownerId, P2H_SQL, [today, HSE, 'dt-02', items({ brake: 'not_ok' }), 'Rem blong'])).rows[0];
+  eq(p.conclusion, 'unfit'); eq(p.unit_no, 'DT-02');
+  eq((await as(db, spvPlt, `select 1 from public.notifications where kind = 'she.p2h_unfit'`)).rowCount, 1);
+  const q = (await as(db, ownerId, P2H_SQL, [today, HSE, 'DT-03', items({ cone: 'not_ok' }), 'Cone hilang'])).rows[0];
+  eq(q.conclusion, 'fit_with_notes');
+});
+await test('satu unit hanya satu P2H per shift', async () => {
+  await expectError('23505', async () => as(db, ownerId, P2H_SQL, [today, HSE, 'DT-03', items(), null]));
+});
+
+await test('fit to work: kurang tidur tidak bisa dinyatakan fit; data kesehatan tidak terbuka untuk umum', async () => {
+  const F = `select (f).* from public.ftw_submit($1::date, 1, $2, $3, false, $4, 'Pusing') f`;
+  await expectError('22023', async () => as(db, ownerId, F, [today, HSE, 4, 'fit']));
+  const f = (await as(db, ownerId, F, [today, HSE, 4, 'fit_with_notes'])).rows[0];
+  eq((await as(db, actingId, `select 1 from public.fit_to_work where id = $1`, [f.id])).rowCount, 0);
+  eq((await as(db, spvHse, `select 1 from public.fit_to_work where id = $1`, [f.id])).rowCount, 1);
+  await expectError('42501', async () => as(db, ownerId, `select public.ftw_check($1, 'fit', 'ok')`, [f.id]));
+  await as(db, spvHse, `select public.ftw_check($1, 'unfit', 'Istirahat, diganti operator cadangan')`, [f.id]);
+});
+
+let inc;
+const INC_SQL = `select (i).* from public.incident_report($1::timestamptz, $2, $3, 'DT menyenggol LV di simpang KM 5', $4, null, 'DT-07', null, 'Area diamankan', $5) i`;
+await test('insiden lewat 24 jam wajib alasan keterlambatan', async () => {
+  await expectError('22023', async () => as(db, ownerId, INC_SQL, [new Date(Date.now() - 30 * 3600e3).toISOString(), HSE, 'property_damage', area, null]));
+  const r = (await as(db, ownerId, INC_SQL, [new Date(Date.now() - 30 * 3600e3).toISOString(), HSE, 'nearmiss', area, 'Radio mati'])).rows[0];
+  eq(r.late_report, true);
+});
+await test('insiden bernomor INC dan HSE manager diberi tahu', async () => {
+  inc = (await as(db, ownerId, INC_SQL, [new Date(Date.now() - 2 * 3600e3).toISOString(), HSE, 'property_damage', area, null])).rows[0];
+  if (!/^INC-BSB-\d{4}-\d{6}$/.test(inc.incident_no)) throw new Error(inc.incident_no);
+  eq((await as(db, hseMgr, `select 1 from public.notifications where kind = 'she.incident'`)).rowCount, 2);
+});
+await test('investigasi oleh investigator yang ditunjuk; penutupan oleh orang lain dan wajib action plan', async () => {
+  await expectError('42501', async () => as(db, spvHse, `select public.incident_assign($1, $2)`, [inc.id, spvHse]));
+  await as(db, hseMgr, `select public.incident_assign($1, $2)`, [inc.id, spvHse]);
+  await expectError('42501', async () => as(db, hseMgr, `select public.incident_investigate($1, 'x', 'y')`, [inc.id]));
+  await expectError('22023', async () => as(db, hseMgr, `select public.incident_close($1, 'Selesai')`, [inc.id]));
+  await as(db, spvHse, `select public.incident_investigate($1, 'Blind spot simpang tanpa cermin', 'Pasang convex mirror', 'property_damage')`, [inc.id]);
+  await expectError('22023', async () => as(db, hseMgr, `select public.incident_close($1, 'Selesai')`, [inc.id]));
+  await as(db, dhHse, `select public.capa_create('Pasang convex mirror simpang KM 5', 'Hasil investigasi', 'incident', $1, 'medium', $2, $3, $4, $5::date,
+    'corrective', 'engineering', 'incidents', $6, $7)`, [await clause('5.4'), HSE, ownerId, spvHse, await due(20), inc.id, inc.incident_no]);
+  eq((await as(db, hseMgr, `select (i).status from public.incident_close($1, 'Action plan berjalan') i`, [inc.id])).rows[0].status, 'closed');
+  eq((await as(db, hseMgr, `select capa_count from public.incident_register where id = $1`, [inc.id])).rows[0].capa_count, 1);
+});
+await test('LTI hanya bisa ditutup setelah pelaporan ke KaIT dicatat', async () => {
+  const x = (await as(db, ownerId, INC_SQL, [new Date(Date.now() - 3600e3).toISOString(), HSE, 'lti', area, null])).rows[0];
+  await as(db, hseMgr, `select public.incident_assign($1, $2)`, [x.id, spvHse]);
+  await as(db, spvHse, `select public.incident_investigate($1, 'Prosedur tidak diikuti', 'Retraining')`, [x.id]);
+  await as(db, dhHse, `select public.capa_create('Retraining operator', 'Hasil investigasi', 'incident', $1, 'high', $2, $3, $4, $5::date,
+    'corrective', 'administrative', 'incidents', $6)`, [await clause('5.4'), HSE, ownerId, spvHse, await due(10), x.id]);
+  await expectError('22023', async () => as(db, hseMgr, `select public.incident_close($1, 'Selesai')`, [x.id]));
+  await as(db, hseMgr, `select public.incident_close($1, 'Selesai', now())`, [x.id]);
+});
+
+await test('SAP menghitung act mingguan (Selasa–Senin) terhadap target, nol saat cuti', async () => {
+  eq((await db.query(`select app.sap_week('2026-10-13')::text a, app.sap_week('2026-10-19')::text b, app.sap_week('2026-10-20')::text c`)).rows[0].b, '2026-10-13');
+  eq((await db.query(`select app.sap_week('2026-10-20')::text c`)).rows[0].c, '2026-10-20');
+  await expectError('42501', async () => as(db, spvHse, `select public.sap_set_target($1, '2026-01-06', 3, 2, 2)`, [spvHse]));
+  await as(db, hseMgr, `select public.sap_set_target($1, '2026-01-06', 3, 2, 2)`, [spvHse]);
+  const w = (await as(db, hseMgr, `select * from public.sap_weekly where user_id = $1 and week_start = app.sap_week(app.site_today())`, [spvHse])).rows[0];
+  eq(w.obs_target, 3); eq(w.obs_act, 2); eq(w.insp_act, 1);
+  await as(db, hseMgr, `select public.sap_set_leave($1, app.sap_week(app.site_today()), true)`, [spvHse]);
+  eq((await as(db, hseMgr, `select obs_target from public.sap_weekly where user_id = $1 and week_start = app.sap_week(app.site_today())`, [spvHse])).rows[0].obs_target, 0);
+});
+
 await test('anon hanya bisa memanggil verifikasi dokumen', async () => {
   const r = await db.query(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')`);

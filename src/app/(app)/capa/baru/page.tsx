@@ -25,7 +25,7 @@ export default async function NewCapaPage({ searchParams }: { searchParams: Prom
     <>
       <PageHeader eyebrow="Action plan" title="Buat action plan" />
       <Panel>
-        <ActionForm action={createAction} label="Simpan dan terbitkan nomor ACT" primary hidden={{ idem: randomUUID() }} className="max-w-3xl">
+        <ActionForm action={createAction} label="Simpan dan terbitkan nomor ACT" primary hidden={{ idem: randomUUID(), ...(sp.tabel && sp.sid ? { source_table: sp.tabel, source_id: sp.sid } : {}) }} className="max-w-3xl">
           <label className="grid gap-1 text-sm">Judul tindakan<input name="title" required className={input} placeholder="mis. Pasang rambu batas kecepatan KM 12" /></label>
           <label className="grid gap-1 text-sm">Uraian masalah dan tindakan<textarea name="description" required rows={4} className={input} /></label>
           <div className="grid gap-3 sm:grid-cols-2">

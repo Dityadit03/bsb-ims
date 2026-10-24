@@ -13,10 +13,13 @@ export const NAV: NavGroup[] = [
     { href: '/capa', label: 'Action plan' },
     { href: '/legal', label: 'Legal register' },
   ] },
-  { code: 'M4', label: 'SHE', ready: false, items: [
-    { href: '/she/p2h', label: 'P2H & inspeksi' },
+  { code: 'M4', label: 'SHE', ready: true, items: [
+    { href: '/she', label: 'Ringkasan & formulir' },
+    { href: '/she/hazard', label: 'Hazard report' },
+    { href: '/she/inspeksi', label: 'Inspeksi' },
     { href: '/she/insiden', label: 'Insiden' },
     { href: '/she/risiko', label: 'Risk register' },
+    { href: '/she/sap', label: 'SAP' },
   ] },
   { code: 'M5', label: 'Plant', ready: false, items: [{ href: '/plant', label: 'Unit & work order' }] },
   { code: 'M6', label: 'Produksi', ready: false, items: [{ href: '/produksi', label: 'Hauling' }] },

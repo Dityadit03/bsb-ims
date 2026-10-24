@@ -14,7 +14,8 @@ export async function createAction(_: ActionState, form: FormData): Promise<Acti
     p_clause: str(form, 'clause'), p_risk: str(form, 'risk'), p_department: str(form, 'department'),
     p_pic: str(form, 'pic'), p_verifier: str(form, 'verifier'), p_due: str(form, 'due'),
     p_action_type: str(form, 'action_type') ?? 'corrective', p_control_hierarchy: str(form, 'hierarchy'),
-    p_source_ref: str(form, 'source_ref'), p_idempotency_key: str(form, 'idem'),
+    p_source_ref: str(form, 'source_ref'), p_source_table: str(form, 'source_table'), p_source_id: str(form, 'source_id'),
+    p_idempotency_key: str(form, 'idem'),
   });
   if (error) return { error: error.message };
   redirect(`/capa/${(data as { id: string }).id}`);
