@@ -1,16 +1,18 @@
 @import 'tailwindcss';
 
-/* Palet industri: graphite + oranye hi-vis untuk penanda; netral sedikit hijau-abu agar tidak datar. */
+/* Palet dari logo BSB: plum gelap untuk navigasi, magenta sebagai aksen, gradien magenta-ungu-oranye hanya sebagai garis penanda. */
 @theme {
-  --color-ground: #f5f6f4;
+  --color-ground: #f6f5f9;
   --color-panel: #ffffff;
-  --color-ink: #1d2321;
-  --color-muted: #5d6763;
-  --color-line: #d9ddd9;
-  --color-coal: #232826;
-  --color-coal-ink: #e6e9e7;
-  --color-accent: #d4540f;
-  --color-accent-soft: #fbe7da;
+  --color-ink: #1c1726;
+  --color-muted: #625c70;
+  --color-line: #e3e0ea;
+  --color-coal: #1e1433;
+  --color-coal-ink: #ece8f3;
+  --color-accent: #c2125a;
+  --color-accent-soft: #fce6ef;
+  --color-violet: #6a1fc0;
+  --color-flame: #f95a11;
   --color-ok: #2f7d4f;
   --color-warn: #b07a00;
   --color-crit: #b3261e;
@@ -21,14 +23,15 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-ground: #151918;
-    --color-panel: #1d2221;
-    --color-ink: #e6e9e7;
-    --color-muted: #9aa49f;
-    --color-line: #323a37;
-    --color-coal: #0e1110;
-    --color-accent: #f07a36;
-    --color-accent-soft: #3a2518;
+    --color-ground: #131019;
+    --color-panel: #1c1824;
+    --color-ink: #ece8f3;
+    --color-muted: #a39cb0;
+    --color-line: #332d3e;
+    --color-coal: #0f0b18;
+    --color-accent: #f2588f;
+    --color-accent-soft: #3d1a2a;
+    --color-violet: #a77bf0;
     --color-ok: #5fbf86;
     --color-warn: #e0ad3a;
     --color-crit: #ef6b62;
@@ -40,3 +43,8 @@ body { background: var(--color-ground); color: var(--color-ink); }
 h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; }
 :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .tabular { font-variant-numeric: tabular-nums; }
+@utility brand-line { background-image: linear-gradient(90deg, #ea0b60, #900fb3 55%, #f95a11); }
+@utility shadow-soft {
+  box-shadow: 0 1px 2px rgb(30 20 51 / 0.05), 0 4px 16px -8px rgb(30 20 51 / 0.12);
+  @media (prefers-color-scheme: dark) { box-shadow: none; }
+}

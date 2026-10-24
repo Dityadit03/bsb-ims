@@ -20,21 +20,21 @@ export function Sidebar({ permissions, name, email }: { permissions: string[]; n
 
   return (
     <>
-      <div className="sticky top-0 z-20 flex items-center justify-between bg-coal px-4 py-3 text-coal-ink lg:hidden">
-<span className="flex items-center gap-2 font-display text-xl font-bold tracking-wide"><span className="grid size-8 place-items-center rounded-md bg-white p-0.5"><Image src="/logo.png" alt="" width={32} height={32} priority /></span>BSB IMS</span>
-        <button onClick={() => setOpen(o => !o)} className="rounded border border-white/20 px-3 py-1 text-sm" aria-expanded={open} aria-controls="nav">
+      <div className="sticky top-0 z-20 flex items-center justify-between bg-coal px-4 py-3 text-coal-ink after:brand-line after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 lg:hidden">
+<span className="flex items-center gap-2 font-display text-xl font-bold tracking-wide"><span className="grid size-8 place-items-center rounded-lg bg-white p-0.5 shadow-sm"><Image src="/logo.png" alt="" width={32} height={32} priority /></span>BSB IMS</span>
+        <button onClick={() => setOpen(o => !o)} className="rounded-lg border border-white/20 px-3 py-1 text-sm" aria-expanded={open} aria-controls="nav">
           Menu
         </button>
       </div>
       {open && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setOpen(false)} aria-hidden />}
-      <aside id="nav" className={`${open ? 'flex' : 'hidden'} fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] flex-col overflow-y-auto bg-coal text-coal-ink shadow-xl lg:sticky lg:top-0 lg:bottom-auto lg:z-auto lg:flex lg:h-dvh lg:w-64 lg:max-w-none lg:shrink-0 lg:shadow-none`}>
+      <aside id="nav" className={`${open ? 'flex' : 'hidden'} fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] flex-col overflow-y-auto bg-coal bg-[radial-gradient(120%_50%_at_0%_0%,rgb(144_15_179/0.28),transparent_60%)] text-coal-ink shadow-xl lg:sticky lg:top-0 lg:bottom-auto lg:z-auto lg:flex lg:h-dvh lg:w-64 lg:max-w-none lg:shrink-0 lg:shadow-none`}>
         <div className="flex items-center justify-between px-5 pt-4 lg:hidden">
-  <span className="flex items-center gap-2 font-display text-xl font-bold tracking-wide"><span className="grid size-8 place-items-center rounded-md bg-white p-0.5"><Image src="/logo.png" alt="" width={32} height={32} priority /></span>BSB IMS</span>
+  <span className="flex items-center gap-2 font-display text-xl font-bold tracking-wide"><span className="grid size-8 place-items-center rounded-lg bg-white p-0.5 shadow-sm"><Image src="/logo.png" alt="" width={32} height={32} priority /></span>BSB IMS</span>
           <button onClick={() => setOpen(false)} className="rounded px-3 py-2 text-sm text-coal-ink/70" aria-label="Tutup menu">Tutup</button>
         </div>
         <div className="hidden px-5 pb-2 pt-6 lg:block">
           <div className="flex items-center gap-2.5 font-display text-2xl font-bold tracking-wide">
-            <span className="grid size-10 place-items-center rounded-md bg-white p-0.5"><Image src="/logo.png" alt="" width={40} height={40} priority /></span>BSB IMS
+            <span className="grid size-10 place-items-center rounded-lg bg-white p-0.5 shadow-sm"><Image src="/logo.png" alt="" width={40} height={40} priority /></span>BSB IMS
           </div>
           <div className="font-mono text-[11px] uppercase tracking-wider text-coal-ink/60">Integrated Management System</div>
         </div>
@@ -57,7 +57,7 @@ export function Sidebar({ permissions, name, email }: { permissions: string[]; n
                     );
                   return (
                     <Link key={item.href} href={item.href} onClick={() => setOpen(false)}
-                      className={`rounded px-2 py-2.5 text-sm lg:py-1.5 ${active ? 'bg-accent text-white' : 'text-coal-ink/85 hover:bg-white/5'}`}>
+                      className={`relative rounded-lg px-3 py-2.5 text-sm transition-colors lg:py-1.5 ${active ? 'bg-white/10 font-medium text-white before:brand-line before:absolute before:inset-y-1.5 before:left-0 before:w-1 before:rounded-full' : 'text-coal-ink/80 hover:bg-white/5 hover:text-white'}`}>
                       {item.label}
                     </Link>
                   );
@@ -69,15 +69,15 @@ export function Sidebar({ permissions, name, email }: { permissions: string[]; n
           <div className="truncate font-medium">{name}</div>
           <div className="truncate text-xs text-coal-ink/60">{email}</div>
           <form action="/auth/keluar" method="post" className="mt-2">
-            <button className="text-xs text-accent hover:underline">Keluar</button>
+            <button className="text-xs text-coal-ink/70 hover:text-white hover:underline">Keluar</button>
           </form>
         </div>
       </aside>
-      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-line bg-panel pb-[env(safe-area-inset-bottom)] text-[11px] lg:hidden" aria-label="Aksi cepat">
+      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-line bg-panel/95 backdrop-blur pb-[env(safe-area-inset-bottom)] text-[11px] lg:hidden" aria-label="Aksi cepat">
         {QUICK.map(([href, label, icon]) => {
           const active = href === '/' ? path === '/' : path.startsWith(href);
           return (
-            <Link key={href} href={href} className={`flex flex-col items-center gap-0.5 py-2 ${active ? 'text-accent' : 'text-muted'}`}>
+            <Link key={href} href={href} className={`flex flex-col items-center gap-0.5 py-2 ${active ? 'font-medium text-accent' : 'text-muted'}`}>
               <span aria-hidden className="text-lg leading-none">{icon}</span>{label}
             </Link>
           );
