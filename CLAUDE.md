@@ -16,6 +16,8 @@ Rencana build: https://claude.ai/artifact/1hBNpZYGgXVwAzeB28bgAi
 - Format nomor dokumen mengikuti Document Control BSB v4 (KBJ, MAN, SOP, STD, IK, F, PRG, REK, IZN, EXT, SRM, SRK, SKP) dan tidak boleh diubah.
 - Kode departemen/seksi: HSE(SFT,HLT,ENV) PLT(MTC) PRD(OPR) HRGA(HRD,GA) LOG(PUR) MGT(DIR,DC).
 - Setiap aturan bisnis baru diberi uji di `scripts/db-test.mjs`.
+- Fungsi yang boleh dipanggil `anon` hanya `verify_document` dan `feed_rows` (feed Google Sheets bertoken). Loop revoke di akhir migrasi baru wajib mengecualikan keduanya.
+- Register baru yang perlu diunduh/ditarik ke spreadsheet didaftarkan di `src/lib/datasets.ts` (feed hanya untuk data yang terbaca semua pengguna aktif, dan juga ditambahkan ke daftar di `feed_rows`).
 
 ## Perintah
 - `npm run dev` / `npm run build` / `npm run typecheck`

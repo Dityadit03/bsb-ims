@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExportLinks } from '@/components/export-links';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, Pill, Stat, Table, btnGhost, input, paginate, Pager } from '@/components/ui';
 import { getSession } from '@/lib/session';
@@ -32,6 +33,7 @@ export default async function SpipPage({ searchParams }: { searchParams: Promise
   return (
     <>
       <PageHeader eyebrow="SMKP 4.4 · Komisioning sarana, prasarana, instalasi & peralatan" title="Komisioning SPIP">
+        <ExportLinks dataset="spip" />
         <Link href="/plant" className="text-sm text-accent hover:underline">← Unit</Link>
       </PageHeader>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

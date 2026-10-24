@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { DropZone } from '@/components/drop-zone';
 import { notFound } from 'next/navigation';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, Pill, Table, btnGhost, input } from '@/components/ui';
@@ -69,7 +70,7 @@ export default async function LegalDetail({ params }: { params: Promise<{ id: st
                         {['compliant', 'partial', 'non_compliant', 'not_applicable'].map(k => <option key={k} value={k}>{COMPLIANCE[k][1]}</option>)}
                       </select>
                       <input name="note" className={input} placeholder="Catatan (wajib bila tidak patuh)" aria-label="Catatan" />
-                      <input type="file" name="file" className={input} aria-label="Bukti" />
+                      <DropZone name="file" label="Bukti" multiple={false} hint="Seret atau pilih berkas bukti" />
                     </ActionForm>
                   )}
                 </td>

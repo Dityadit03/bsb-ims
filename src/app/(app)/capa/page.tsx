@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExportLinks } from '@/components/export-links';
 import { PageHeader, Pill, Stat, Table, btnGhost, btnPrimary, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
@@ -38,6 +39,7 @@ export default async function CapaPage({ searchParams }: { searchParams: Promise
   return (
     <>
       <PageHeader eyebrow="SMKP Elemen 5.7 · Tindak lanjut" title="Action plan">
+        <ExportLinks dataset="capa" />
         {s.can('capa.create') && <Link href="/capa/baru" className={btnPrimary}>Buat action plan</Link>}
       </PageHeader>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">

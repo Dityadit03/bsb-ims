@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { DropZone } from '@/components/drop-zone';
 import { Tabs } from '@/components/tabs';
 import { input } from '@/components/ui';
 import { RISK } from '@/lib/compliance';
@@ -51,7 +52,7 @@ export function RiskSelect({ name = 'risk', value = 'medium' }: { name?: string;
 }
 
 export function Files({ label = 'Foto / lampiran' }: { label?: string }) {
-  return <label className="grid gap-1 text-sm">{label}<input type="file" name="files" multiple accept="image/*,application/pdf" capture="environment" className={input} /></label>;
+  return <DropZone label={label} accept="image/*,application/pdf" hint="Ketuk untuk memotret / memilih, atau seret berkas ke sini" />;
 }
 
 const TABS = [

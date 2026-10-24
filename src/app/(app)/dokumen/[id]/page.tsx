@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { DropZone } from '@/components/drop-zone';
 import { notFound } from 'next/navigation';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, Pill, Table, input } from '@/components/ui';
@@ -78,7 +79,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
               {isOwner && editable && (
                 <div className="grid gap-4 border-t border-line pt-3">
                   <ActionForm action={uploadDraft} label="Lampirkan draf" hidden={{ version: current.id, document: doc.id }}>
-                    <input id="file" type="file" name="file" accept=".pdf,.docx,.xlsx" required className="text-sm" />
+                    <DropZone name="file" label="Berkas draf" multiple={false} accept=".pdf,.docx,.xlsx" required hint="Seret PDF / Word / Excel ke sini atau ketuk untuk memilih" />
                     <span className="text-xs text-muted">PDF diperlukan untuk rilis terkendali. Maksimal 25 MB.</span>
                   </ActionForm>
                   {current.draft && <ActionForm action={submitVersion} label="Ajukan untuk review" primary hidden={{ version: current.id, document: doc.id }} />}

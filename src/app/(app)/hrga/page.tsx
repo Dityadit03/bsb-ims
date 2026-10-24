@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExportLinks } from '@/components/export-links';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Pager, Panel, Pill, Stat, Table, input, paginate } from '@/components/ui';
 import { getSession } from '@/lib/session';
@@ -32,7 +33,7 @@ export default async function HrgaPage({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHeader eyebrow="SMKP 3.5 · Kompetensi, pendidikan & pelatihan" title="HRGA" />
+      <PageHeader eyebrow="SMKP 3.5 · Kompetensi, pendidikan & pelatihan" title="HRGA"><ExportLinks dataset="karyawan" /></PageHeader>
       <HrTabs active="/hrga" />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label={sp.keluar ? 'Karyawan keluar' : 'Karyawan aktif'} value={all.length} />

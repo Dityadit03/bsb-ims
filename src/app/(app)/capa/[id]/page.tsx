@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { DropZone } from '@/components/drop-zone';
 import { notFound } from 'next/navigation';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, Pill, input } from '@/components/ui';
@@ -64,7 +65,7 @@ export default async function CapaDetail({ params }: { params: Promise<{ id: str
             <Panel title="Laporkan penyelesaian">
               <ActionForm action={submitAction} label="Kirim ke verifikator" primary hidden={{ id }}>
                 <label className="grid gap-1 text-sm">Uraian tindakan yang dilakukan<textarea name="note" required rows={3} className={input} /></label>
-                <label className="grid gap-1 text-sm">Bukti (foto sebelum/sesudah, dokumen)<input type="file" name="files" multiple required className={input} /></label>
+                <DropZone label="Bukti (foto sebelum/sesudah, dokumen)" required />
               </ActionForm>
             </Panel>
           )}

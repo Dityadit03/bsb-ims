@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExportLinks } from '@/components/export-links';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, Pill, Table, input, Clamp, Pager, paginate } from '@/components/ui';
 import { getSession } from '@/lib/session';
@@ -35,7 +36,7 @@ export default async function KompetensiPage({ searchParams }: { searchParams: P
 
   return (
     <>
-      <PageHeader eyebrow="SMKP 3.5 · Kompetensi" title="Kompetensi & SIMPER" />
+      <PageHeader eyebrow="SMKP 3.5 · Kompetensi" title="Kompetensi & SIMPER"><ExportLinks dataset="kompetensi" /></PageHeader>
       <HrTabs active="/hrga/kompetensi" />
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title={`Kompetensi wajib belum terpenuhi (${gapCount ?? gaps?.length ?? 0})`}>

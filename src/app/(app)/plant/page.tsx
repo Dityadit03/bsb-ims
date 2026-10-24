@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExportLinks } from '@/components/export-links';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, Pill, Stat, Table, input, Pager, paginate } from '@/components/ui';
 import { getSession } from '@/lib/session';
@@ -33,6 +34,7 @@ export default async function PlantPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader eyebrow="SMKP 4.4 · Sarana, prasarana, instalasi & peralatan" title="Unit & work order">
+        <ExportLinks dataset="unit" />
         <span className="flex gap-4 text-sm"><Link href="/plant/spip" className="text-accent hover:underline">Komisioning SPIP →</Link><Link href="/plant/wo" className="text-accent hover:underline">Work order →</Link></span>
       </PageHeader>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">

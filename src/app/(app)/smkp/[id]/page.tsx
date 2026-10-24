@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { DropZone } from '@/components/drop-zone';
 import { notFound } from 'next/navigation';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, Pill, Table, btnPrimary, input } from '@/components/ui';
@@ -123,7 +124,7 @@ export default async function ClausePage({ params }: { params: Promise<{ id: str
                   {(docs ?? []).map(d => <option key={d.id} value={d.id}>{d.document_number} · {d.title}</option>)}
                 </select>
               </label>
-              <label className="grid gap-1 text-sm">Berkas<input type="file" name="file" className={input} /></label>
+              <DropZone name="file" label="Berkas" multiple={false} />
               {(controls ?? []).length > 0 && (
                 <label className="grid gap-1 text-sm">Kontrol
                   <select name="control" className={input} defaultValue=""><option value="">–</option>

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { ExportLinks } from '@/components/export-links';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, Pill, Stat, Table, btnGhost, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
@@ -32,7 +33,7 @@ export default async function ViolationPage({ searchParams }: { searchParams: Pr
 
   return (
     <>
-      <PageHeader eyebrow="Golden Rules & SPDK · SMKP 3.5 · Disiplin" title="Pelanggaran" />
+      <PageHeader eyebrow="Golden Rules & SPDK · SMKP 3.5 · Disiplin" title="Pelanggaran"><ExportLinks dataset="pelanggaran" /></PageHeader>
       <SheTabs active="/she/pelanggaran" />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Tercatat" value={rows.length} />

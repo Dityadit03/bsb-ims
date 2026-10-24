@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExportLinks } from '@/components/export-links';
 import { randomUUID } from 'node:crypto';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, Pill, Stat, Table, input } from '@/components/ui';
@@ -33,7 +34,7 @@ export default async function IncidentPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <PageHeader eyebrow="SMKP 5.4 · Penyelidikan kecelakaan" title="Insiden" />
+      <PageHeader eyebrow="SMKP 5.4 · Penyelidikan kecelakaan" title="Insiden"><ExportLinks dataset="insiden" /></PageHeader>
       <SheTabs active="/she/insiden" />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label={`Nearmiss ${year}`} value={n(['nearmiss'])} />

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExportLinks } from '@/components/export-links';
 import { PageHeader, Pill, Table, btnPrimary, input, btnGhost } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
@@ -35,6 +36,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader eyebrow="Document Control" title="Register dokumen">
+        <ExportLinks dataset="dokumen" />
         <Link href="/dokumen/ajukan" className={btnPrimary}>Ajukan dokumen</Link>
       </PageHeader>
       <form className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">

@@ -842,6 +842,79 @@ await test('evaluasi supplier: nilai rendah wajib catatan; grade dari rata-rata'
   eq(s.sc, 3.6); eq(s.grade, 'B');
 });
 
+console.log('Pengadaan (alur Syshab)');
+let mrLine, prShort, poSmall, sup2;
+const lineOf = async mr => (await db.query(`select id from public.material_request_lines where mr_id = $1`, [mr])).rows[0].id;
+const stage = async line => (await as(db, pltStaff, `select stage from public.mr_tracking where mr_line_id = $1`, [line])).rows[0].stage;
+await test('approval MR per baris: pending wajib catatan, jumlah bisa dikurangi, GI dibatasi jumlah disetujui', async () => {
+  const mr = (await as(db, pltStaff, `select (r).* from public.mr_create($1, 'Servis berkala', $2::jsonb, null, $3) r`,
+    [PLT, JSON.stringify([{ material: sp.id, qty: 4 }]), woLog.id])).rows[0];
+  mrLine = await lineOf(mr.id);
+  await expectError('22023', async () => as(db, dhPlt, `select public.mr_decide($1, 'pending', '')`, [mr.id]));
+  eq((await as(db, dhPlt, `select (r).status from public.mr_decide($1, 'pending', 'Konfirmasi nomor part') r`, [mr.id])).rows[0].status, 'pending');
+  eq(await stage(mrLine), 'awaiting_approval');
+  await expectError('42501', async () => as(db, pltStaff, `select public.mr_decide($1, 'approve')`, [mr.id]));
+  await expectError('22023', async () => as(db, dhPlt, `select public.mr_decide($1, 'approve', null, $2::jsonb)`, [mr.id, JSON.stringify([{ line: mrLine, qty: 0 }])]));
+  eq((await as(db, dhPlt, `select (r).status from public.mr_decide($1, 'approve', 'Cukup 2', $2::jsonb) r`, [mr.id, JSON.stringify([{ line: mrLine, qty: 2 }])])).rows[0].status, 'approved');
+  eq(await stage(mrLine), 'ready');
+  await expectError('22023', async () => as(db, logStaff, `select public.goods_issue($1, $2::jsonb)`, [mr.id, JSON.stringify([{ line: mrLine, qty: 3 }])]));
+  eq((await as(db, logStaff, `select (r).status from public.goods_issue($1, $2::jsonb) r`, [mr.id, JSON.stringify([{ line: mrLine, qty: 2 }])])).rows[0].status, 'issued');
+});
+await test('PR otomatis dari kekurangan stok MR; tidak dobel; disetujui orang lain', async () => {
+  // mrBig: disetujui 20, keluar 15, stok 1 → kurang 4
+  await expectError('42501', async () => as(db, pltStaff, `select public.pr_from_mr($1)`, [mrBig.id]));
+  prShort = (await as(db, logStaff, `select (p).* from public.pr_from_mr($1) p`, [mrBig.id])).rows[0];
+  if (!/^PR-BSB-\d{4}-\d{5}$/.test(prShort.pr_no)) throw new Error(prShort.pr_no);
+  eq(Number((await db.query(`select qty from public.purchase_requisition_lines where pr_id = $1`, [prShort.id])).rows[0].qty), 4);
+  await expectError('22023', async () => as(db, logStaff, `select public.pr_from_mr($1)`, [mrBig.id]));
+  eq(await stage(await lineOf(mrBig.id)), 'in_pr');
+  await expectError('42501', async () => as(db, logStaff, `select public.pr_decide($1, true)`, [prShort.id]));
+  await expectError('22023', async () => as(db, logHead, `select public.pr_decide($1, false, '')`, [prShort.id]));
+  eq((await as(db, logHead, `select (p).status from public.pr_decide($1, true) p`, [prShort.id])).rows[0].status, 'approved');
+});
+await test('penawaran supplier: pertama otomatis terpilih, bisa diganti; satu tombol PO per supplier', async () => {
+  sup2 = (await as(db, logHead, `select (s).* from public.supplier_save('sup-02', 'PT Sumber Part', 'Suku cadang') s`)).rows[0];
+  const pl = (await db.query(`select id from public.purchase_requisition_lines where pr_id = $1`, [prShort.id])).rows[0].id;
+  await expectError('22023', async () => as(db, logStaff, `select public.po_from_pr($1)`, [prShort.id]));
+  const q1 = (await as(db, logStaff, `select (q).* from public.quote_save($1, $2, 650000, 7) q`, [pl, sup.id])).rows[0];
+  const q2 = (await as(db, logStaff, `select (q).* from public.quote_save($1, $2, 600000, 3) q`, [pl, sup2.id])).rows[0];
+  eq(q1.selected, true); eq(q2.selected, false);
+  await as(db, logStaff, `select public.quote_select($1)`, [q2.id]);
+  eq(Number((await as(db, logStaff, `select public.po_from_pr($1) n`, [prShort.id])).rows[0].n), 1);
+  poSmall = (await db.query(`select * from public.purchase_orders where pr_id = $1`, [prShort.id])).rows[0];
+  if (!/^PO-BSB-\d{4}-\d{5}$/.test(poSmall.po_no)) throw new Error(poSmall.po_no);
+  eq(poSmall.status, 'issued'); eq(Number(poSmall.total_value), 2400000); eq(poSmall.supplier_id, sup2.id);
+  eq((await db.query(`select status from public.purchase_requisitions where id = $1`, [prShort.id])).rows[0].status, 'ordered');
+  await expectError('22023', async () => as(db, logStaff, `select public.quote_select($1)`, [q1.id]));
+  eq(await stage(await lineOf(mrBig.id)), 'on_order');
+});
+await test('PO di atas batas menunggu approval Dept Head (bukan pembuat) sebelum barang bisa diterima', async () => {
+  const pr = (await as(db, logStaff, `select (p).* from public.pr_create('Isi ulang solar', $1::jsonb) p`, [JSON.stringify([{ material: solar.id, qty: 1000 }])])).rows[0];
+  await as(db, logHead, `select public.pr_decide($1, true)`, [pr.id]);
+  const pl = (await db.query(`select id from public.purchase_requisition_lines where pr_id = $1`, [pr.id])).rows[0].id;
+  await as(db, logStaff, `select public.quote_save($1, $2, 14000) q`, [pl, sup.id]);
+  await as(db, logStaff, `select public.po_from_pr($1)`, [pr.id]);
+  const po = (await db.query(`select * from public.purchase_orders where pr_id = $1`, [pr.id])).rows[0];
+  eq(po.status, 'awaiting_approval');
+  const pol = (await db.query(`select id from public.purchase_order_lines where po_id = $1`, [po.id])).rows[0].id;
+  await expectError('22023', async () => as(db, logStaff, `select public.goods_receive_po($1, $2::jsonb, 'SJ-9')`, [po.id, JSON.stringify([{ line: pol, qty: 1000 }])]));
+  await expectError('42501', async () => as(db, logStaff, `select public.po_approve($1, true)`, [po.id]));
+  eq((await as(db, logHead, `select (o).status from public.po_approve($1, true) o`, [po.id])).rows[0].status, 'issued');
+});
+await test('penerimaan dari PO: harga PO, wajib surat jalan, PR tertutup, peminta MR diberi tahu', async () => {
+  const pol = (await db.query(`select id from public.purchase_order_lines where po_id = $1`, [poSmall.id])).rows[0].id;
+  const L = JSON.stringify([{ line: pol, qty: 4 }]);
+  await expectError('22023', async () => as(db, logStaff, `select public.goods_receive_po($1, $2::jsonb, 'SJ-10')`, [poSmall.id, JSON.stringify([{ line: pol, qty: 5 }])]));
+  await expectError('22023', async () => as(db, logStaff, `select public.goods_receive_po($1, $2::jsonb, '')`, [poSmall.id, L]));
+  const before = await stock(sp.id);
+  eq((await as(db, logStaff, `select (o).status from public.goods_receive_po($1, $2::jsonb, 'SJ-10') o`, [poSmall.id, L])).rows[0].status, 'received');
+  eq(await stock(sp.id), before + 4);
+  eq((await db.query(`select status from public.purchase_requisitions where id = $1`, [prShort.id])).rows[0].status, 'closed');
+  eq(Number((await db.query(`select count(*) n from public.notifications where user_id = $1 and title like 'Barang PO%'`, [pltStaff])).rows[0].n), 1);
+  eq(await stage(await lineOf(mrBig.id)), 'ready');
+  eq((await as(db, logStaff, `select (r).status from public.goods_issue($1, $2::jsonb) r`, [mrBig.id, JSON.stringify([{ line: await lineOf(mrBig.id), qty: 5 }])])).rows[0].status, 'issued');
+});
+
 console.log('HRGA');
 const HRGA = await dept('HRGA');
 const hrStaff = await createUser('hrd@bsb.co.id');
@@ -1080,10 +1153,55 @@ await test('dashboard eksekutif & capaian elemen SMKP terbaca pengguna aktif', a
   eq((await as(db, spvPrd, `select count(*)::int c from public.smkp_element_status`)).rows[0].c, 7);
 });
 
-await test('anon hanya bisa memanggil verifikasi dokumen', async () => {
+console.log('Spreadsheet: feed & impor');
+const anon = async (sql, params = []) => {
+  await db.query('begin');
+  try { await db.query('set local role anon'); const r = await db.query(sql, params); await db.query('commit'); return r; }
+  catch (e) { await db.query('rollback'); throw e; }
+};
+await test('feed Google Sheets: token pribadi (hanya hash disimpan), dataset terbatas, bisa dicabut', async () => {
+  const token = (await as(db, logStaff, `select public.feed_token_create('Laporan logistik') t`)).rows[0].t;
+  eq((await db.query(`select count(*)::int n from public.feed_tokens where token_hash = $1`, [token])).rows[0].n, 0);
+  const rows = (await anon(`select public.feed_rows($1, 'stok') r`, [token])).rows[0].r;
+  if (!rows.some(r => r.code === 'SP-FLT-01')) throw new Error('stok tidak ada di feed');
+  await expectError('22023', async () => anon(`select public.feed_rows($1, 'pelanggaran')`, [token]));
+  await expectError('42501', async () => anon(`select public.feed_rows('salah', 'stok')`));
+  await expectError('42501', async () => anon(`select count(*) from public.feed_tokens`));
+  const id = (await as(db, logStaff, `select id from public.feed_tokens where label = 'Laporan logistik'`)).rows[0].id;
+  await expectError('P0002', async () => as(db, hrStaff, `select public.feed_token_revoke($1)`, [id]));
+  await as(db, logStaff, `select public.feed_token_revoke($1)`, [id]);
+  await expectError('42501', async () => anon(`select public.feed_rows($1, 'stok')`, [token]));
+});
+await test('impor massal: periksa tanpa menyimpan, baris gagal dilaporkan, impor menyimpan sisanya', async () => {
+  const rows = JSON.stringify([
+    { kode: 'imp-01', nama: 'Baut roda', kategori: 'Suku cadang', satuan: 'pcs', stok_min: '10' },
+    { kode: 'imp-02', nama: 'Oli mesin', kategori: 'oli', satuan: 'L' },
+    { kode: '', nama: 'Tanpa kode' },
+  ]);
+  const check = (await as(db, logHead, `select public.import_rows('barang', $1::jsonb, false) r`, [rows])).rows[0].r;
+  eq(check.ok, 2); eq(check.errors.length, 1); eq(check.errors[0].row, 3);
+  eq((await db.query(`select count(*)::int n from public.materials where code like 'IMP-%'`)).rows[0].n, 0);
+  const done = (await as(db, logHead, `select public.import_rows('barang', $1::jsonb, true) r`, [rows])).rows[0].r;
+  eq(done.ok, 2);
+  eq((await db.query(`select category from public.materials where code = 'IMP-02'`)).rows[0].category, 'lubricant');
+  const denied = (await as(db, pltStaff, `select public.import_rows('barang', $1::jsonb, true) r`, [rows])).rows[0].r;
+  eq(denied.ok, 0); eq(denied.errors.length, 3);
+  await expectError('22023', async () => as(db, logHead, `select public.import_rows('rahasia', '[{}]'::jsonb)`));
+});
+await test('impor karyawan & sertifikat memakai kode departemen, nama jabatan dan kode kompetensi', async () => {
+  const emp = JSON.stringify([{ nrp: 'imp-100', nama: 'Rudi Impor', departemen: 'prd', jabatan: 'OPR-DT', status_kerja: 'Kontrak', tgl_masuk: '2026-02-01' },
+    { nrp: 'imp-101', nama: 'Salah Dept', departemen: 'XYZ' }]);
+  const r = (await as(db, hrStaff, `select public.import_rows('karyawan', $1::jsonb, true) r`, [emp])).rows[0].r;
+  eq(r.ok, 1); if (!/XYZ/.test(r.errors[0].error)) throw new Error(r.errors[0].error);
+  eq((await db.query(`select employment_type from public.employees where nrp = 'IMP-100'`)).rows[0].employment_type, 'contract');
+  const cert = JSON.stringify([{ nrp: 'IMP-100', kompetensi: 'mcu', tgl_terbit: '2026-03-01', berlaku_sampai: '2027-03-01', no_sertifikat: 'MCU-9' }]);
+  eq((await as(db, hrStaff, `select public.import_rows('sertifikat', $1::jsonb, true) r`, [cert])).rows[0].r.ok, 1);
+});
+
+await test('anon hanya bisa memanggil verifikasi dokumen & feed spreadsheet', async () => {
   const r = await db.query(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')`);
-  eq(r.rows.map(x => x.proname).join(','), 'verify_document');
+  eq(r.rows.map(x => x.proname).sort().join(','), 'feed_rows,verify_document');
 });
 
 console.log('audit trail');

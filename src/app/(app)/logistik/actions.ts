@@ -59,10 +59,13 @@ export async function createMr(_: ActionState, f: FormData): Promise<ActionState
   redirect(`/logistik/mr/${id}`);
 }
 
-export async function reviewMr(_: ActionState, f: FormData) {
-  const approve = str(f, 'decision') === 'approve';
-  return run(`/logistik/mr/${str(f, 'id')}`, approve ? 'MR disetujui' : 'MR ditolak', () =>
-    rpc('mr_review', { p_mr: str(f, 'id'), p_approve: approve, p_note: str(f, 'note') }));
+// Approval ala Syshab: setujui (jumlah per baris bisa dikurangi, 0 = baris ditolak), pending atau tolak dengan catatan
+export async function decideMr(_: ActionState, f: FormData) {
+  const decision = str(f, 'decision') ?? 'approve';
+  const lines = decision === 'approve' ? f.getAll('line').map(String).map(line => ({ line, qty: num(f, `qty_${line}`) ?? 0 })) : [];
+  const ok = { approve: 'MR disetujui', pending: 'MR di-pending', reject: 'MR ditolak' }[decision] ?? 'Tersimpan';
+  return run(`/logistik/mr/${str(f, 'id')}`, ok, () =>
+    rpc('mr_decide', { p_mr: str(f, 'id'), p_decision: decision, p_note: str(f, 'note'), p_lines: lines }));
 }
 
 export async function cancelMr(_: ActionState, f: FormData) {
@@ -86,5 +89,56 @@ export async function evaluateSupplier(_: ActionState, f: FormData) {
   return run('/logistik/supplier', 'Evaluasi disimpan', () => rpc('supplier_evaluate', {
     p_supplier: str(f, 'supplier'), p_period: `${str(f, 'period')}-01`, p_quality: num(f, 'quality'), p_delivery: num(f, 'delivery'),
     p_price: num(f, 'price'), p_service: num(f, 'service'), p_safety: num(f, 'safety'), p_note: str(f, 'note'),
+  }));
+}
+
+// ---------------------------------------------------------------- pengadaan: PR → penawaran → PO → GR
+export async function prFromMr(_: ActionState, f: FormData): Promise<ActionState> {
+  let id: string;
+  try { id = (await rpc('pr_from_mr', { p_mr: str(f, 'id'), p_idempotency_key: str(f, 'idem') })).id; }
+  catch (e) { return { error: (e as Error).message }; }
+  redirect(`/logistik/pengadaan/${id}`);
+}
+
+export async function createPr(_: ActionState, f: FormData): Promise<ActionState> {
+  const lines = f.getAll('row').map(String).map(i => ({ material: str(f, `material_${i}`), qty: num(f, `qty_${i}`), note: str(f, `note_${i}`) }))
+    .filter(l => l.material && l.qty);
+  let id: string;
+  try {
+    id = (await rpc('pr_create', { p_purpose: str(f, 'purpose'), p_lines: lines, p_need_date: str(f, 'need_date'), p_idempotency_key: str(f, 'idem') })).id;
+  } catch (e) { return { error: (e as Error).message }; }
+  redirect(`/logistik/pengadaan/${id}`);
+}
+
+const prPath = (f: FormData) => `/logistik/pengadaan/${str(f, 'pr')}`;
+
+export async function decidePr(_: ActionState, f: FormData) {
+  const approve = str(f, 'decision') === 'approve';
+  return run(prPath(f), approve ? 'PR disetujui' : 'PR ditolak', () => rpc('pr_decide', { p_pr: str(f, 'pr'), p_approve: approve, p_note: str(f, 'note') }));
+}
+
+export async function saveQuote(_: ActionState, f: FormData) {
+  return run(prPath(f), 'Penawaran disimpan', () => rpc('quote_save', {
+    p_pr_line: str(f, 'line'), p_supplier: str(f, 'supplier'), p_unit_price: num(f, 'price'), p_lead_days: num(f, 'lead'), p_note: str(f, 'note'),
+  }));
+}
+
+export async function selectQuote(_: ActionState, f: FormData) {
+  return run(prPath(f), 'Supplier dipilih', () => rpc('quote_select', { p_quote: str(f, 'quote') }));
+}
+
+export async function createPo(_: ActionState, f: FormData) {
+  return run(prPath(f), 'PO dibuat', () => rpc('po_from_pr', { p_pr: str(f, 'pr'), p_expected: str(f, 'expected') }));
+}
+
+export async function approvePo(_: ActionState, f: FormData) {
+  const approve = str(f, 'decision') === 'approve';
+  return run(prPath(f), approve ? 'PO disetujui' : 'PO dibatalkan', () => rpc('po_approve', { p_po: str(f, 'po'), p_approve: approve, p_note: str(f, 'note') }));
+}
+
+export async function receivePo(_: ActionState, f: FormData) {
+  const lines = f.getAll('line').map(String).map(line => ({ line, qty: num(f, `qty_${line}`) ?? 0 }));
+  return run(prPath(f), 'Barang diterima', () => rpc('goods_receive_po', {
+    p_po: str(f, 'po'), p_lines: lines, p_doc_ref: str(f, 'doc_ref'), p_note: str(f, 'note'), p_idempotency_key: str(f, 'idem'),
   }));
 }

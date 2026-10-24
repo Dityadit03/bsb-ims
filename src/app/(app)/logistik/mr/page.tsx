@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExportLinks } from '@/components/export-links';
 import { randomUUID } from 'node:crypto';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, Pill, Table, input } from '@/components/ui';
@@ -29,7 +30,7 @@ export default async function MrPage({ searchParams }: { searchParams: Promise<R
 
   return (
     <>
-      <PageHeader eyebrow="Logistik" title="Material request" />
+      <PageHeader eyebrow="Logistik" title="Material request"><ExportLinks dataset="mr" /></PageHeader>
       <LogTabs active="/logistik/mr" />
       <form className="flex flex-wrap gap-2">
         <select name="status" defaultValue={sp.status ?? ''} className={`${input} w-auto`} aria-label="Status">

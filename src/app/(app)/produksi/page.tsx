@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExportLinks } from '@/components/export-links';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, Pill, Stat, Table, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
@@ -33,6 +34,7 @@ export default async function ProduksiPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader eyebrow="SMKP 4.3 · Pengelolaan operasional" title="Produksi hauling">
+        <ExportLinks dataset="produksi" />
         {s.can('prod.manage') && <Link href="/produksi/master" className="text-sm text-accent hover:underline">Rute & target →</Link>}
       </PageHeader>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExportLinks } from '@/components/export-links';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, Table, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
@@ -68,7 +69,7 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
 
   return (
     <>
-      <PageHeader eyebrow="Safety Accountability Program · minggu Selasa–Senin" title="SAP" />
+      <PageHeader eyebrow="Safety Accountability Program · minggu Selasa–Senin" title="SAP"><ExportLinks dataset="sap" /></PageHeader>
       <SheTabs active="/she/sap" />
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <Link href={`/she/sap?minggu=${addDays(ws, -7)}`} className="text-accent">← Sebelumnya</Link>

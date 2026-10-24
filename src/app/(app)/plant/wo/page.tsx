@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExportLinks } from '@/components/export-links';
 import { PageHeader, Panel, Pill, Table, input } from '@/components/ui';
 import { createClient } from '@/lib/supabase/server';
 import { fmtDateTime } from '@/lib/documents';
@@ -26,6 +27,7 @@ export default async function WoPage({ searchParams }: { searchParams: Promise<R
   return (
     <>
       <PageHeader eyebrow="Plant · Maintenance" title="Work order">
+        <ExportLinks dataset="wo" />
         <Link href="/plant" className="text-sm text-accent hover:underline">← Register unit</Link>
       </PageHeader>
       {pm?.length ? (

@@ -22,9 +22,12 @@ export function Sidebar({ permissions, name, email }: { permissions: string[]; n
     <>
       <div className="sticky top-0 z-20 flex items-center justify-between bg-coal px-4 py-3 text-coal-ink after:brand-line after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 lg:hidden">
 <span className="flex items-center gap-2 font-display text-xl font-bold tracking-wide"><span className="grid size-8 place-items-center rounded-lg bg-white p-0.5 shadow-sm"><Image src="/logo.png" alt="" width={32} height={32} priority /></span>BSB IMS</span>
-        <button onClick={() => setOpen(o => !o)} className="rounded-lg border border-white/20 px-3 py-1 text-sm" aria-expanded={open} aria-controls="nav">
-          Menu
-        </button>
+        <span className="flex items-center gap-2">
+          <Link href="/cari" className="rounded-lg border border-white/20 px-2.5 py-1 text-sm" aria-label="Cari">Cari</Link>
+          <button onClick={() => setOpen(o => !o)} className="rounded-lg border border-white/20 px-3 py-1 text-sm" aria-expanded={open} aria-controls="nav">
+            Menu
+          </button>
+        </span>
       </div>
       {open && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setOpen(false)} aria-hidden />}
       <aside id="nav" className={`${open ? 'flex' : 'hidden'} fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] flex-col overflow-y-auto bg-coal bg-[radial-gradient(120%_50%_at_0%_0%,rgb(144_15_179/0.28),transparent_60%)] text-coal-ink shadow-xl lg:sticky lg:top-0 lg:bottom-auto lg:z-auto lg:flex lg:h-dvh lg:w-64 lg:max-w-none lg:shrink-0 lg:shadow-none`}>
@@ -38,6 +41,10 @@ export function Sidebar({ permissions, name, email }: { permissions: string[]; n
           </div>
           <div className="font-mono text-[11px] uppercase tracking-wider text-coal-ink/60">Integrated Management System</div>
         </div>
+        <form action="/cari" role="search" className="px-4 pt-3" onSubmit={() => setOpen(false)}>
+          <input name="q" type="search" placeholder="Cari nomor, nama, unit…" aria-label="Cari di semua modul"
+            className="w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm text-coal-ink placeholder:text-coal-ink/50 focus:border-white/40 focus:outline-none" />
+        </form>
         <nav className="grid gap-4 px-3 py-4" aria-label="Menu utama">
           {NAV.map(group => (
             <div key={group.code} className="grid gap-0.5">

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExportLinks } from '@/components/export-links';
 import { randomUUID } from 'node:crypto';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, Pill, Table, btnGhost, input } from '@/components/ui';
@@ -28,7 +29,7 @@ export default async function HazardPage({ searchParams }: { searchParams: Promi
 
   return (
     <>
-      <PageHeader eyebrow="SMKP 2.2 · Identifikasi bahaya" title="Hazard report" />
+      <PageHeader eyebrow="SMKP 2.2 · Identifikasi bahaya" title="Hazard report"><ExportLinks dataset="hazard" /></PageHeader>
       <SheTabs active="/she/hazard" />
       {s.can('she.report') && (
         <Panel title="Laporkan bahaya">

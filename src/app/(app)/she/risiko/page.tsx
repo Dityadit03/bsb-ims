@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExportLinks } from '@/components/export-links';
 import { PageHeader, Panel, Pill, Table, btnGhost, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
@@ -31,7 +32,7 @@ export default async function RiskPage({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHeader eyebrow="SMKP 2.2 · Manajemen risiko (IBPR)" title="Risk register" />
+      <PageHeader eyebrow="SMKP 2.2 · Manajemen risiko (IBPR)" title="Risk register"><ExportLinks dataset="risiko" /></PageHeader>
       <SheTabs active="/she/risiko" />
       <form className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
         <select name="status" defaultValue={sp.status ?? ''} className={input} aria-label="Status">

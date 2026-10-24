@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { ExportLinks } from '@/components/export-links';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, Pill, Stat, Table, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
@@ -26,12 +27,14 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
     supabase.from('material_requests').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
   ]);
   const all = rows ?? [];
+  const term = (sp.q ?? '').toLowerCase();
+  const shown = term ? all.filter(r => `${r.code} ${r.name}`.toLowerCase().includes(term)) : all;
   const fuels = all.filter(r => r.category === 'fuel' || r.category === 'lubricant');
   const wh = s.canIn('log.warehouse', 'LOG');
 
   return (
     <>
-      <PageHeader eyebrow="SMKP 4.6 · Sistem pembelian" title="Logistik" />
+      <PageHeader eyebrow="SMKP 4.6 · Sistem pembelian" title="Logistik"><ExportLinks dataset="stok" /></PageHeader>
       <LogTabs active="/logistik" />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="Jenis barang" value={all.length} />
@@ -40,15 +43,16 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
         <Stat label="MR siap dikeluarkan" value={mrOpen ?? 0} href="/logistik/mr?status=approved" />
       </div>
       <form className="flex flex-wrap gap-2">
+        <input name="q" type="search" defaultValue={sp.q ?? ''} placeholder="Cari kode / nama barang" className={`${input} w-56`} />
         <select name="kategori" defaultValue={sp.kategori ?? ''} className={`${input} w-auto`} aria-label="Kategori">
           <option value="">Semua kategori</option>{Object.entries(CATEGORY).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
         <label className="flex items-center gap-1 text-sm"><input type="checkbox" name="rendah" value="1" defaultChecked={!!sp.rendah} /> Stok rendah saja</label>
         <button className="text-sm text-accent">Saring</button>
       </form>
-      {all.length ? (
+      {shown.length ? (
         <Table head={['Kode', 'Nama', 'Kategori', 'Stok', 'Minimum', 'Harga rata-rata', 'Nilai']}>
-          {all.map(r => (
+          {shown.map(r => (
             <tr key={r.id}>
               <td className="font-mono text-xs">{r.code}</td>
               <td className="text-sm">{r.name}</td>
