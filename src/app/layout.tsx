@@ -15,7 +15,11 @@ export const viewport: Viewport = { themeColor: '#ffffff', width: 'device-width'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" className={`${jakarta.variable} ${plexMono.variable}`}>
+    <html lang="id" suppressHydrationWarning className={`${jakarta.variable} ${plexMono.variable}`}>
+      <head>
+        {/* pasang tema pilihan sebelum halaman tampil, agar tidak berkedip */}
+        <script dangerouslySetInnerHTML={{ __html: "try{var t=localStorage.getItem('bsb-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}" }} />
+      </head>
       <body className="min-h-dvh font-sans text-[15px] leading-normal antialiased">{children}</body>
     </html>
   );

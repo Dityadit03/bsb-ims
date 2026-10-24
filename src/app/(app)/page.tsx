@@ -3,14 +3,12 @@ import { AreaChart, GroupedBars } from '@/components/charts';
 import { Panel, Stat, btnGhost, btnPrimary } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
+import { getAlerts } from '@/lib/alerts';
 
 export const metadata = { title: 'Ringkasan' };
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 const num = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });
-type Tone = 'crit' | 'warn' | 'accent';
-type Todo = { tone: Tone; title: string; sub: string; href: string };
-type Cert = { employee_id: string; competency_id: string; competency_code: string; category: string; valid_until: string | null; validity: string };
 type Sap = { week_start: string; week_no: number; on_leave: boolean; obs_target: number; obs_act: number; insp_target: number; insp_act: number; hazard_target: number; hazard_act: number };
 
 // Jam & tanggal site (WITA)
@@ -24,25 +22,15 @@ export default async function HomePage() {
   const supabase = await createClient();
   const now = siteNow();
   const yearStart = `${now.year}-01-01`;
-  const count = (q: PromiseLike<{ count: number | null }>) => q.then(r => r.count ?? 0);
-  const head = { count: 'exact' as const, head: true };
 
-  const [emps, incidents, certs, spip, hazardOpen, hazardLate, capaLate, mrWait, poWait, lowStock, tasks, prod, sap] = await Promise.all([
+  const [emps, incidents, prod, sap, { counts: c, items: todos }] = await Promise.all([
     supabase.from('employee_register').select('department_code, required, compliant').eq('status', 'active').limit(5000),
     supabase.from('incident_register').select('classification, occurred_at').gte('occurred_at', yearStart).limit(5000),
-    supabase.from('employee_competency_view').select('employee_id, competency_id, competency_code, category, valid_until, validity')
-      .neq('validity', 'revoked').limit(20000).returns<Cert[]>(),
-    supabase.from('commissioning_register').select('validity').in('validity', ['expired', 'expiring']).limit(5000),
-    count(supabase.from('she_hazard_register').select('*', head).eq('status', 'open')),
-    count(supabase.from('she_hazard_register').select('*', head).eq('is_overdue', true)),
-    count(supabase.from('capa_register').select('*', head).eq('is_overdue', true)),
-    count(supabase.from('mr_register').select('*', head).in('status', ['submitted', 'pending'])),
-    count(supabase.from('po_register').select('*', head).eq('status', 'awaiting_approval')),
-    count(supabase.from('material_stock').select('*', head).eq('low_stock', true)),
-    supabase.rpc('my_tasks').then(r => (r.data as unknown[] | null)?.length ?? 0),
     supabase.from('production_month').select('month, tonnage_approved, tonnage_all').gte('month', yearStart).order('month'),
     supabase.from('sap_weekly').select('week_start, week_no, on_leave, obs_target, obs_act, insp_target, insp_act, hazard_target, hazard_act')
-      .lte('week_start', new Date(Date.now() + 8 * 3600000 - 7 * 86400000).toISOString().slice(0, 10)).order('week_start', { ascending: false }).limit(1500).returns<Sap[]>(),
+      .lte('week_start', new Date(Date.now() + 8 * 3600000 - 7 * 86400000).toISOString().slice(0, 10)).order('week_start', { ascending: false })
+      .limit(1500).returns<Sap[]>(),
+    getAlerts(),
   ]);
 
   // ---------------------------------------------------------------- angka
@@ -53,39 +41,7 @@ export default async function HomePage() {
   const inc = incidents.data ?? [];
   const lti = inc.filter(i => ['lti', 'fatality'].includes(i.classification)).length;
   const nearmiss = inc.filter(i => i.classification === 'nearmiss').length;
-  // sertifikat terbaru per karyawan & kompetensi
-  const latest = new Map<string, Cert>();
-  for (const c of certs.data ?? []) {
-    const k = `${c.employee_id}:${c.competency_id}`, p = latest.get(k);
-    if (!p || (c.valid_until ?? '9999') > (p.valid_until ?? '9999')) latest.set(k, c);
-  }
-  const certCount = (pred: (c: Cert) => boolean, v: string) => [...latest.values()].filter(c => pred(c) && c.validity === v).length;
-  const isMcu = (c: Cert) => c.category === 'medical';
-  const isSimper = (c: Cert) => c.category === 'authorization';
-  const isOther = (c: Cert) => !isMcu(c) && !isSimper(c);
-  const mcuExp = certCount(isMcu, 'expired'), mcuSoon = certCount(isMcu, 'expiring');
-  const simExp = certCount(isSimper, 'expired'), simSoon = certCount(isSimper, 'expiring');
-  const othExp = certCount(isOther, 'expired');
-  const spipExp = (spip.data ?? []).filter(r => r.validity === 'expired').length;
-  const spipSoon = (spip.data ?? []).filter(r => r.validity === 'expiring').length;
-
-  const todos = ([
-    [mcuExp, 'crit', 'MCU expired', 'Masa berlaku habis', '/hrga/kompetensi'],
-    [mcuSoon, 'warn', 'MCU segera expired', '≤ 30 hari lagi', '/hrga/kompetensi'],
-    [simExp, 'crit', 'SIMPER expired', 'Izin mengoperasikan unit habis', '/hrga/kompetensi'],
-    [simSoon, 'warn', 'SIMPER segera expired', '≤ 30 hari lagi', '/hrga/kompetensi'],
-    [othExp, 'crit', 'Sertifikat lain expired', 'Kompetensi & pelatihan', '/hrga/kompetensi'],
-    [spipExp, 'crit', 'Komisioning SPIP expired', 'Unit / alat perlu uji ulang', '/plant/spip'],
-    [spipSoon, 'warn', 'Komisioning SPIP segera expired', '≤ 30 hari lagi', '/plant/spip'],
-    [hazardLate, 'crit', 'Hazard lewat batas waktu', 'Belum ditutup PIC', '/she/hazard'],
-    [capaLate, 'crit', 'Action plan terlambat', 'Lewat tanggal target', '/capa'],
-    [tasks, 'accent', 'Tugas menunggu Anda', 'Persetujuan & review', '/tugas'],
-    [mrWait, 'warn', 'MR menunggu persetujuan', 'Material request', '/logistik/mr'],
-    [poWait, 'warn', 'PO menunggu approval', 'Di atas batas nilai', '/logistik/pengadaan'],
-    [lowStock, 'warn', 'Stok di bawah minimum', 'Perlu PR isi ulang', '/logistik?rendah=1'],
-  ] as [number, Tone, string, string, string][])
-    .filter(([n]) => n > 0)
-    .map(([n, tone, title, sub, href]): Todo & { n: number } => ({ n, tone, title: `${num.format(n)} ${title}`, sub, href }));
+  const { mcuExp, mcuSoon, simExp, simSoon, hazardOpen, hazardLate } = c;
 
   // ---------------------------------------------------------------- grafik
   const months = MONTHS.slice(0, now.month + 1);

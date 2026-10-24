@@ -22,8 +22,9 @@
   --font-mono: var(--font-plex-mono), ui-monospace, Menlo, monospace;
 }
 
+/* Tema: ikut perangkat, kecuali dipilih Terang/Gelap di Pengaturan (atribut data-theme pada <html>) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --color-ground: #131019;
     --color-panel: #1c1824;
     --color-ink: #ece8f3;
@@ -40,6 +41,23 @@
     color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+  --color-ground: #131019;
+  --color-panel: #1c1824;
+  --color-ink: #ece8f3;
+  --color-muted: #a39cb0;
+  --color-line: #332d3e;
+  --color-coal: #0f0b18;
+  --color-accent: #f2588f;
+  --color-accent-soft: #3d1a2a;
+  --color-violet: #8b5cf6;
+  --color-orange: #f0a04b;
+  --color-ok: #5fbf86;
+  --color-warn: #e0ad3a;
+  --color-crit: #ef6b62;
+  color-scheme: dark;
+}
+:root[data-theme="light"] { color-scheme: light; }
 
 body { background: var(--color-ground); color: var(--color-ink); }
 h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; letter-spacing: -0.02em; }
