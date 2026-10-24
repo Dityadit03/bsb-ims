@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -20,7 +21,7 @@ export function Sidebar({ permissions, name, email }: { permissions: string[]; n
   return (
     <>
       <div className="sticky top-0 z-20 flex items-center justify-between bg-coal px-4 py-3 text-coal-ink lg:hidden">
-        <span className="font-display text-xl font-bold tracking-wide">BSB IMS</span>
+<span className="flex items-center gap-2 font-display text-xl font-bold tracking-wide"><span className="grid size-8 place-items-center rounded-md bg-white p-0.5"><Image src="/logo.png" alt="" width={32} height={32} priority /></span>BSB IMS</span>
         <button onClick={() => setOpen(o => !o)} className="rounded border border-white/20 px-3 py-1 text-sm" aria-expanded={open} aria-controls="nav">
           Menu
         </button>
@@ -28,11 +29,13 @@ export function Sidebar({ permissions, name, email }: { permissions: string[]; n
       {open && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setOpen(false)} aria-hidden />}
       <aside id="nav" className={`${open ? 'flex' : 'hidden'} fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] flex-col overflow-y-auto bg-coal text-coal-ink shadow-xl lg:sticky lg:top-0 lg:bottom-auto lg:z-auto lg:flex lg:h-dvh lg:w-64 lg:max-w-none lg:shrink-0 lg:shadow-none`}>
         <div className="flex items-center justify-between px-5 pt-4 lg:hidden">
-          <span className="font-display text-xl font-bold tracking-wide">BSB IMS</span>
+  <span className="flex items-center gap-2 font-display text-xl font-bold tracking-wide"><span className="grid size-8 place-items-center rounded-md bg-white p-0.5"><Image src="/logo.png" alt="" width={32} height={32} priority /></span>BSB IMS</span>
           <button onClick={() => setOpen(false)} className="rounded px-3 py-2 text-sm text-coal-ink/70" aria-label="Tutup menu">Tutup</button>
         </div>
         <div className="hidden px-5 pb-2 pt-6 lg:block">
-          <div className="font-display text-2xl font-bold tracking-wide">BSB IMS</div>
+          <div className="flex items-center gap-2.5 font-display text-2xl font-bold tracking-wide">
+            <span className="grid size-10 place-items-center rounded-md bg-white p-0.5"><Image src="/logo.png" alt="" width={40} height={40} priority /></span>BSB IMS
+          </div>
           <div className="font-mono text-[11px] uppercase tracking-wider text-coal-ink/60">Integrated Management System</div>
         </div>
         <nav className="grid gap-4 px-3 py-4" aria-label="Menu utama">

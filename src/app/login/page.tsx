@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { LoginButton } from './login-button';
 
 export const metadata = { title: 'Masuk' };
@@ -8,6 +9,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <main className="grid min-h-dvh place-items-center bg-coal px-4 py-10 text-coal-ink">
       <div className="grid w-full max-w-sm gap-8">
         <div className="grid gap-2">
+          <span className="mb-2 grid size-20 place-items-center rounded-2xl bg-white p-2 shadow-lg">
+            <Image src="/logo.png" alt="Logo PT Berkarya Sejahtera Bersama" width={72} height={72} priority />
+          </span>
           <span className="font-mono text-xs uppercase tracking-wider text-coal-ink/60">PT Berkarya Sejahtera Bersama</span>
           <h1 className="text-5xl font-bold leading-none">BSB IMS</h1>
           <p className="text-sm text-coal-ink/70">Document Control, SMKP Minerba, SHE, Plant, Produksi, Logistik dan HRGA dalam satu sistem.</p>
