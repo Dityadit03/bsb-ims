@@ -3,11 +3,10 @@ export type NavItem = { href: string; label: string; perm?: string };
 export type NavGroup = { code: string; label: string; ready: boolean; items: NavItem[] };
 
 export const NAV: NavGroup[] = [
-  { code: 'M0', label: 'Beranda', ready: true, items: [{ href: '/', label: 'Ringkasan' }] },
-  { code: 'M2', label: 'Document Control', ready: false, items: [
+  { code: 'M0', label: 'Beranda', ready: true, items: [{ href: '/', label: 'Ringkasan' }, { href: '/tugas', label: 'Kotak tugas' }] },
+  { code: 'M2', label: 'Document Control', ready: true, items: [
     { href: '/dokumen', label: 'Register dokumen' },
-    { href: '/dokumen/ajukan', label: 'Ajukan dokumen' },
-    { href: '/surat', label: 'Surat masuk & keluar' },
+    { href: '/dokumen/ajukan', label: 'Ajukan / registrasi' },
   ] },
   { code: 'M3', label: 'SMKP & CAPA', ready: false, items: [
     { href: '/smkp', label: 'Matriks 7 elemen' },

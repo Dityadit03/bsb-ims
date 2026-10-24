@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { env } from '@/lib/env';
 
-const PUBLIC_PATHS = ['/login', '/auth/callback'];
+const PUBLIC_PATHS = ['/login', '/auth/callback', '/verifikasi/'];
 
 // Memperbarui sesi Supabase di setiap request dan mengarahkan pengguna tanpa sesi ke /login.
 export async function proxy(request: NextRequest) {

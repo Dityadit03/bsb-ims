@@ -11,7 +11,7 @@ create table if not exists auth.users(
   raw_user_meta_data jsonb default '{}'
 );
 create or replace function auth.uid() returns uuid language sql stable as $$
-  select nullif(current_setting('request.jwt.claims', true)::json->>'sub', '')::uuid
+  select nullif(nullif(current_setting('request.jwt.claims', true), '')::json->>'sub', '')::uuid
 $$;
 grant execute on function auth.uid() to authenticated, anon;
 grant usage on schema public to authenticated, anon;

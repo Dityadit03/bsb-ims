@@ -32,7 +32,7 @@ export function Sidebar({ permissions, name, email }: { permissions: string[]; n
               {group.items
                 .filter(i => !i.perm || perms.has(i.perm))
                 .map(item => {
-                  const active = item.href === '/' ? path === '/' : path.startsWith(item.href);
+                  const active = item.href === '/' ? path === '/' : path === item.href || (path.startsWith(item.href + '/') && !group.items.some(o => o.href !== item.href && path.startsWith(o.href)));
                   if (!group.ready)
                     return (
                       <span key={item.href} className="cursor-not-allowed rounded px-2 py-1.5 text-sm text-coal-ink/35" title="Modul belum dibangun">

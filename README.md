@@ -8,8 +8,8 @@ Menggantikan dan menyatukan [Document Control BSB](https://github.com/Dityadit03
 | Modul | Isi | Status |
 |---|---|---|
 | M0 Fondasi | Login Google, pengguna & peran per departemen, master organisasi, audit trail, lampiran | Selesai |
-| M1 Penomoran | Skema nomor DC v4, alokasi atomik, idempotency, impor nomor lama | Selesai (workflow engine menyusul) |
-| M2 Document Control | Pengajuan, review, approval, rilis PDF terkendali, distribusi | Berikutnya |
+| M1 Penomoran & workflow | Skema nomor DC v4, alokasi atomik, impor nomor lama; approval berjenjang berversi, pemisahan tugas, delegasi, SLA, notifikasi | Selesai |
+| M2 Document Control | Pengajuan, review, verifikasi DC, approval, rilis PDF berstempel + QR + SHA-256, distribusi & tanda terima, revisi, pencabutan, registrasi rekaman/izin/surat, halaman verifikasi publik | Selesai (impor data DC v4 menyusul) |
 | M3–M10 | SMKP & CAPA, SHE, Plant, Produksi, Logistik, HRGA, Audit & MR, migrasi | Dijadwalkan |
 
 ## Menjalankan
