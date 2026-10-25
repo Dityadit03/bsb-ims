@@ -1,7 +1,7 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { importKind, mapHeaders, parseDelimited, toIsoDate } from '@/lib/datasets';
+import { importKind, mapHeaders, parseDelimited, toIsoDate, toIsoDateTime, toTime } from '@/lib/datasets';
 import { readXlsx } from '@/lib/xlsx';
 
 export type TokenState = { error?: string; ok?: string; token?: string; label?: string };
@@ -33,13 +33,26 @@ export type ImportState = {
   done?: { ok: number; errors: { row: number; error: string }[] };
 };
 
+// import_rows menerima maksimal 2000 baris; berkas besar (mis. log fingerprint sebulan) dikirim bertahap
+async function importChunks(supabase: Awaited<ReturnType<typeof createClient>>, kind: string, rows: Record<string, string>[], commit: boolean) {
+  const out = { ok: 0, errors: [] as { row: number; error: string }[] };
+  for (let i = 0; i < rows.length; i += 2000) {
+    const { data, error } = await supabase.rpc('import_rows', { p_dataset: kind, p_rows: rows.slice(i, i + 2000), p_commit: commit });
+    if (error) return { error: error.message };
+    const r = data as typeof out;
+    out.ok += r.ok;
+    out.errors.push(...r.errors.map(e => ({ ...e, row: e.row + i })));
+  }
+  return { data: out };
+}
+
 // Langkah 1: baca berkas / tempelan, cocokkan kolom, lalu periksa di database tanpa menyimpan.
 // Langkah 2 (commit): kirim ulang baris yang sudah dibaca dan simpan; baris yang gagal dilewati.
 export async function runImport(prev: ImportState, f: FormData): Promise<ImportState> {
   const supabase = await createClient();
   if (f.get('commit') === '1' && prev.rows && prev.kind) {
-    const { data, error } = await supabase.rpc('import_rows', { p_dataset: prev.kind, p_rows: prev.rows, p_commit: true });
-    if (error) return { ...prev, error: error.message };
+    const { data, error } = await importChunks(supabase, prev.kind, prev.rows, true);
+    if (error) return { ...prev, error };
     revalidatePath('/', 'layout');
     return { kind: prev.kind, rows: prev.rows, columns: prev.columns, done: data as ImportState['done'] };
   }
@@ -63,17 +76,21 @@ export async function runImport(prev: ImportState, f: FormData): Promise<ImportS
   const headers = table[h].map(x => x.trim());
   const map = mapHeaders(kind, headers);
   const dates = new Set(kind.fields.filter(x => x.date).map(x => x.key));
+  const stamps = new Set(kind.fields.filter(x => x.datetime).map(x => x.key));
   const rows = table.slice(h + 1).map(r => {
     const o: Record<string, string> = {};
-    map.forEach((k, i) => { if (k) o[k] = dates.has(k) ? toIsoDate(r[i] ?? '') : (r[i] ?? '').trim(); });
+    map.forEach((k, i) => {
+      if (k) o[k] = dates.has(k) ? toIsoDate(r[i] ?? '') : stamps.has(k) ? toIsoDateTime(r[i] ?? '') : k === 'jam' ? toTime(r[i] ?? '') : (r[i] ?? '').trim();
+    });
     return o;
   }).filter(o => Object.values(o).some(v => v !== ''));
   if (!rows.length) return { error: 'Tidak ada baris data di bawah judul kolom' };
-  if (rows.length > 2000) return { error: `Berkas berisi ${rows.length} baris; maksimal 2000 sekali impor` };
+  const max = kind.max ?? 2000;
+  if (rows.length > max) return { error: `Berkas berisi ${rows.length} baris; maksimal ${max} sekali impor` };
   const missing = kind.fields.filter(x => x.required && !map.includes(x.key)).map(x => x.label);
   const columns = headers.map((header, i) => ({ header, field: map[i] }));
   if (missing.length) return { kind: kind.key, columns, missing, rows };
-  const { data, error } = await supabase.rpc('import_rows', { p_dataset: kind.key, p_rows: rows, p_commit: false });
-  if (error) return { error: error.message };
+  const { data, error } = await importChunks(supabase, kind.key, rows, false);
+  if (error) return { error };
   return { kind: kind.key, rows, columns, missing, checked: data as ImportState['checked'] };
 }

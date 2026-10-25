@@ -2,7 +2,7 @@
 import { HAZARD_TYPE, INCIDENT_CLASS, OPEN_CLOSED, VALIDITY } from '@/lib/she';
 import { UNIT_STATUS, WO_STATUS, WO_TYPE } from '@/lib/plant';
 import { CATEGORY, MOVE, MR_STATUS, PO_STATUS, PR_STATUS, STAGE } from '@/lib/logistics';
-import { CARD_STATUS, CONTRACT, CONTRACT_STATUS, EMPLOYMENT, MOVE as MOVEMENT } from '@/lib/hrga';
+import { ATT_STATUS, CARD_STATUS, CONTRACT, CONTRACT_STATUS, DAY_TYPE, EMPLOYMENT, LEAVE_STATUS, MOVE as MOVEMENT, OT_STATUS } from '@/lib/hrga';
 
 type Label = Record<string, string | [string, string]>;
 const lbl = (m: Label) => (v: unknown) => { const x = m[String(v)]; return x == null ? v : Array.isArray(x) ? x[1] : x; };
@@ -109,6 +109,21 @@ export const DATASETS: Dataset[] = [
   { key: 'izin', label: 'Izin masuk area', group: 'SHE', view: 'area_permit_register', order: 'start_on', desc: true, feed: false, columns: [
     ['permit_no', 'No. izin'], ['visitor_name', 'Tamu'], ['company', 'Perusahaan'], ['people_count', 'Orang'], ['work_area_name', 'Area'],
     ['purpose', 'Keperluan'], ['start_on', 'Mulai'], ['end_on', 'Sampai'], ['escort_name', 'Pendamping'], ['status', 'Status']] },
+  { key: 'absensi', label: 'Absensi harian', group: 'HRGA', view: 'attendance_daily', order: 'work_date', desc: true, feed: false, columns: [
+    ['work_date', 'Tanggal'], ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['roster_code', 'Roster'], ['clock_in', 'Masuk'],
+    ['clock_out', 'Pulang'], ['late_minutes', 'Terlambat (mnt)'], ['early_minutes', 'Pulang awal (mnt)'], ['worked_hours', 'Jam kerja'],
+    ['status', 'Status', lbl(ATT_STATUS)], ['outside_geofence', 'Di luar radius', yn]] },
+  { key: 'cuti', label: 'Pengajuan cuti & izin', group: 'HRGA', view: 'leave_register', order: 'start_date', desc: true, feed: false, columns: [
+    ['request_no', 'No.'], ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['leave_name', 'Jenis'], ['paid', 'Dibayar', yn],
+    ['start_date', 'Mulai'], ['end_date', 'Sampai'], ['days', 'Hari'], ['reason', 'Keterangan'], ['status', 'Status', lbl(LEAVE_STATUS)],
+    ['approver1_name', 'Atasan'], ['approver2_name', 'HRGA'], ['decision_note', 'Catatan']] },
+  { key: 'saldo_cuti', label: 'Saldo cuti tahun berjalan', group: 'HRGA', view: 'leave_balance', order: 'full_name', feed: false, columns: [
+    ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['leave_name', 'Jenis'], ['year', 'Tahun'], ['quota', 'Kuota'],
+    ['adjustment', 'Penyesuaian'], ['used', 'Terpakai'], ['pending', 'Menunggu'], ['available', 'Sisa']] },
+  { key: 'lembur', label: 'Lembur (SPL)', group: 'HRGA', view: 'overtime_register', order: 'work_date', desc: true, feed: false, columns: [
+    ['request_no', 'No. SPL'], ['work_date', 'Tanggal'], ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['start_at', 'Mulai'],
+    ['end_at', 'Selesai'], ['hours', 'Jam SPL'], ['actual_hours', 'Jam aktual'], ['day_type', 'Jenis hari', lbl(DAY_TYPE)], ['reason', 'Pekerjaan'],
+    ['status', 'Status', lbl(OT_STATUS)], ['approver_name', 'Disetujui oleh']] },
 ];
 
 export const dataset = (key: string) => DATASETS.find(d => d.key === key);
@@ -132,8 +147,8 @@ export function toCsv(rows: (string | number | boolean | null)[][]) {
 }
 
 // ---------------------------------------------------------------- impor
-export type ImportField = { key: string; label: string; required?: boolean; date?: boolean; aliases: string[]; example: string };
-export type ImportKind = { key: string; label: string; perm: string; note: string; fields: ImportField[] };
+export type ImportField = { key: string; label: string; required?: boolean; date?: boolean; datetime?: boolean; aliases: string[]; example: string };
+export type ImportKind = { key: string; label: string; perm: string; note: string; fields: ImportField[]; max?: number };
 const f = (key: string, label: string, aliases: string[], example: string, opt: Partial<ImportField> = {}): ImportField =>
   ({ key, label, aliases, example, ...opt });
 
@@ -193,6 +208,19 @@ export const IMPORTS: ImportKind[] = [
     f('no_kartu', 'No. kartu', ['no kartu', 'nomor kartu', 'no id card', 'id card'], 'IDC-0123', { required: true }),
     f('area', 'Area', ['area', 'akses', 'area akses'], 'OFFICE, MESS, PIT'),
     f('berlaku_sampai', 'Berlaku sampai', ['berlaku sampai', 'masa berlaku', 'expired'], '2027-06-30', { date: true })] },
+  { key: 'absensi', label: 'Absensi mesin fingerprint', perm: 'hr.manage', max: 20000, note: 'Satu baris = satu sentuhan. Isi Waktu (tanggal + jam) atau kolom Tanggal dan Jam terpisah. Jenis boleh kosong: sentuhan pertama dianggap masuk, terakhir pulang. Data yang sama tidak tercatat dua kali.', fields: [
+    f('nrp', 'NRP', ['nrp', 'no karyawan', 'id', 'user id', 'pin', 'ac-no', 'no. id', 'emp no'], 'BSB-0123', { required: true }),
+    f('waktu', 'Waktu', ['waktu', 'tanggal jam', 'datetime', 'date time', 'time', 'scan time', 'check time'], '2026-10-20 06:02', { datetime: true }),
+    f('tanggal', 'Tanggal', ['tanggal', 'tgl', 'date'], '2026-10-20', { date: true }),
+    f('jam', 'Jam', ['jam', 'jam scan', 'clock'], '06:02'),
+    f('jenis', 'Jenis', ['jenis', 'status', 'state', 'in/out', 'check type'], 'Masuk'),
+    f('mesin', 'Mesin', ['mesin', 'device', 'terminal', 'machine'], 'FP-OFFICE')] },
+  { key: 'saldo_cuti', label: 'Saldo awal / penyesuaian cuti', perm: 'hr.manage', note: 'Hari positif menambah, negatif mengurangi saldo (mis. -4 untuk cuti yang sudah diambil sebelum aplikasi dipakai). Jenis default CT (cuti tahunan).', fields: [
+    f('nrp', 'NRP', ['nrp', 'no karyawan'], 'BSB-0123', { required: true }),
+    f('hari', 'Hari', ['hari', 'jumlah hari', 'days', 'saldo'], '-4', { required: true }),
+    f('tahun', 'Tahun', ['tahun', 'year', 'periode'], '2026'),
+    f('jenis', 'Jenis', ['jenis', 'jenis cuti', 'kode'], 'CT'),
+    f('keterangan', 'Keterangan', ['keterangan', 'alasan', 'catatan'], 'Cuti terpakai Jan–Okt')] },
   { key: 'unit', label: 'Unit / sarana', perm: 'plant.manage', note: 'No. unit yang sudah ada diperbarui. Jenis: DT, LV, ST, FT, WT, BUS, EXC, OTHER.', fields: [
     f('no_unit', 'No. unit', ['no unit', 'no lambung', 'unit', 'kode unit'], 'DT-21', { required: true }),
     f('jenis', 'Jenis', ['jenis', 'tipe unit', 'type'], 'DT', { required: true }),
@@ -254,6 +282,24 @@ export function toIsoDate(v: string): string {
   m = /^(\d{1,2})[\s\-]+([a-z]{3})[a-z]*[\s\-]+(\d{4})$/i.exec(s);
   if (m && MONTHS[m[2].toLowerCase()]) return `${m[3]}-${String(MONTHS[m[2].toLowerCase()]).padStart(2, '0')}-${m[1].padStart(2, '0')}`;
   return s;
+}
+
+// Tanggal + jam (serial Excel, "2026-10-20 06:20", "20/10/2026 06:20:15") → "YYYY-MM-DD HH:MM[:SS]"
+export function toIsoDateTime(v: string): string {
+  const s = v.trim();
+  if (/^\d{5}(\.\d+)?$/.test(s)) {
+    return new Date(Date.UTC(1899, 11, 30) + Math.round(Number(s) * 86400) * 1000).toISOString().slice(0, 19).replace('T', ' ');
+  }
+  const m = /^(.+?)[\sT]+(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?\s*$/.exec(s);
+  if (!m) return toIsoDate(s);
+  return `${toIsoDate(m[1])} ${m[2].padStart(2, '0')}:${m[3]}${m[4] ? `:${m[4]}` : ''}`;
+}
+
+// Jam saja (serial pecahan Excel 0.2638 atau "06.20") → "HH:MM"
+export function toTime(v: string): string {
+  const s = v.trim();
+  if (/^0?\.\d+$/.test(s)) { const t = Math.round(Number(s) * 1440); return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; }
+  return s.replace('.', ':');
 }
 
 // CSV / teks tempelan dari Excel (tab) → baris

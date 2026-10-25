@@ -4,6 +4,7 @@ import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { fmtDateTime, rev } from '@/lib/documents';
 import { TaskActions } from './task-actions';
+import { LeaveTable, OvertimeTable, type LeaveRow, type OtRow } from '../hrga/time-tables';
 
 export const metadata = { title: 'Kotak tugas' };
 
@@ -22,6 +23,10 @@ export default async function TugasPage() {
         .select('id, revision, change_summary, draft_sha256, draft:draft_attachment_id(file_name), documents(id, title, registration_no, type_code, departments(code))')
         .in('id', verIds).returns<Ver[]>()
     : { data: [] as Ver[] };
+  const [{ data: leaves }, { data: ots }] = await Promise.all([
+    supabase.from('leave_register').select('*').eq('can_decide', true).order('start_date').limit(100).returns<LeaveRow[]>(),
+    supabase.from('overtime_register').select('*').eq('can_decide', true).order('work_date').limit(100).returns<OtRow[]>(),
+  ]);
   const { data: notes } = await supabase.from('notifications').select('id, title, body, link, created_at, read_at')
     .order('created_at', { ascending: false }).limit(10);
   const now = Date.now();
@@ -29,6 +34,8 @@ export default async function TugasPage() {
   return (
     <>
       <PageHeader eyebrow="Workflow" title="Kotak tugas" />
+      {!!leaves?.length && <Panel title={`Persetujuan cuti (${leaves.length})`}><LeaveTable rows={leaves} /></Panel>}
+      {!!ots?.length && <Panel title={`Persetujuan lembur / SPL (${ots.length})`}><OvertimeTable rows={ots} /></Panel>}
       {tasks.length ? (
         <div className="grid gap-4">
           {tasks.map(t => {
@@ -55,7 +62,7 @@ export default async function TugasPage() {
           })}
         </div>
       ) : (
-        <div className="rounded-md border border-dashed border-line p-8 text-center text-sm text-muted">Tidak ada tugas yang menunggu Anda.</div>
+        <div className="rounded-md border border-dashed border-line p-8 text-center text-sm text-muted">Tidak ada dokumen yang menunggu Anda.</div>
       )}
       <Panel title="Notifikasi terbaru">
         {notes?.length ? (

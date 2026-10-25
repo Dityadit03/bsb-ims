@@ -52,3 +52,22 @@ export const PRIVATE_FIELDS: [string, string, ('date' | 'select' | 'text'), stri
   ['uniform_size', 'Ukuran seragam', 'text'], ['shoe_size', 'Ukuran sepatu', 'text'],
 ];
 export const SELF_EDITABLE = ['address_domicile', 'phone', 'personal_email', 'emergency_name', 'emergency_relation', 'emergency_phone', 'uniform_size', 'shoe_size'];
+
+// ---------------------------------------------------------------- waktu: absensi, cuti, lembur
+export const ATT_STATUS: Record<string, [Tone, string]> = {
+  hadir: ['ok', 'Hadir'], terlambat: ['warn', 'Terlambat'], alpa: ['crit', 'Alpa'], belum: ['muted', 'Belum absen'], off: ['muted', 'Off'],
+  masuk_off: ['accent', 'Masuk saat off'], cuti: ['ok', 'Cuti'], sakit: ['crit', 'Sakit'], izin: ['warn', 'Izin'], libur: ['muted', 'Libur'],
+  tanpa_jadwal: ['muted', 'Tanpa jadwal'],
+};
+export const LEAVE_STATUS: Record<string, [Tone, string]> = {
+  submitted: ['warn', 'Menunggu atasan'], approved_1: ['accent', 'Menunggu HRGA'], approved: ['ok', 'Disetujui'], rejected: ['crit', 'Ditolak'], cancelled: ['muted', 'Batal'],
+};
+export const OT_STATUS: Record<string, [Tone, string]> = {
+  submitted: ['warn', 'Menunggu persetujuan'], approved: ['ok', 'Disetujui'], rejected: ['crit', 'Ditolak'], cancelled: ['muted', 'Batal'],
+};
+export const DAY_TYPE: Record<string, string> = { workday: 'Hari kerja', restday: 'Hari istirahat', holiday: 'Hari libur' };
+export const ATT_SOURCE: Record<string, string> = { app: 'Aplikasi', fingerprint: 'Fingerprint', manual: 'Koreksi' };
+export const fmtTime = (d: string | null | undefined) =>
+  d ? new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Makassar' }) : '–';
+// Tanggal hari ini di zona site (YYYY-MM-DD)
+export const siteToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });

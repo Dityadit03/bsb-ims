@@ -1313,6 +1313,112 @@ await test('karyawan keluar: riwayat "exit" dan ID card ditangguhkan', async () 
   eq((await db.query(`select reason from public.employee_movements where employee_id = $1 and kind = 'exit'`, [ops.id])).rows[0].reason, 'Habis kontrak');
 });
 
+console.log('HRIS: Waktu (absensi, cuti, lembur)');
+const absUser = await createUser('operator.absen@bsb.co.id');
+await db.query(`insert into public.user_roles(user_id, role_code, department_id) values ($1,'STAFF',$2)`, [absUser, PRD]);
+const wk = (await as(db, hrStaff, EMP_SQL, ['BSB-102', 'Fajar Operator', PRD, OPRDT, 'permanent', null, 'operator.absen@bsb.co.id'])).rows[0];
+const ROSTER = `select public.roster_set(array[$1]::uuid[], $2::date, $3::date, $4)`;
+await test('absen aplikasi: selfie wajib, di luar radius ditandai (mode flag) atau ditolak (mode reject), tidak dobel', async () => {
+  const CLOCK = `select (a).* from public.attendance_clock($1, $2, $3, 15, $4, 'test') a`;
+  await expectError('42501', async () => as(db, absUser, `select public.attendance_location_save(null, 'Pit', -1, 116, 300)`));
+  await as(db, hrStaff, `select public.attendance_location_save(null, 'Office BDA', -1.000000, 116.000000, 300)`);
+  await expectError('22023', async () => as(db, absUser, CLOCK, ['in', -1.0005, 116.0005, null]));
+  await expectError('22023', async () => as(db, absUser, CLOCK, ['in', null, null, (await upload(absUser)).id]));
+  const far = (await as(db, absUser, CLOCK, ['in', -1.02, 116.0, (await upload(absUser)).id])).rows[0];
+  eq(far.in_geofence, false); eq(far.distance_m > 2000, true);
+  await expectError('22023', async () => as(db, absUser, CLOCK, ['in', -1.0, 116.0, (await upload(absUser)).id]));
+  await db.query(`update public.app_settings set value = '"reject"' where key = 'attendance_geofence_mode'`);
+  await expectError('22023', async () => as(db, absUser, CLOCK, ['out', -1.02, 116.0, (await upload(absUser)).id]));
+  const near = (await as(db, absUser, CLOCK, ['out', -1.0005, 116.0005, (await upload(absUser)).id])).rows[0];
+  eq(near.in_geofence, true);
+  await db.query(`update public.app_settings set value = '"flag"' where key = 'attendance_geofence_mode'`);
+  // karyawan lain dari departemen lain tidak melihat log absen
+  eq((await as(db, spvHse, `select 1 from public.attendance_logs where employee_id = $1`, [wk.id])).rowCount, 0);
+  eq((await as(db, spvPrd, `select 1 from public.attendance_logs where employee_id = $1`, [wk.id])).rowCount, 2);
+});
+await test('impor mesin fingerprint: masuk/pulang ditentukan otomatis, terlambat dihitung, impor ulang tidak dobel', async () => {
+  const d = await due(-3);
+  await as(db, spvPrd, ROSTER, [boss.id, d, d, 'D']);
+  const rows = JSON.stringify([{ nrp: 'BSB-100', waktu: `${d} 06:20` }, { nrp: 'BSB-100', tanggal: d, jam: '12:00' }, { nrp: 'BSB-100', waktu: `${d} 18:05`, mesin: 'FP-1' }]);
+  eq((await as(db, spvPrd, `select public.import_rows('absensi', $1::jsonb, true) r`, [rows])).rows[0].r.ok, 0);
+  const ri = (await as(db, hrStaff, `select public.import_rows('absensi', $1::jsonb, true) r`, [rows])).rows[0].r;
+  if (ri.ok !== 3) throw new Error(JSON.stringify(ri.errors));
+  await as(db, hrStaff, `select public.import_rows('absensi', $1::jsonb, true) r`, [rows]);
+  eq((await db.query(`select count(*)::int c from public.attendance_logs where employee_id = $1`, [boss.id])).rows[0].c, 3);
+  const a = (await as(db, spvPrd, `select status, late_minutes, worked_hours, punches from public.attendance_daily where employee_id = $1 and work_date = $2::date`, [boss.id, d])).rows[0];
+  eq(a.status, 'terlambat'); eq(a.late_minutes, 20); eq(Number(a.worked_hours), 11.75); eq(a.punches, 3);
+  // jadwal D tanpa absen = alpa; koreksi manual wajib keterangan
+  const d2 = await due(-2);
+  await as(db, spvPrd, ROSTER, [boss.id, d2, d2, 'D']);
+  eq((await as(db, spvPrd, `select status from public.attendance_daily where employee_id = $1 and work_date = $2::date`, [boss.id, d2])).rows[0].status, 'alpa');
+  const MAN = `select public.attendance_manual($1, ($2::date + time '06:00') at time zone app.site_tz(), 'in', $3)`;
+  await expectError('22023', async () => as(db, spvPrd, MAN, [boss.id, d2, '']));
+  await expectError('42501', async () => as(db, spvHse, MAN, [boss.id, d2, 'Lupa absen']));
+  await as(db, spvPrd, MAN, [boss.id, d2, 'Mesin mati']);
+  eq((await as(db, spvPrd, `select status from public.attendance_daily where employee_id = $1 and work_date = $2::date`, [boss.id, d2])).rows[0].status, 'hadir');
+});
+let leave;
+await test('cuti: hitung hari kerja dari roster, saldo & bentrok dicek, dua tahap (atasan lalu HRGA), roster terisi CUTI', async () => {
+  const y = Number(today.slice(0, 4)) + 1, s = `${y}-03-02`, e = `${y}-03-06`;
+  await as(db, spvPrd, ROSTER, [wk.id, s, `${y}-03-04`, 'D']);
+  await as(db, spvPrd, ROSTER, [wk.id, `${y}-03-05`, e, 'OFF']);
+  const CREATE = `select (l).* from public.leave_request_create(null, $1, $2::date, $3::date, $4) l`;
+  await expectError('22023', async () => as(db, absUser, CREATE, ['SKT', s, s, 'Demam']));
+  await as(db, hrStaff, `select public.employee_private_save($1, '{"gender":"L"}'::jsonb)`, [wk.id]);
+  await expectError('22023', async () => as(db, absUser, CREATE, ['CHD', s, s, 'Haid']));
+  await expectError('22023', async () => as(db, absUser, CREATE, ['CT', `${y}-12-30`, `${y + 1}-01-02`, 'Liburan']));
+  leave = (await as(db, absUser, CREATE, ['CT', s, e, 'Pulang kampung'])).rows[0];
+  eq(Number(leave.days), 3); eq(leave.request_no.startsWith(`CUTI-BSB-${y}-`), true);
+  await expectError('22023', async () => as(db, absUser, CREATE, ['CT', e, e, 'Bentrok']));
+  // saldo 12 - 3 = 9; pengajuan 10 hari kerja ditolak
+  await expectError('22023', async () => as(db, absUser, CREATE, ['CT', `${y}-04-06`, `${y}-04-17`, 'Terlalu banyak']));
+  await expectError('42501', async () => as(db, spvHse, `select public.leave_request_decide($1, true)`, [leave.id]));
+  await expectError('42501', async () => as(db, absUser, `select public.leave_request_decide($1, true)`, [leave.id]));
+  eq((await as(db, spvPrd, `select can_decide from public.leave_register where id = $1`, [leave.id])).rows[0].can_decide, true);
+  eq((await as(db, spvPrd, `select (l).status from public.leave_request_decide($1, true) l`, [leave.id])).rows[0].status, 'approved_1');
+  await expectError('42501', async () => as(db, spvPrd, `select public.leave_request_decide($1, true)`, [leave.id]));
+  eq((await as(db, hrStaff, `select (l).status from public.leave_request_decide($1, true) l`, [leave.id])).rows[0].status, 'approved');
+  const codes = (await db.query(`select string_agg(code, ',' order by work_date) c from public.roster_entries where employee_id = $1 and work_date between $2 and $3`, [wk.id, s, e])).rows[0].c;
+  eq(codes, 'CUTI,CUTI,CUTI,OFF,OFF');
+  eq((await as(db, spvHse, `select 1 from public.leave_requests where id = $1`, [leave.id])).rowCount, 0);
+  eq((await db.query(`select count(*)::int c from public.notifications where user_id = $1 and title like '%disetujui'`, [absUser])).rows[0].c, 1);
+});
+await test('cuti: tolak wajib alasan; batal sebelum berjalan; saldo awal lewat impor', async () => {
+  const y = Number(today.slice(0, 4)) + 1;
+  const l2 = (await as(db, absUser, `select (l).* from public.leave_request_create(null, 'IZN', $1::date, $1::date, 'Urusan keluarga') l`, [`${y}-05-04`])).rows[0];
+  await expectError('22023', async () => as(db, spvPrd, `select public.leave_request_decide($1, false, '')`, [l2.id]));
+  eq((await as(db, spvPrd, `select (l).status from public.leave_request_decide($1, false, 'Jadwal padat') l`, [l2.id])).rows[0].status, 'rejected');
+  await expectError('42501', async () => as(db, absUser, `select public.leave_request_cancel($1)`, [leave.id]));
+  await as(db, hrStaff, `select public.leave_request_cancel($1)`, [leave.id]);
+  eq((await db.query(`select count(*)::int c from public.roster_entries where employee_id = $1 and code = 'CUTI'`, [wk.id])).rows[0].c, 0);
+  const rows = JSON.stringify([{ nrp: 'BSB-102', jenis: 'CT', hari: '-2', keterangan: 'Sudah diambil Jan–Okt' }, { nrp: 'BSB-102', jenis: 'IZN', hari: 1 }]);
+  const r = (await as(db, hrStaff, `select public.import_rows('saldo_cuti', $1::jsonb, true) r`, [rows])).rows[0].r;
+  eq(r.ok, 1); eq(r.errors.length, 1);
+  eq(Number((await as(db, absUser, `select available from public.leave_balance where leave_type = 'CT'`)).rows[0].available), 10);
+});
+await test('lembur (SPL): batas jam per hari & minggu, tidak bentrok, disetujui atasan bukan pembuat', async () => {
+  await as(db, spvPrd, ROSTER, [wk.id, today, today, 'D']);
+  const SPL = `select (o).* from public.overtime_request_create(null, $1::date, $2::time, $3::time, 'Perbaikan jalan hauling') o`;
+  await expectError('22023', async () => as(db, absUser, SPL, [today, '18:00', '23:00']));
+  const o = (await as(db, absUser, SPL, [today, '18:00', '21:00'])).rows[0];
+  eq(Number(o.hours), 3); eq(o.day_type, 'workday'); eq(o.request_no.startsWith('LBR-BSB-'), true);
+  await expectError('22023', async () => as(db, absUser, SPL, [today, '20:00', '22:00']));
+  await db.query(`update public.app_settings set value = '4' where key = 'overtime_max_week_hours'`);
+  await expectError('22023', async () => as(db, absUser, SPL, [today, '22:00', '23:30']));
+  await db.query(`update public.app_settings set value = '18' where key = 'overtime_max_week_hours'`);
+  await expectError('22023', async () => as(db, absUser, SPL, [await due(-10), '18:00', '20:00']));
+  await expectError('42501', async () => as(db, absUser, `select public.overtime_request_decide($1, true)`, [o.id]));
+  await expectError('42501', async () => as(db, spvHse, `select public.overtime_request_decide($1, true)`, [o.id]));
+  eq((await as(db, spvPrd, `select (o).status from public.overtime_request_decide($1, true) o`, [o.id])).rows[0].status, 'approved');
+  // hari OFF = hari istirahat, batas 11 jam
+  const d = await due(1);
+  await as(db, spvPrd, ROSTER, [wk.id, d, d, 'OFF']);
+  const r = (await as(db, spvPrd, `select (o).* from public.overtime_request_create($1, $2::date, '07:00', '17:00', 'Overhaul') o`, [wk.id, d])).rows[0];
+  eq(r.day_type, 'restday');
+  await expectError('42501', async () => as(db, spvPrd, `select public.overtime_request_decide($1, true)`, [r.id]));
+  await as(db, absUser, `select public.overtime_request_cancel($1)`, [r.id]);
+});
+
 console.log('audit trail');
 await test('setiap penerbitan nomor tercatat', async () => {
   const r = await db.query(`select count(*)::int c from public.audit_logs where action = 'numbering.issue'`);

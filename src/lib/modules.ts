@@ -3,7 +3,7 @@ export type NavItem = { href: string; label: string; perm?: string };
 export type NavGroup = { code: string; label: string; ready: boolean; items: NavItem[] };
 
 export const NAV: NavGroup[] = [
-  { code: 'M0', label: 'Beranda', ready: true, items: [{ href: '/', label: 'Ringkasan' }, { href: '/tugas', label: 'Kotak tugas' }] },
+  { code: 'M0', label: 'Beranda', ready: true, items: [{ href: '/', label: 'Ringkasan' }, { href: '/tugas', label: 'Kotak tugas' }, { href: '/absen', label: 'Absen' }, { href: '/saya', label: 'Saya (ESS)' }] },
   { code: 'M2', label: 'Document Control', ready: true, items: [
     { href: '/dokumen', label: 'Register dokumen' },
     { href: '/dokumen/ajukan', label: 'Ajukan / registrasi' },
@@ -27,7 +27,7 @@ export const NAV: NavGroup[] = [
   { code: 'M5', label: 'Plant', ready: true, items: [{ href: '/plant', label: 'Register unit' }, { href: '/plant/spip', label: 'Komisioning SPIP' }, { href: '/plant/wo', label: 'Work order' }] },
   { code: 'M6', label: 'Produksi', ready: true, items: [{ href: '/produksi', label: 'Laporan hauling' }, { href: '/produksi/master', label: 'Rute & target' }] },
   { code: 'M7', label: 'Logistik', ready: true, items: [{ href: '/logistik', label: 'Stok & gudang' }, { href: '/logistik/mr', label: 'Material request' }, { href: '/logistik/pengadaan', label: 'Pengadaan (PR/PO)' }, { href: '/logistik/supplier', label: 'Supplier' }] },
-  { code: 'M8', label: 'HRGA', ready: true, items: [{ href: '/hrga', label: 'Karyawan' }, { href: '/hrga/kompetensi', label: 'Kompetensi & SIMPER' }, { href: '/hrga/pelatihan', label: 'Pelatihan' }, { href: '/hrga/roster', label: 'Roster' }, { href: '/hrga/ga', label: 'Permintaan GA' }] },
+  { code: 'M8', label: 'HRGA', ready: true, items: [{ href: '/hrga', label: 'Karyawan' }, { href: '/hrga/kompetensi', label: 'Kompetensi & SIMPER' }, { href: '/hrga/pelatihan', label: 'Pelatihan' }, { href: '/hrga/kesiapan', label: 'Kesiapan kerja' }, { href: '/hrga/roster', label: 'Roster' }, { href: '/hrga/absensi', label: 'Absensi' }, { href: '/hrga/cuti', label: 'Cuti & izin' }, { href: '/hrga/lembur', label: 'Lembur (SPL)' }, { href: '/hrga/ga', label: 'Permintaan GA' }] },
   { code: 'M9', label: 'PJO & Manajemen', ready: true, items: [{ href: '/manajemen', label: 'Dashboard eksekutif' }, { href: '/manajemen/audit', label: 'Audit internal' }, { href: '/manajemen/tinjauan', label: 'Tinjauan manajemen' }] },
   { code: 'ADM', label: 'Administrasi', ready: true, items: [
     { href: '/master/organisasi', label: 'Organisasi' },

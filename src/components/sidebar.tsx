@@ -7,7 +7,7 @@ import { NAV } from '@/lib/modules';
 import type { Alert } from '@/lib/alerts';
 
 // Aksi yang paling sering dipakai di lapangan, selalu terlihat di bawah layar HP
-const QUICK = [['/', 'Beranda', '⌂'], ['/she/p2h', 'P2H', '✓'], ['/she/hazard', 'Hazard', '⚠'], ['/tugas', 'Tugas', '✉']] as const;
+const QUICK = [['/', 'Beranda', '⌂'], ['/absen', 'Absen', '◉'], ['/she/p2h', 'P2H', '✓'], ['/she/hazard', 'Hazard', '⚠'], ['/tugas', 'Tugas', '✉']] as const;
 
 const Icon = ({ d, className = 'size-5' }: { d: string; className?: string }) => (
   <svg aria-hidden viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
@@ -192,6 +192,8 @@ export function Sidebar({ permissions, name, email, role, unit, alerts, alertTot
                 <div className="truncate text-xs text-muted">{email}</div>
                 <div className="truncate text-xs text-muted">{role} · {unit}</div>
                 <div className="my-2 border-t border-line" />
+                <Link href="/saya" className="block rounded-lg px-2 py-1.5 text-sm hover:bg-ground">Profil & pengajuan saya</Link>
+                <Link href="/absen" className="block rounded-lg px-2 py-1.5 text-sm hover:bg-ground">Absen</Link>
                 <Link href="/tugas" className="block rounded-lg px-2 py-1.5 text-sm hover:bg-ground">Kotak tugas</Link>
                 <button onClick={() => setPop('settings')} className="block w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-ground">Pengaturan</button>
                 <form action="/auth/keluar" method="post"><button className="w-full rounded-lg px-2 py-1.5 text-left text-sm text-crit hover:bg-ground">Keluar</button></form>
@@ -249,7 +251,7 @@ export function Sidebar({ permissions, name, email, role, unit, alerts, alertTot
         </div>
       </aside>
 
-      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-line bg-panel/95 backdrop-blur pb-[env(safe-area-inset-bottom)] text-[11px] lg:hidden" aria-label="Aksi cepat">
+      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-6 border-t border-line bg-panel/95 backdrop-blur pb-[env(safe-area-inset-bottom)] text-[11px] lg:hidden" aria-label="Aksi cepat">
         {QUICK.map(([href, label, icon]) => {
           const active = href === '/' ? path === '/' : path.startsWith(href);
           return (
