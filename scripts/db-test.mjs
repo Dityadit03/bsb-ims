@@ -1800,6 +1800,27 @@ console.log('HRIS: Kinerja & e-learning');
   });
 }
 
+console.log('HRIS: Analitik');
+await test('analitik HR: hanya HRGA; angka konsisten dengan data; gaji hanya untuk payroll; filter departemen', async () => {
+  const AN = `select public.hr_analytics($1, $2) a`;
+  await expectError('42501', async () => as(db, dhPrd, AN, [12, null]));
+  await expectError('42501', async () => as(db, absUser, AN, [12, null]));
+  const a = (await as(db, hrStaff, AN, [6, null])).rows[0].a;
+  eq(a.monthly.length, 6);
+  const active = (await db.query(`select count(*)::int c from public.employees where status = 'active'`)).rows[0].c;
+  eq(a.monthly[a.monthly.length - 1].headcount, (await db.query(`select count(*)::int c from public.employees where status = 'active' and (join_date is null or join_date <= (date_trunc('month', current_date) + interval '1 month' - interval '1 day')::date)`)).rows[0].c);
+  eq(a.departments.reduce((n, d) => n + d.headcount, 0), active);
+  eq(a.tenure.reduce((n, d) => n + d.n, 0), active);
+  eq(a.age.reduce((n, d) => n + d.n, 0), active);
+  eq(a.cost, null);
+  const prdN = (await db.query(`select count(*)::int c from public.employees where status = 'active' and department_id = $1`, [PRD])).rows[0].c;
+  const p = (await as(db, hrStaff, AN, [6, PRD])).rows[0].a;
+  eq(p.departments.length, 1); eq(p.departments[0].headcount, prdN);
+  eq(typeof a.recruitment.open_requisitions, 'number'); eq(typeof a.learning.assigned, 'number');
+  const pay = (await as(db, payOff, `select public.hr_analytics(6, null) a`).catch(e => e)); // payroll bukan HRGA
+  eq(pay.code, '42501');
+});
+
 console.log('audit trail');
 await test('setiap penerbitan nomor tercatat', async () => {
   const r = await db.query(`select count(*)::int c from public.audit_logs where action = 'numbering.issue'`);
