@@ -33,7 +33,7 @@ export default async function HrgaPage({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHeader eyebrow="SMKP 3.5 · Kompetensi, pendidikan & pelatihan" title="HRGA"><ExportLinks dataset="karyawan" /></PageHeader>
+      <PageHeader eyebrow="SMKP 3.5 · Kompetensi, pendidikan & pelatihan" title="HRGA"><ExportLinks dataset="karyawan" />{s.canIn('hr.manage', 'HRGA') && <ExportLinks dataset="profil_karyawan" />}</PageHeader>
       <HrTabs active="/hrga" />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label={sp.keluar ? 'Karyawan keluar' : 'Karyawan aktif'} value={all.length} />
@@ -72,7 +72,7 @@ export default async function HrgaPage({ searchParams }: { searchParams: Promise
         <Panel title="Tambah / perbarui karyawan">
           <ActionForm action={saveEmployee} label="Simpan karyawan" primary className="max-w-4xl">
             <div className="grid gap-3 sm:grid-cols-3">
-              <label className="grid gap-1 text-sm">NRP<input name="nrp" required className={`${input} uppercase`} placeholder="BSB-0001" /></label>
+              <label className="grid gap-1 text-sm">NIK karyawan (NRP)<input name="nrp" className={`${input} uppercase`} placeholder="Kosongkan = dibuat otomatis" /></label>
               <label className="grid gap-1 text-sm">Nama lengkap<input name="name" required className={input} /></label>
               <DeptSelect depts={depts} />
               <label className="grid gap-1 text-sm">Jabatan
@@ -84,7 +84,7 @@ export default async function HrgaPage({ searchParams }: { searchParams: Promise
               <label className="grid gap-1 text-sm">Tanggal masuk<input type="date" name="join_date" className={input} /></label>
               <label className="grid gap-1 text-sm sm:col-span-2">Email akun aplikasi (opsional)<input type="email" name="email" className={input} placeholder="Akun harus sudah pernah login" /></label>
             </div>
-            <p className="text-xs text-muted">NRP yang sudah ada akan diperbarui datanya.</p>
+            <p className="text-xs text-muted">NIK dibuat otomatis (BSB-0001, 0002, …) dan tidak pernah sama. Isi hanya untuk memperbarui karyawan yang sudah ada.</p>
           </ActionForm>
         </Panel>
       )}

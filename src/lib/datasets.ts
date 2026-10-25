@@ -80,6 +80,15 @@ export const DATASETS: Dataset[] = [
     ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['position_name', 'Jabatan'], ['employment_type', 'Status kerja', lbl(EMPLOYMENT)],
     ['company', 'Perusahaan'], ['join_date', 'Tgl masuk'], ['status', 'Status'], ['email', 'Email akun'], ['required', 'Kompetensi wajib'],
     ['compliant', 'Terpenuhi'], ['expiring', 'Segera habis'], ['compliance_pct', 'Kepatuhan (%)']] },
+  { key: 'profil_karyawan', label: 'Profil lengkap karyawan (data pribadi)', group: 'HRGA', view: 'profile_register', order: 'nrp', feed: false, columns: [
+    ['nrp', 'NIK karyawan'], ['full_name', 'Nama'], ['gender', 'Jenis kelamin'], ['blood_type', 'Gol. darah'], ['birth_place', 'Tempat lahir'],
+    ['birth_date', 'Tgl lahir'], ['age', 'Umur'], ['religion', 'Agama'], ['phone', 'No. telepon'], ['emergency_name', 'Kontak darurat'],
+    ['emergency_relation', 'Hubungan'], ['emergency_phone', 'Telepon darurat'], ['address_ktp', 'Alamat lengkap'], ['kelurahan', 'Kelurahan'],
+    ['kecamatan', 'Kecamatan'], ['kabupaten', 'Kabupaten'], ['provinsi', 'Provinsi'], ['point_of_hire', 'POH'], ['sim_no', 'No. SIM'],
+    ['ktp_no', 'No. KTP'], ['kk_no', 'No. KK'], ['education_level', 'Pendidikan'], ['marital_status', 'Status nikah'], ['children_count', 'Jumlah anak'],
+    ['recruitment_origin', 'Status penerimaan', v => (v === 'local' ? 'Lokal' : v === 'non_local' ? 'Non lokal' : '')], ['join_date', 'Date of hire'],
+    ['worker_class', 'Status karyawan', v => (v === 'staff' ? 'Staff' : v === 'non_staff' ? 'Non staff' : '')],
+    ['tenure_months', 'Masa kerja (bulan)'], ['department_code', 'Dept'], ['position_name', 'Jabatan']] },
   { key: 'kompetensi', label: 'Sertifikat, MCU & SIMPER', group: 'HRGA', view: 'employee_competency_view', order: 'nrp', feed: false, columns: [
     ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['competency_code', 'Kode'], ['competency_name', 'Kompetensi'],
     ['unit_type', 'Jenis unit'], ['cert_no', 'No. sertifikat'], ['issuer', 'Penerbit'], ['issued_on', 'Terbit'], ['valid_until', 'Berlaku sampai'],

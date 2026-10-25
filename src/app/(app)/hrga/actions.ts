@@ -111,7 +111,8 @@ export async function cancelGa(_: ActionState, f: FormData) {
 // ---------------------------------------------------------------- HRIS: Core HR
 const PRIVATE_KEYS = ['nik', 'kk_no', 'birth_place', 'birth_date', 'gender', 'religion', 'marital_status', 'ptkp_status', 'blood_type', 'address_ktp',
   'address_domicile', 'phone', 'personal_email', 'emergency_name', 'emergency_relation', 'emergency_phone', 'education_level', 'education_major',
-  'npwp', 'bpjs_tk_no', 'bpjs_kes_no', 'bank_name', 'bank_account', 'bank_holder', 'uniform_size', 'shoe_size'];
+  'npwp', 'bpjs_tk_no', 'bpjs_kes_no', 'bank_name', 'bank_account', 'bank_holder', 'uniform_size', 'shoe_size',
+  'kelurahan', 'kecamatan', 'kabupaten', 'provinsi', 'sim_no', 'children_count'];
 const pick = (f: FormData) => Object.fromEntries(PRIVATE_KEYS.filter(k => f.has(k)).map(k => [k, String(f.get(k) ?? '').trim()]));
 const emp = (f: FormData) => `/hrga/${str(f, 'employee')}`;
 
@@ -119,6 +120,12 @@ export async function saveOrg(_: ActionState, f: FormData) {
   return run(emp(f), 'Data organisasi disimpan', () => rpc('employee_org_save', {
     p_employee: str(f, 'employee'), p_supervisor: str(f, 'supervisor'), p_site: str(f, 'site'), p_grade: str(f, 'grade'),
     p_roster_pattern: str(f, 'roster_pattern'), p_point_of_hire: str(f, 'poh'),
+  }));
+}
+
+export async function saveClassify(_: ActionState, f: FormData) {
+  return run(emp(f), 'Klasifikasi disimpan', () => rpc('employee_classify', {
+    p_employee: str(f, 'employee'), p_origin: str(f, 'origin'), p_class: str(f, 'class'),
   }));
 }
 

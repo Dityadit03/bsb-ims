@@ -1243,6 +1243,23 @@ await test('data pribadi hanya HRGA & karyawan ybs; karyawan hanya boleh ubah ko
   const r = (await db.query(`select phone, bank_account from public.employee_private where employee_id = $1`, [ops.id])).rows[0];
   eq(r.phone, '0812'); eq(r.bank_account, '123');
 });
+await test('NIK karyawan otomatis tanpa duplikat; No. KTP unik; profil lengkap menghitung umur & masa kerja', async () => {
+  const a = (await as(db, hrStaff, EMP_SQL, [null, 'Karyawan Otomatis A', PRD, OPRDT, 'contract', null, null])).rows[0];
+  const b = (await as(db, hrStaff, EMP_SQL, ['', 'Karyawan Otomatis B', PRD, OPRDT, 'contract', null, null])).rows[0];
+  eq(/^BSB-\d{4}$/.test(a.nrp), true); eq(a.nrp !== b.nrp, true);
+  // nomor yang sudah terpakai (hasil impor) dilompati
+  const nxt = Number(b.nrp.slice(4)) + 1;
+  await as(db, hrStaff, EMP_SQL, [`BSB-${String(nxt).padStart(4, '0')}`, 'Impor Lama', PRD, OPRDT, 'contract', null, null]);
+  const c = (await as(db, hrStaff, EMP_SQL, [null, 'Karyawan Otomatis C', PRD, OPRDT, 'contract', null, null])).rows[0];
+  eq(c.nrp !== `BSB-${String(nxt).padStart(4, '0')}`, true);
+  await as(db, hrStaff, `select public.employee_private_save($1, $2::jsonb)`, [a.id, JSON.stringify({ nik: '6471010101900099', kelurahan: 'Gunung Bahagia', kecamatan: 'Balikpapan Selatan', kabupaten: 'Balikpapan', provinsi: 'Kalimantan Timur', sim_no: 'SIM-123', children_count: '2', birth_date: '1990-01-01' })]);
+  await expectError('23505', async () => as(db, hrStaff, `select public.employee_private_save($1, $2::jsonb)`, [b.id, JSON.stringify({ nik: '6471010101900099' })]));
+  await as(db, hrStaff, `select public.employee_classify($1, 'local', 'non_staff')`, [a.id]);
+  await expectError('23514', async () => as(db, hrStaff, `select public.employee_classify($1, 'asing', null)`, [a.id]));
+  await expectError('42501', async () => as(db, spvPrd, `select public.employee_classify($1, 'local', 'staff')`, [a.id]));
+  const r = (await as(db, hrStaff, `select age, children_count, recruitment_origin, worker_class, provinsi from public.profile_register where employee_id = $1`, [a.id])).rows[0];
+  eq(r.age >= 35, true); eq(r.children_count, 2); eq(r.recruitment_origin, 'local'); eq(r.worker_class, 'non_staff'); eq(r.provinsi, 'Kalimantan Timur');
+});
 await test('kontrak: PKWT wajib tanggal akhir, status kerja ikut kontrak, register menandai segera habis', async () => {
   await expectError('23514', async () => as(db, hrStaff, `select public.contract_add($1, 'pkwt', 'PKWT/1', $2::date, null)`, [ops.id, today]));
   await as(db, hrStaff, `select public.contract_add($1, 'pkwt', 'PKWT/1', $2::date - 340, $2::date + 20)`, [ops.id, today]);

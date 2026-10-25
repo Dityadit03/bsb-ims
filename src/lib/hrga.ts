@@ -38,19 +38,23 @@ export const CARD_STATUS: Record<string, [Tone, string]> = {
 };
 export const MOB: Record<string, string> = { mob: 'Mobilisasi', demob: 'Demobilisasi' };
 export const MOB_AUTO: Record<string, string> = { induksi: 'Induksi berlaku', mcu: 'MCU berlaku & fit', id_card: 'ID card' };
-export const PRIVATE_FIELDS: [string, string, ('date' | 'select' | 'text'), string[]?][] = [
-  ['nik', 'NIK (KTP)', 'text'], ['kk_no', 'No. KK', 'text'], ['birth_place', 'Tempat lahir', 'text'], ['birth_date', 'Tanggal lahir', 'date'],
+export const PRIVATE_FIELDS: [string, string, ('date' | 'select' | 'text' | 'number'), string[]?][] = [
+  ['nik', 'No. KTP', 'text'], ['kk_no', 'No. KK', 'text'], ['birth_place', 'Tempat lahir', 'text'], ['birth_date', 'Tanggal lahir', 'date'],
   ['gender', 'Jenis kelamin', 'select', ['L', 'P']], ['religion', 'Agama', 'text'],
   ['marital_status', 'Status nikah', 'select', ['single', 'married', 'divorced', 'widowed']],
   ['ptkp_status', 'Status PTKP', 'select', ['TK/0', 'TK/1', 'TK/2', 'TK/3', 'K/0', 'K/1', 'K/2', 'K/3']],
   ['blood_type', 'Golongan darah', 'select', ['A', 'B', 'AB', 'O']],
   ['education_level', 'Pendidikan', 'select', ['SD', 'SMP', 'SMA', 'D1', 'D2', 'D3', 'D4', 'S1', 'S2', 'S3']], ['education_major', 'Jurusan', 'text'],
-  ['address_ktp', 'Alamat KTP', 'text'], ['address_domicile', 'Alamat domisili', 'text'], ['phone', 'No. HP', 'text'], ['personal_email', 'Email pribadi', 'text'],
+  ['address_ktp', 'Alamat lengkap (KTP)', 'text'], ['kelurahan', 'Kelurahan / desa', 'text'], ['kecamatan', 'Kecamatan', 'text'],
+  ['kabupaten', 'Kabupaten / kota', 'text'], ['provinsi', 'Provinsi', 'text'], ['sim_no', 'No. SIM', 'text'], ['children_count', 'Jumlah anak', 'number'],
+  ['address_domicile', 'Alamat domisili', 'text'], ['phone', 'No. HP', 'text'], ['personal_email', 'Email pribadi', 'text'],
   ['emergency_name', 'Kontak darurat', 'text'], ['emergency_relation', 'Hubungan', 'text'], ['emergency_phone', 'HP kontak darurat', 'text'],
   ['npwp', 'NPWP', 'text'], ['bpjs_tk_no', 'No. BPJS Ketenagakerjaan', 'text'], ['bpjs_kes_no', 'No. BPJS Kesehatan', 'text'],
   ['bank_name', 'Bank', 'text'], ['bank_account', 'No. rekening', 'text'], ['bank_holder', 'Nama di rekening', 'text'],
   ['uniform_size', 'Ukuran seragam', 'text'], ['shoe_size', 'Ukuran sepatu', 'text'],
 ];
+export const ORIGIN: Record<string, string> = { local: 'Lokal', non_local: 'Non lokal' };
+export const WORKER_CLASS: Record<string, string> = { staff: 'Staff', non_staff: 'Non staff' };
 export const SELF_EDITABLE = ['address_domicile', 'phone', 'personal_email', 'emergency_name', 'emergency_relation', 'emergency_phone', 'uniform_size', 'shoe_size'];
 
 // ---------------------------------------------------------------- waktu: absensi, cuti, lembur

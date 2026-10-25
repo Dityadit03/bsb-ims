@@ -8,11 +8,11 @@ import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { fmtDate } from '@/lib/documents';
 import {
-  CARD_STATUS, COMP_CATEGORY, CONTRACT, CONTRACT_STATUS, EMPLOYMENT, FITNESS, MOB, MOB_AUTO, MOVE, PRIVATE_FIELDS, ROSTER, VALIDITY, pctTone,
+  CARD_STATUS, COMP_CATEGORY, CONTRACT, CONTRACT_STATUS, EMPLOYMENT, FITNESS, MOB, MOB_AUTO, MOVE, ORIGIN, PRIVATE_FIELDS, WORKER_CLASS, ROSTER, VALIDITY, pctTone,
 } from '@/lib/hrga';
 import {
   addCompetency, addContract, cancelMobilization, checkMobilization, completeMobilization, createMobilization, exitEmployee, issueIdCard,
-  moveEmployee, revokeCompetency, saveOrg, savePrivate, setCompetencyDetail, setIdCardStatus,
+  moveEmployee, revokeCompetency, saveClassify, saveOrg, savePrivate, setCompetencyDetail, setIdCardStatus,
 } from '../actions';
 import { HrTabs } from '../tabs';
 import { today } from '../../she/fields';
@@ -21,7 +21,7 @@ type Emp = { id: string; nrp: string; full_name: string; department_id: string; 
   company: string | null; join_date: string | null; status: string; exit_date: string | null; email: string | null;
   required: number; compliant: number; compliance_pct: number | null };
 type Org = { supervisor_id: string | null; site_id: string | null; grade: string | null; roster_pattern: string | null; point_of_hire: string | null;
-  section_id: string | null; position_id: string | null };
+  section_id: string | null; position_id: string | null; recruitment_origin: string | null; worker_class: string | null };
 type Comp = { id: string; competency_code: string; competency_name: string; category: string; cert_no: string | null; issuer: string | null;
   issued_on: string; valid_until: string | null; validity: string; days_left: number | null; revoke_reason: string | null;
   fitness: string | null; fitness_note: string | null; license_class: string | null };
@@ -30,6 +30,18 @@ type Mob = { id: string; kind: string; planned_date: string; status: string; ite
 
 const TAB = [['ringkasan', 'Ringkasan'], ['pribadi', 'Data pribadi'], ['kontrak', 'Kontrak & riwayat'], ['kompetensi', 'Kompetensi'], ['akses', 'ID card & mobilisasi']] as const;
 
+const ageOf = (birth: string, on: string) => {
+  const b = new Date(birth), d = new Date(on);
+  return d.getFullYear() - b.getFullYear() - (d.getMonth() < b.getMonth() || (d.getMonth() === b.getMonth() && d.getDate() < b.getDate()) ? 1 : 0);
+};
+const tenure = (join: string | null, exit: string | null, on: string) => {
+  if (!join) return '–';
+  const a = new Date(join), z = new Date(exit ?? on);
+  let m = (z.getFullYear() - a.getFullYear()) * 12 + z.getMonth() - a.getMonth() - (z.getDate() < a.getDate() ? 1 : 0);
+  if (m < 0) m = 0;
+  return `${Math.floor(m / 12)} tahun ${m % 12} bulan`;
+};
+
 export default async function EmployeeDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
   const { id } = await params;
   const tab = (await searchParams).tab ?? 'ringkasan';
@@ -37,7 +49,7 @@ export default async function EmployeeDetail({ params, searchParams }: { params:
   const supabase = await createClient();
   const [{ data: e }, { data: org }] = await Promise.all([
     supabase.from('employee_register').select('*').eq('id', id).maybeSingle<Emp>(),
-    supabase.from('employees').select('supervisor_id, site_id, grade, roster_pattern, point_of_hire, section_id, position_id').eq('id', id).maybeSingle<Org>(),
+    supabase.from('employees').select('supervisor_id, site_id, grade, roster_pattern, point_of_hire, section_id, position_id, recruitment_origin, worker_class').eq('id', id).maybeSingle<Org>(),
   ]);
   if (!e || !org) notFound();
   const from = today();
@@ -91,6 +103,10 @@ export default async function EmployeeDetail({ params, searchParams }: { params:
                 <dt>Golongan</dt><dd>{org.grade ?? '–'}</dd>
                 <dt>Pola roster</dt><dd>{org.roster_pattern ?? '–'}</dd>
                 <dt>Point of hire</dt><dd>{org.point_of_hire ?? '–'}</dd>
+                <dt>Status penerimaan</dt><dd>{org.recruitment_origin ? ORIGIN[org.recruitment_origin] : '–'}</dd>
+                <dt>Golongan karyawan</dt><dd>{org.worker_class ? WORKER_CLASS[org.worker_class] : '–'}</dd>
+                <dt>Masa kerja</dt><dd>{tenure(e.join_date, e.exit_date, from)}</dd>
+                <dt>Umur</dt><dd>{priv?.birth_date ? `${ageOf(priv.birth_date, from)} tahun` : '–'}</dd>
                 <dt>Akun</dt><dd>{e.email ?? '–'}</dd>
               </dl>
               {hr && active && (
@@ -106,6 +122,16 @@ export default async function EmployeeDetail({ params, searchParams }: { params:
                       <label className="grid gap-1 text-xs">Golongan / grade<input name="grade" defaultValue={org.grade ?? ''} className={input} /></label>
                       <label className="grid gap-1 text-xs">Pola roster<input name="roster_pattern" defaultValue={org.roster_pattern ?? ''} className={input} placeholder="10/4, 14/7, 5/2" /></label>
                       <label className="grid gap-1 text-xs sm:col-span-2">Point of hire<input name="poh" defaultValue={org.point_of_hire ?? ''} className={input} placeholder="Kota asal penerimaan" /></label>
+                    </div>
+                  </ActionForm>
+                  <ActionForm action={saveClassify} label="Simpan klasifikasi" hidden={{ employee: id }} className="mt-3">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <label className="grid gap-1 text-xs">Status penerimaan
+                        <select name="origin" defaultValue={org.recruitment_origin ?? ''} className={input}><option value="">–</option>
+                          {Object.entries(ORIGIN).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
+                      <label className="grid gap-1 text-xs">Golongan karyawan
+                        <select name="class" defaultValue={org.worker_class ?? ''} className={input}><option value="">–</option>
+                          {Object.entries(WORKER_CLASS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
                     </div>
                   </ActionForm>
                 </details>
@@ -150,7 +176,7 @@ export default async function EmployeeDetail({ params, searchParams }: { params:
                     <label key={k} className="grid gap-1 text-xs">{l}
                       {type === 'select'
                         ? <select name={k} defaultValue={priv?.[k] ?? ''} className={input}><option value="">–</option>{opts!.map(o => <option key={o}>{o}</option>)}</select>
-                        : <input name={k} type={type} defaultValue={priv?.[k] ?? ''} className={input} />}
+                        : <input name={k} type={type} min={type === 'number' ? 0 : undefined} defaultValue={priv?.[k] ?? ''} className={input} />}
                     </label>
                   ))}
                 </div>
