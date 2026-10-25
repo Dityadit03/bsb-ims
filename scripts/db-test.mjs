@@ -1520,6 +1520,87 @@ await test('pengaturan payroll: hanya kunci yang diizinkan, tanggal tutup <= 28,
   await expectError('42501', async () => as(db, payApp, `select public.payroll_setting_set('bpjs_jkk_er', 1)`));
 });
 
+console.log('HRIS: Klaim & kasbon');
+{
+  const CLAIM = `select (c).* from public.expense_claim_create(null, $1, $2::date, $3, $4, null, $5::uuid[]) c`;
+  const today = (await db.query(`select app.site_today()::text d`)).rows[0].d;
+  const DEC = `select (c).* from public.expense_claim_decide($1, $2, $3, $4, $5) c`;
+  let medis, dinas, loan, adv, krun;
+  await test('klaim wajib bukti; plafon tahunan per jenis', async () => {
+    await expectError('22023', async () => as(db, payEmpUser, CLAIM, ['MEDIS', today, 500000, 'Berobat klinik', []]));
+    await as(db, payOff, `select public.claim_type_save('MEDIS', 'Pengobatan / rawat jalan', true, null, 1000000, true, true, 10)`);
+    await expectError('22023', async () => as(db, payEmpUser, CLAIM, ['MEDIS', today, 1200000, 'Rawat jalan', [(await upload(payEmpUser)).id]]));
+    medis = (await as(db, payEmpUser, CLAIM, ['MEDIS', today, 500000, 'Berobat klinik', [(await upload(payEmpUser)).id]])).rows[0];
+    dinas = (await as(db, payEmpUser, CLAIM, ['DINAS', today, 300000, 'Tiket bus Samarinda', [(await upload(payEmpUser)).id]])).rows[0];
+    eq(medis.claim_no.startsWith('RMB-BSB-'), true);
+    await expectError('42501', async () => as(db, hrStaff, `select public.claim_type_save('X1', 'x', false, null, null, false, true)`));
+  });
+  await test('klaim: atasan/HRGA tahap 1, payroll tahap 2 (nominal bisa dikurangi), pengaju tidak memutuskan sendiri', async () => {
+    await expectError('42501', async () => as(db, payEmpUser, DEC, [medis.id, true, null, null, 'payroll']));
+    await expectError('42501', async () => as(db, payOff, DEC, [medis.id, true, null, null, 'payroll']));
+    for (const c of [medis, dinas]) await as(db, hrStaff, DEC, [c.id, true, null, null, 'payroll']);
+    await expectError('42501', async () => as(db, hrStaff, DEC, [medis.id, true, null, null, 'payroll']));
+    await expectError('22023', async () => as(db, payOff, DEC, [medis.id, true, null, 600000, 'payroll']));
+    eq(Number((await as(db, payOff, DEC, [medis.id, true, 'Obat non-generik tidak ditanggung', 400000, 'payroll'])).rows[0].approved_amount), 400000);
+    await as(db, payOff, DEC, [dinas.id, true, null, null, 'payroll']);
+    const r = (await as(db, hrStaff, `select can_decide from public.expense_claim_register where id = $1`, [medis.id])).rows[0];
+    eq(r.can_decide, false);
+    eq((await as(db, absUser, `select 1 from public.expense_claims`)).rowCount, 0);
+  });
+  await test('kasbon pribadi: plafon 1x upah tetap, satu kasbon berjalan, cair lalu dicicil', async () => {
+    const LOAN = `select (a).* from public.cash_advance_create(null, $1, $2, $3, $4) a`;
+    await expectError('22023', async () => as(db, payEmpUser, LOAN, ['loan', 'Biaya sekolah', 10000000, 3]));
+    await expectError('22023', async () => as(db, payEmpUser, LOAN, ['loan', 'Biaya sekolah', 3000000, 24]));
+    loan = (await as(db, payEmpUser, LOAN, ['loan', 'Biaya sekolah', 3000000, 3])).rows[0];
+    eq(Number(loan.installment_amount), 1000000);
+    await expectError('22023', async () => as(db, payEmpUser, LOAN, ['loan', 'Lagi', 500000, 1]));
+    const tmp = (await as(db, payEmpUser, LOAN, ['advance', 'Batal', 100000, 1])).rows[0];
+    await expectError('22023', async () => as(db, absUser, `select public.cash_advance_cancel($1)`, [tmp.id]));
+    eq((await as(db, payEmpUser, `select (a).status from public.cash_advance_cancel($1) a`, [tmp.id])).rows[0].status, 'cancelled');
+    adv = (await as(db, payEmpUser, LOAN, ['advance', 'Dinas ke Balikpapan', 2000000, 5])).rows[0];
+    eq(adv.installments, 1);
+    for (const a of [loan, adv]) {
+      await as(db, hrStaff, `select public.cash_advance_decide($1, true)`, [a.id]);
+      await as(db, payOff, `select public.cash_advance_decide($1, true)`, [a.id]);
+      await expectError('42501', async () => as(db, hrStaff, `select public.cash_advance_disburse($1)`, [a.id]));
+      await as(db, payOff, `select public.cash_advance_disburse($1)`, [a.id]);
+    }
+    await expectError('22023', async () => as(db, payEmpUser, `select public.cash_advance_report($1, 1)`, [loan.id]));
+    await as(db, payEmpUser, `select public.cash_advance_report($1, 1500000, 'Hotel + transport')`, [adv.id]);
+    eq(Number((await as(db, payEmpUser, `select balance from public.cash_advance_register where id = $1`, [adv.id])).rows[0].balance), 500000);
+  });
+  await test('proses gaji menarik klaim (pajak sesuai jenis) dan cicilan; tercatat lunas saat slip terbit', async () => {
+    krun = (await as(db, payOff, RUN, ['2026-11', 'regular', '2026-11-25', false])).rows[0];
+    await as(db, payOff, `select public.payroll_calculate($1)`, [krun.id]);
+    const inp = (await db.query(`select component_code, amount from public.payroll_inputs where run_id = $1 and employee_id = $2 order by component_code, amount`,
+      [krun.id, pe.id])).rows.map(r => `${r.component_code}:${Number(r.amount)}`).join(',');
+    eq(inp, 'KASBON:500000,KASBON:1000000,REIMB:300000,REIMBT:400000');
+    const auto = (await db.query(`select id from public.payroll_inputs where run_id = $1 and source_table is not null limit 1`, [krun.id])).rows[0];
+    await expectError('22023', async () => as(db, payOff, `select public.payroll_input_delete($1)`, [auto.id]));
+    await as(db, payOff, `select public.payroll_calculate($1)`, [krun.id]);
+    eq((await db.query(`select count(*)::int c from public.payroll_inputs where run_id = $1 and employee_id = $2`, [krun.id, pe.id])).rows[0].c, 4);
+    eq((await as(db, payEmpUser, `select status from public.expense_claims where id = $1`, [medis.id])).rows[0].status, 'approved');
+    await as(db, payApp, `select public.payroll_approve($1)`, [krun.id]);
+    await as(db, payOff, `select public.payroll_publish($1)`, [krun.id]);
+    const c = (await as(db, payEmpUser, `select status, paid_run_no from public.expense_claim_register where id = $1`, [medis.id])).rows[0];
+    eq(c.status, 'paid'); eq(c.paid_run_no, krun.run_no);
+    const l = (await as(db, payEmpUser, `select status, balance, repaid from public.cash_advance_register where id = $1`, [loan.id])).rows[0];
+    eq(Number(l.balance), 2000000); eq(l.status, 'active');
+    eq((await as(db, payEmpUser, `select status from public.cash_advance_register where id = $1`, [adv.id])).rows[0].status, 'settled');
+  });
+  await test('pelunasan manual kasbon dan saldo kasbon dari sistem lama lewat impor', async () => {
+    await expectError('22023', async () => as(db, payOff, `select public.advance_repay($1, 2500000)`, [loan.id]));
+    await as(db, payOff, `select public.advance_repay($1, 2000000, null, 'Transfer pelunasan')`, [loan.id]);
+    eq((await db.query(`select status from public.cash_advances where id = $1`, [loan.id])).rows[0].status, 'settled');
+    const rows = JSON.stringify([{ nrp: 'BSB-200', sisa: '1.200.000', cicilan: '400.000' }]);
+    eq((await as(db, hrStaff, `select public.import_rows('kasbon_awal', $1::jsonb, true) r`, [rows])).rows[0].r.ok, 0);
+    const ir = (await as(db, payOff, `select public.import_rows('kasbon_awal', $1::jsonb, true) r`, [rows])).rows[0].r;
+    eq(ir.ok, 1, JSON.stringify(ir.errors));
+    const o = (await db.query(`select status, installments, installment_amount from public.cash_advances where employee_id = $1 and opening`, [pe.id])).rows[0];
+    eq(o.status, 'active'); eq(o.installments, 3); eq(Number(o.installment_amount), 400000);
+  });
+}
+
 console.log('audit trail');
 await test('setiap penerbitan nomor tercatat', async () => {
   const r = await db.query(`select count(*)::int c from public.audit_logs where action = 'numbering.issue'`);

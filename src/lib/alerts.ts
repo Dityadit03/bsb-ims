@@ -11,7 +11,7 @@ export const getAlerts = cache(async () => {
   const supabase = await createClient();
   const head = { count: 'exact' as const, head: true };
   const count = (q: PromiseLike<{ count: number | null }>) => q.then(r => r.count ?? 0);
-  const [certs, spip, hazardOpen, hazardLate, capaLate, mrWait, poWait, lowStock, tasks, unread, contractExp, contractSoon, leaveWait, otWait] = await Promise.all([
+  const [certs, spip, hazardOpen, hazardLate, capaLate, mrWait, poWait, lowStock, tasks, unread, contractExp, contractSoon, leaveWait, otWait, claimWait, advWait, advLate] = await Promise.all([
     supabase.from('employee_competency_view').select('employee_id, competency_id, category, valid_until, validity')
       .neq('validity', 'revoked').limit(20000).returns<Cert[]>(),
     supabase.from('commissioning_register').select('validity').in('validity', ['expired', 'expiring']).limit(5000),
@@ -28,6 +28,9 @@ export const getAlerts = cache(async () => {
     count(supabase.from('contract_register').select('*', head).eq('contract_status', 'expiring')),
     count(supabase.from('leave_register').select('*', head).eq('can_decide', true)),
     count(supabase.from('overtime_register').select('*', head).eq('can_decide', true)),
+    count(supabase.from('expense_claim_register').select('*', head).eq('can_decide', true)),
+    count(supabase.from('cash_advance_register').select('*', head).eq('can_decide', true)),
+    count(supabase.from('cash_advance_register').select('*', head).eq('report_overdue', true)),
   ]);
   // sertifikat terbaru per karyawan & kompetensi
   const latest = new Map<string, Cert>();
@@ -41,13 +44,16 @@ export const getAlerts = cache(async () => {
     mcuExp: cert(mcu, 'expired'), mcuSoon: cert(mcu, 'expiring'), simExp: cert(simper, 'expired'), simSoon: cert(simper, 'expiring'),
     othExp: cert(other, 'expired'), spipExp: (spip.data ?? []).filter(r => r.validity === 'expired').length,
     spipSoon: (spip.data ?? []).filter(r => r.validity === 'expiring').length, hazardOpen, hazardLate, capaLate, mrWait, poWait, lowStock, tasks, unread,
-    contractExp, contractSoon, leaveWait, otWait,
+    contractExp, contractSoon, leaveWait, otWait, claimWait, advWait, advLate,
   };
   const items = ([
     [c.unread, 'accent', 'notifikasi baru', 'Belum dibaca', '/tugas'],
     [c.tasks, 'accent', 'tugas menunggu Anda', 'Persetujuan & review', '/tugas'],
     [c.leaveWait, 'warn', 'cuti menunggu persetujuan Anda', 'Pengajuan cuti & izin', '/tugas'],
     [c.otWait, 'warn', 'SPL lembur menunggu persetujuan Anda', 'Surat perintah lembur', '/tugas'],
+    [c.claimWait, 'warn', 'klaim menunggu persetujuan Anda', 'Reimbursement', '/tugas'],
+    [c.advWait, 'warn', 'kasbon / uang muka menunggu persetujuan Anda', 'Kasbon & uang muka dinas', '/tugas'],
+    [c.advLate, 'crit', 'uang muka belum dipertanggungjawabkan', 'Lewat batas laporan', '/hrga/klaim?tab=kasbon'],
     [c.mcuExp, 'crit', 'MCU expired', 'Masa berlaku habis', '/hrga/kompetensi'],
     [c.mcuSoon, 'warn', 'MCU segera expired', '≤ 30 hari lagi', '/hrga/kompetensi'],
     [c.simExp, 'crit', 'SIMPER expired', 'Izin mengoperasikan unit habis', '/hrga/kompetensi'],

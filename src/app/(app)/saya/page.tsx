@@ -10,17 +10,18 @@ import { ATT_STATUS, EMPLOYMENT, PRIVATE_FIELDS, ROSTER, RUN_KIND, SELF_EDITABLE
 import { saveMyPrivate } from '../hrga/actions';
 import { LeaveForm, OvertimeForm } from '../hrga/time-forms';
 import { LeaveTable, OvertimeTable, type LeaveRow, type OtRow } from '../hrga/time-tables';
+import { AdvanceForm, AdvanceTable, ClaimForm, ClaimTable, type AdvanceRow, type ClaimRow } from '../hrga/claims';
 
 export const metadata = { title: 'Saya' };
 
-const TABS = [['/saya', 'Profil'], ['/saya?tab=absen', 'Kehadiran'], ['/saya?tab=cuti', 'Cuti'], ['/saya?tab=lembur', 'Lembur'], ['/saya?tab=gaji', 'Slip gaji']] as const;
+const TABS = [['/saya', 'Profil'], ['/saya?tab=absen', 'Kehadiran'], ['/saya?tab=cuti', 'Cuti'], ['/saya?tab=lembur', 'Lembur'], ['/saya?tab=klaim', 'Klaim & kasbon'], ['/saya?tab=gaji', 'Slip gaji']] as const;
 
 // Employee self service: profil & data kontak, rekap kehadiran, pengajuan cuti dan SPL milik sendiri.
 export default async function SayaPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
   const { profile } = await getSession();
   const supabase = await createClient();
-  const tab = ['absen', 'cuti', 'lembur', 'gaji'].includes(sp.tab ?? '') ? sp.tab! : 'profil';
+  const tab = ['absen', 'cuti', 'lembur', 'klaim', 'gaji'].includes(sp.tab ?? '') ? sp.tab! : 'profil';
   const { data: me } = await supabase.from('employee_register').select('*').eq('profile_id', profile.id).eq('status', 'active').maybeSingle();
 
   return (
@@ -35,6 +36,7 @@ export default async function SayaPage({ searchParams }: { searchParams: Promise
           {tab === 'absen' && <Kehadiran id={me.id} month={sp.bln} supabase={supabase} />}
           {tab === 'cuti' && <Cuti id={me.id} supabase={supabase} />}
           {tab === 'lembur' && <Lembur id={me.id} supabase={supabase} />}
+          {tab === 'klaim' && <Klaim id={me.id} supabase={supabase} />}
           {tab === 'gaji' && <Gaji id={me.id} supabase={supabase} />}
         </>
       )}
@@ -199,5 +201,24 @@ async function Gaji({ id, supabase }: { id: string; supabase: Client }) {
         </Table>
       ) : <p className="text-sm text-muted">Belum ada slip gaji yang diterbitkan.</p>}
     </Panel>
+  );
+}
+
+async function Klaim({ id, supabase }: { id: string; supabase: Client }) {
+  const [{ data: claims }, { data: advs }] = await Promise.all([
+    supabase.from('expense_claim_register').select('*').eq('employee_id', id).order('created_at', { ascending: false }).limit(50).returns<ClaimRow[]>(),
+    supabase.from('cash_advance_register').select('*').eq('employee_id', id).order('created_at', { ascending: false }).limit(30).returns<AdvanceRow[]>(),
+  ]);
+  return (
+    <>
+      <Panel title="Ajukan klaim biaya"><ClaimForm employeeId={id} /></Panel>
+      <Panel title="Riwayat klaim">
+        {claims?.length ? <ClaimTable rows={claims} mode="self" /> : <p className="text-sm text-muted">Belum ada klaim.</p>}
+      </Panel>
+      <Panel title="Ajukan kasbon / uang muka dinas"><AdvanceForm /></Panel>
+      <Panel title="Kasbon & uang muka">
+        {advs?.length ? <AdvanceTable rows={advs} mode="self" /> : <p className="text-sm text-muted">Belum ada kasbon atau uang muka.</p>}
+      </Panel>
+    </>
   );
 }

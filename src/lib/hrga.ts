@@ -84,3 +84,15 @@ export const PAY_CALC: Record<string, string> = {
   fixed: 'Tetap per bulan', per_present_day: 'Per hari hadir', per_night_shift: 'Per shift malam', manual: 'Diisi per proses gaji',
 };
 export const rp = (n: number | string | null | undefined) => (n == null ? '–' : Math.round(Number(n)).toLocaleString('id-ID'));
+
+// Klaim & kasbon
+export const CLAIM_STATUS: Record<string, [Tone, string]> = {
+  submitted: ['warn', 'Menunggu atasan'], approved_1: ['accent', 'Menunggu payroll'], approved: ['accent', 'Disetujui, belum dibayar'],
+  paid: ['ok', 'Dibayar'], rejected: ['crit', 'Ditolak'], cancelled: ['muted', 'Batal'],
+};
+export const ADV_STATUS: Record<string, [Tone, string]> = {
+  submitted: ['warn', 'Menunggu atasan'], approved_1: ['accent', 'Menunggu payroll'], approved: ['accent', 'Menunggu pencairan'],
+  active: ['warn', 'Berjalan'], settled: ['ok', 'Lunas'], rejected: ['crit', 'Ditolak'], cancelled: ['muted', 'Batal'],
+};
+export const ADV_KIND: Record<string, string> = { loan: 'Kasbon pribadi', advance: 'Uang muka dinas' };
+export const PAY_METHOD: Record<string, string> = { payroll: 'Bersama gaji', transfer: 'Transfer' };

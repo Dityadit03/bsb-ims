@@ -2,7 +2,7 @@
 import { HAZARD_TYPE, INCIDENT_CLASS, OPEN_CLOSED, VALIDITY } from '@/lib/she';
 import { UNIT_STATUS, WO_STATUS, WO_TYPE } from '@/lib/plant';
 import { CATEGORY, MOVE, MR_STATUS, PO_STATUS, PR_STATUS, STAGE } from '@/lib/logistics';
-import { ATT_STATUS, CARD_STATUS, CONTRACT, CONTRACT_STATUS, DAY_TYPE, EMPLOYMENT, LEAVE_STATUS, MOVE as MOVEMENT, OT_STATUS, RUN_KIND, RUN_STATUS } from '@/lib/hrga';
+import { ATT_STATUS, CARD_STATUS, CONTRACT, CONTRACT_STATUS, DAY_TYPE, EMPLOYMENT, LEAVE_STATUS, MOVE as MOVEMENT, OT_STATUS, RUN_KIND, RUN_STATUS, CLAIM_STATUS, ADV_STATUS, ADV_KIND, PAY_METHOD } from '@/lib/hrga';
 
 type Label = Record<string, string | [string, string]>;
 const lbl = (m: Label) => (v: unknown) => { const x = m[String(v)]; return x == null ? v : Array.isArray(x) ? x[1] : x; };
@@ -124,6 +124,16 @@ export const DATASETS: Dataset[] = [
     ['request_no', 'No. SPL'], ['work_date', 'Tanggal'], ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['start_at', 'Mulai'],
     ['end_at', 'Selesai'], ['hours', 'Jam SPL'], ['actual_hours', 'Jam aktual'], ['day_type', 'Jenis hari', lbl(DAY_TYPE)], ['reason', 'Pekerjaan'],
     ['status', 'Status', lbl(OT_STATUS)], ['approver_name', 'Disetujui oleh']] },
+  { key: 'klaim', label: 'Klaim reimbursement', group: 'HRGA', view: 'expense_claim_register', order: 'created_at', desc: true, feed: false, columns: [
+    ['claim_no', 'No. klaim'], ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['claim_type_name', 'Jenis'], ['taxable', 'Kena pajak', yn],
+    ['expense_date', 'Tgl biaya'], ['description', 'Keterangan'], ['amount', 'Diajukan'], ['approved_amount', 'Disetujui'],
+    ['pay_method', 'Cara bayar', lbl(PAY_METHOD)], ['status', 'Status', lbl(CLAIM_STATUS)], ['paid_on', 'Tgl bayar'], ['paid_run_no', 'Proses gaji'],
+    ['approver1_name', 'Atasan'], ['approver2_name', 'Payroll'], ['decision_note', 'Catatan']] },
+  { key: 'kasbon', label: 'Kasbon & uang muka', group: 'HRGA', view: 'cash_advance_register', order: 'created_at', desc: true, feed: false, columns: [
+    ['advance_no', 'No.'], ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['kind', 'Jenis', lbl(ADV_KIND)], ['purpose', 'Keperluan'],
+    ['amount', 'Nominal'], ['installments', 'Cicilan (bln)'], ['installment_amount', 'Potongan/bulan'], ['disbursed_on', 'Tgl cair'],
+    ['actual_amount', 'Biaya sebenarnya'], ['repaid', 'Sudah kembali'], ['balance', 'Sisa'], ['status', 'Status', lbl(ADV_STATUS)],
+    ['approver1_name', 'Atasan'], ['approver2_name', 'Payroll']] },
   // payroll: hanya terbaca pemegang peran payroll (RLS); tidak pernah jadi feed
   { key: 'slip_gaji', label: 'Rincian gaji per karyawan', group: 'HRGA', view: 'payroll_slip_register', order: 'period', desc: true, feed: false, filter: ['run', 'run_id'], columns: [
     ['run_no', 'No. proses'], ['period', 'Periode'], ['kind', 'Jenis', lbl(RUN_KIND)], ['run_status', 'Status', lbl(RUN_STATUS)], ['parallel', 'Uji paralel', yn],
@@ -261,6 +271,11 @@ export const IMPORTS: ImportKind[] = [
     f('pph21', 'PPh 21', ['pph21', 'pph 21', 'pajak'], '166272'),
     f('gaji_bersih', 'Gaji bersih', ['gaji bersih', 'take home pay', 'thp', 'net'], '8273728', { required: true }),
     f('keterangan', 'Keterangan', ['keterangan', 'catatan'], '')] },
+  { key: 'kasbon_awal', label: 'Saldo kasbon dari sistem lama', perm: 'payroll.manage', note: 'Sisa kasbon yang belum lunas; langsung berjalan dan dipotong gaji sebesar Cicilan per bulan (kosong = dipotong sekaligus).', fields: [
+    f('nrp', 'NRP', ['nrp', 'no karyawan'], 'BSB-0123', { required: true }),
+    f('sisa', 'Sisa kasbon', ['sisa', 'sisa kasbon', 'saldo', 'outstanding'], '1200000', { required: true }),
+    f('cicilan', 'Cicilan per bulan', ['cicilan', 'potongan', 'angsuran', 'cicilan per bulan'], '400000'),
+    f('keterangan', 'Keterangan', ['keterangan', 'catatan', 'keperluan'], 'Kasbon Agustus')] },
   { key: 'unit', label: 'Unit / sarana', perm: 'plant.manage', note: 'No. unit yang sudah ada diperbarui. Jenis: DT, LV, ST, FT, WT, BUS, EXC, OTHER.', fields: [
     f('no_unit', 'No. unit', ['no unit', 'no lambung', 'unit', 'kode unit'], 'DT-21', { required: true }),
     f('jenis', 'Jenis', ['jenis', 'tipe unit', 'type'], 'DT', { required: true }),

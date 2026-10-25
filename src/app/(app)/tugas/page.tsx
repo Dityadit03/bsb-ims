@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { fmtDateTime, rev } from '@/lib/documents';
 import { TaskActions } from './task-actions';
 import { LeaveTable, OvertimeTable, type LeaveRow, type OtRow } from '../hrga/time-tables';
+import { AdvanceTable, ClaimTable, type AdvanceRow, type ClaimRow } from '../hrga/claims';
 
 export const metadata = { title: 'Kotak tugas' };
 
@@ -23,9 +24,11 @@ export default async function TugasPage() {
         .select('id, revision, change_summary, draft_sha256, draft:draft_attachment_id(file_name), documents(id, title, registration_no, type_code, departments(code))')
         .in('id', verIds).returns<Ver[]>()
     : { data: [] as Ver[] };
-  const [{ data: leaves }, { data: ots }] = await Promise.all([
+  const [{ data: leaves }, { data: ots }, { data: claims }, { data: advs }] = await Promise.all([
     supabase.from('leave_register').select('*').eq('can_decide', true).order('start_date').limit(100).returns<LeaveRow[]>(),
     supabase.from('overtime_register').select('*').eq('can_decide', true).order('work_date').limit(100).returns<OtRow[]>(),
+    supabase.from('expense_claim_register').select('*').eq('can_decide', true).order('created_at').limit(100).returns<ClaimRow[]>(),
+    supabase.from('cash_advance_register').select('*').eq('can_decide', true).order('created_at').limit(100).returns<AdvanceRow[]>(),
   ]);
   const { data: notes } = await supabase.from('notifications').select('id, title, body, link, created_at, read_at')
     .order('created_at', { ascending: false }).limit(10);
@@ -36,6 +39,8 @@ export default async function TugasPage() {
       <PageHeader eyebrow="Workflow" title="Kotak tugas" />
       {!!leaves?.length && <Panel title={`Persetujuan cuti (${leaves.length})`}><LeaveTable rows={leaves} /></Panel>}
       {!!ots?.length && <Panel title={`Persetujuan lembur / SPL (${ots.length})`}><OvertimeTable rows={ots} /></Panel>}
+      {!!claims?.length && <Panel title={`Persetujuan klaim (${claims.length})`}><ClaimTable rows={claims} mode="manage" /></Panel>}
+      {!!advs?.length && <Panel title={`Persetujuan kasbon / uang muka (${advs.length})`}><AdvanceTable rows={advs} mode="manage" /></Panel>}
       {tasks.length ? (
         <div className="grid gap-4">
           {tasks.map(t => {
