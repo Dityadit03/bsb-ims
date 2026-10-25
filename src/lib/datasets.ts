@@ -103,6 +103,16 @@ export const DATASETS: Dataset[] = [
   { key: 'riwayat_komponen', label: 'Riwayat pasang / lepas komponen', group: 'Plant', view: 'component_event_view', order: 'created_at', desc: true, feed: false, columns: [
     ['created_at', 'Waktu'], ['comp_no', 'No.'], ['component_type', 'Jenis'], ['serial_no', 'No. seri'], ['kind', 'Kejadian'], ['unit_no', 'Unit'],
     ['unit_hm', 'HM unit'], ['run_hm', 'Jam pakai'], ['reason', 'Alasan'], ['wo_no', 'WO'], ['cost', 'Biaya'], ['note', 'Catatan'], ['by_name', 'Oleh']] },
+  { key: 'tangki_bbm', label: 'Status tangki BBM', group: 'Logistik', view: 'fuel_tank_status', order: 'code', feed: false, columns: [
+    ['code', 'Tangki'], ['name', 'Nama'], ['material_name', 'BBM'], ['capacity_l', 'Kapasitas (L)'], ['level_l', 'Isi (L)'], ['level_pct', 'Isi (%)'],
+    ['received_30d', 'Diterima 30 hari (L)'], ['issued_30d', 'Dikeluarkan 30 hari (L)'], ['days_cover', 'Cukup (hari)'], ['last_dip_at', 'Ukur terakhir'],
+    ['last_dip_variance', 'Selisih ukur (L)']] },
+  { key: 'log_bbm', label: 'Buku tangki BBM (terima, keluar, ukur)', group: 'Logistik', view: 'fuel_tank_log_view', order: 'created_at', desc: true, feed: false, columns: [
+    ['created_at', 'Waktu'], ['tank_code', 'Tangki'], ['kind', 'Jenis'], ['liters', 'Liter'], ['level_after', 'Isi sesudah (L)'], ['movement_no', 'No. GR/GI'],
+    ['supplier_name', 'Supplier'], ['doc_ref', 'Surat jalan'], ['unit_no', 'Unit'], ['hour_meter', 'HM'], ['dip_before', 'Ukur sebelum'], ['dip_after', 'Ukur sesudah'],
+    ['note', 'Catatan'], ['by_name', 'Oleh']] },
+  { key: 'konsumsi_bbm', label: 'Konsumsi BBM per pengisian (L/HM)', group: 'Logistik', view: 'fuel_fills', order: 'moved_at', desc: true, feed: false, columns: [
+    ['moved_at', 'Waktu'], ['unit_no', 'Unit'], ['unit_type', 'Jenis'], ['liters', 'Liter'], ['hm', 'HM'], ['prev_hm', 'HM sebelumnya'], ['hm_delta', 'Selisih HM'], ['l_per_hm', 'L/HM']] },
   { key: 'kompetensi', label: 'Sertifikat, MCU & SIMPER', group: 'HRGA', view: 'employee_competency_view', order: 'nrp', feed: false, columns: [
     ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['competency_code', 'Kode'], ['competency_name', 'Kompetensi'],
     ['unit_type', 'Jenis unit'], ['cert_no', 'No. sertifikat'], ['issuer', 'Penerbit'], ['issued_on', 'Terbit'], ['valid_until', 'Berlaku sampai'],

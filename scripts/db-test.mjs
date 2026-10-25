@@ -1891,6 +1891,45 @@ await test('komponen: daftar unik per nomor seri; pasang butuh stok & HM tidak m
   await expectError('22023', async () => as(db, dhPlt, `select public.component_scrap($1, '')`, [c2.id]));
   await as(db, dhPlt, `select public.component_scrap($1, 'Blok retak')`, [c2.id]);
 });
+console.log('Logistik: stasiun BBM');
+await test('tangki BBM: master oleh pengelola; isi awal sekali; terima kiriman vendor dengan ukur & kapasitas', async () => {
+  await expectError('42501', async () => as(db, logStaff, `select public.fuel_tank_save('TK-01', 'Tangki solar 1', $1, 20000)`, [solar.id]));
+  await expectError('22023', async () => as(db, logHead, `select public.fuel_tank_save('TK-X', 'Salah', $1, 100)`, [sp.id]));
+  const tk = (await as(db, logHead, `select (t).* from public.fuel_tank_save('tk-01', 'Tangki solar 1', $1, 20000) t`, [solar.id])).rows[0];
+  eq(tk.code, 'TK-01');
+  global.fuelTank = tk;
+  await expectError('22023', async () => as(db, logStaff, `select public.fuel_tank_receive($1, $2, 1000, 14000, 'SJ-1')`, [tk.id, sup.id]));
+  await expectError('22023', async () => as(db, logStaff, `select public.fuel_tank_opening($1, 99999)`, [tk.id]));
+  await as(db, logStaff, `select public.fuel_tank_opening($1, 4000, 'Dip awal')`, [tk.id]);
+  await expectError('22023', async () => as(db, logStaff, `select public.fuel_tank_opening($1, 100)`, [tk.id]));
+  const before = Number((await db.query(`select stock_qty from public.materials where id = $1`, [solar.id])).rows[0].stock_qty);
+  await expectError('22023', async () => as(db, logStaff, `select public.fuel_tank_receive($1, $2, 17000, 14000, 'SJ-2')`, [tk.id, sup.id]));
+  await expectError('22023', async () => as(db, logStaff, `select public.fuel_tank_receive($1, $2, 8000, 14000, 'SJ-2', 4000, 11000)`, [tk.id, sup.id]));
+  await as(db, logStaff, `select public.fuel_tank_receive($1, $2, 8000, 14000, 'SJ-2', 4000, 11980, 'Selisih ukur 20 L, suhu')`, [tk.id, sup.id]);
+  eq(Number((await db.query(`select level_l from public.fuel_tanks where id = $1`, [tk.id])).rows[0].level_l), 12000);
+  eq(Number((await db.query(`select stock_qty from public.materials where id = $1`, [solar.id])).rows[0].stock_qty), before + 8000);
+});
+await test('BBM keluar dari tangki ke unit memakai HM & mengurangi isi tangki; ukur menyesuaikan selisih', async () => {
+  const tk = global.fuelTank;
+  const hm = Number((await db.query(`select current_hm from public.units where id = $1`, [unit.id])).rows[0].current_hm);
+  await expectError('22023', async () => as(db, logStaff, `select public.fuel_tank_dispense($1, $2, 13000, $3)`, [tk.id, unit.id, hm + 1]));
+  await expectError('22023', async () => as(db, logStaff, `select public.fuel_tank_dispense($1, $2, 200, $3)`, [tk.id, unit.id, hm - 5]));
+  await as(db, logStaff, `select public.fuel_tank_dispense($1, $2, 400, $3)`, [tk.id, unit.id, hm + 20]);
+  await as(db, logStaff, `select public.fuel_tank_dispense($1, $2, 450, $3)`, [tk.id, unit.id, hm + 30]);
+  eq(Number((await db.query(`select level_l from public.fuel_tanks where id = $1`, [tk.id])).rows[0].level_l), 11150);
+  const f = (await as(db, logStaff, `select l_per_hm::float l from public.fuel_fills where unit_id = $1 and hm = $2`, [unit.id, hm + 30])).rows[0];
+  eq(f.l, 45);
+  const stockBefore = Number((await db.query(`select stock_qty from public.materials where id = $1`, [solar.id])).rows[0].stock_qty);
+  await expectError('22023', async () => as(db, logStaff, `select public.fuel_tank_dip($1, 11000)`, [tk.id]));
+  await expectError('22023', async () => as(db, logStaff, `select public.fuel_tank_dip($1, 99999, 'x')`, [tk.id]));
+  await as(db, logStaff, `select public.fuel_tank_dip($1, 11000, 'Susut penguapan')`, [tk.id]);
+  eq(Number((await db.query(`select level_l from public.fuel_tanks where id = $1`, [tk.id])).rows[0].level_l), 11000);
+  eq(Number((await db.query(`select stock_qty from public.materials where id = $1`, [solar.id])).rows[0].stock_qty), stockBefore - 150);
+  const st = (await as(db, logStaff, `select level_pct::float p, last_dip_variance::float v from public.fuel_tank_status where tank_id = $1`, [tk.id])).rows[0];
+  eq(st.p, 55); eq(st.v, -150);
+  eq((await as(db, logStaff, `select count(*)::int c from public.fuel_tank_log_view where tank_id = $1`, [tk.id])).rows[0].c, 5);
+  eq((await as(db, logStaff, `select count(*)::int c from public.fuel_reconciliation`)).rowCount, 1);
+});
 console.log('audit trail');
 await test('setiap penerbitan nomor tercatat', async () => {
   const r = await db.query(`select count(*)::int c from public.audit_logs where action = 'numbering.issue'`);
