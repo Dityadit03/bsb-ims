@@ -1314,6 +1314,13 @@ await test('impor satu tombol: data pribadi & kontrak lewat NRP', async () => {
   eq(r.ok, 1); eq(r.errors.length, 1);
   const p = (await db.query(`select nik, gender, ptkp_status, bank_account from public.employee_private where employee_id = $1`, [boss.id])).rows[0];
   eq(p.nik, '6471010101900002'); eq(p.gender, 'L'); eq(p.ptkp_status, 'K/2'); eq(p.bank_account, '123456');
+  const pf = JSON.stringify([{ nrp: 'BSB-100', gol_darah: 'o', status_nikah: 'Menikah', jumlah_anak: '3', kelurahan: 'Margasari', kecamatan: 'Balikpapan Barat',
+    kabupaten: 'Balikpapan', provinsi: 'Kalimantan Timur', no_sim: 'SIM-77', penerimaan: 'Non lokal', golongan_karyawan: 'Staff' }]);
+  eq((await as(db, hrStaff, `select public.import_rows('data_pribadi', $1::jsonb, true) r`, [pf])).rows[0].r.ok, 1);
+  const q = (await db.query(`select pr.blood_type, pr.marital_status, pr.children_count, pr.kelurahan, pr.sim_no, e.recruitment_origin, e.worker_class
+    from public.employee_private pr join public.employees e on e.id = pr.employee_id where e.id = $1`, [boss.id])).rows[0];
+  eq(q.blood_type, 'O'); eq(q.marital_status, 'married'); eq(q.children_count, 3); eq(q.kelurahan, 'Margasari'); eq(q.sim_no, 'SIM-77');
+  eq(q.recruitment_origin, 'non_local'); eq(q.worker_class, 'staff');
   const k = JSON.stringify([{ nrp: 'BSB-100', jenis: 'Tetap', no_kontrak: 'SK/9', mulai: '2025-01-01' }]);
   eq((await as(db, hrStaff, `select public.import_rows('kontrak', $1::jsonb, true) r`, [k])).rows[0].r.ok, 1);
   eq((await as(db, spvPrd, `select public.import_rows('data_pribadi', $1::jsonb, true) r`, [rows])).rows[0].r.ok, 0);
