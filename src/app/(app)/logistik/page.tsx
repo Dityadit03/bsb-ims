@@ -14,7 +14,7 @@ type Row = { id: string; code: string; name: string; category: string; uom: stri
   avg_cost: number; stock_value: number; low_stock: boolean; active: boolean };
 
 type Plan = { material_id: string; critical: boolean; lead_time_days: number; daily_use: number; cover_days: number | null; reorder_point: number;
-  suggested_qty: number; reorder_now: boolean; abc: 'A' | 'B' | 'C'; on_order: number };
+  suggested_qty: number; reorder_now: boolean; reserved_qty: number; abc: 'A' | 'B' | 'C'; on_order: number };
 
 export default async function LogistikPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const s = await getSession();
@@ -32,7 +32,7 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
   ]);
   const pm = new Map((plan ?? []).map(p => [p.material_id, p]));
   const base = rows ?? [];
-  const all = sp.pesan ? base.filter(r => pm.get(r.id)?.reorder_now) : sp.kritis ? base.filter(r => pm.get(r.id)?.critical) : base;
+  const all = base.filter(r => (!sp.pesan || pm.get(r.id)?.reorder_now) && (!sp.kritis || pm.get(r.id)?.critical));
   const reorderCount = (plan ?? []).filter(p => p.reorder_now).length;
   const criticalLow = (plan ?? []).filter(p => p.critical && p.reorder_now).length;
   const term = (sp.q ?? '').toLowerCase();
@@ -68,7 +68,7 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
               <td className="font-mono text-xs">{r.code}</td>
               <td className="text-sm">{r.name}</td>
               <td className="text-xs">{CATEGORY[r.category]}</td>
-              <td className="tabular text-xs">{r.low_stock ? <Pill tone="crit">{qty(r.stock_qty)} {r.uom}</Pill> : `${qty(r.stock_qty)} ${r.uom}`}</td>
+              <td className="tabular text-xs">{r.low_stock ? <Pill tone="crit">{qty(r.stock_qty)} {r.uom}</Pill> : `${qty(r.stock_qty)} ${r.uom}`}{Number(pm.get(r.id)?.reserved_qty) > 0 && <span className="block text-[11px] text-muted">dicadangkan {qty(pm.get(r.id)!.reserved_qty)}</span>}</td>
               <td className="tabular text-xs">{pm.get(r.id)?.cover_days != null ? `${pm.get(r.id)!.cover_days} hr` : '–'}</td>
               <td className="tabular text-xs">{qty(pm.get(r.id)?.reorder_point ?? r.min_stock)}</td>
               <td className="tabular text-xs">{pm.get(r.id)?.reorder_now ? <Pill tone={pm.get(r.id)!.critical ? 'crit' : 'warn'}>{qty(pm.get(r.id)!.suggested_qty)} {r.uom}</Pill> : (pm.get(r.id)?.on_order ? <span className="text-muted">PO {qty(pm.get(r.id)!.on_order)}</span> : '–')}</td>

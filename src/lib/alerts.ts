@@ -11,7 +11,7 @@ export const getAlerts = cache(async () => {
   const supabase = await createClient();
   const head = { count: 'exact' as const, head: true };
   const count = (q: PromiseLike<{ count: number | null }>) => q.then(r => r.count ?? 0);
-  const [certs, spip, hazardOpen, hazardLate, capaLate, mrWait, poWait, lowStock, tasks, unread, contractExp, contractSoon, leaveWait, otWait, claimWait, advWait, advLate, reqWait, perfWait, courseDue, compDue, fuelAnom] = await Promise.all([
+  const [certs, spip, hazardOpen, hazardLate, capaLate, mrWait, poWait, lowStock, tasks, unread, contractExp, contractSoon, leaveWait, otWait, claimWait, advWait, advLate, reqWait, perfWait, courseDue, compDue, fuelAnom, tyreReplace, tyreSoon, criticalLow] = await Promise.all([
     supabase.from('employee_competency_view').select('employee_id, competency_id, category, valid_until, validity')
       .neq('validity', 'revoked').limit(20000).returns<Cert[]>(),
     supabase.from('commissioning_register').select('validity').in('validity', ['expired', 'expiring']).limit(5000),
@@ -36,6 +36,9 @@ export const getAlerts = cache(async () => {
     count(supabase.from('course_register').select('*', head).eq('my_assigned', true).is('my_completed_at', null)),
     count(supabase.from('component_view').select('*', head).eq('due', true)),
     count(supabase.from('fuel_anomaly').select('*', head).eq('is_anomaly', true)),
+    count(supabase.from('tyre_status').select('*', head).eq('alert', 'replace')),
+    count(supabase.from('tyre_status').select('*', head).eq('alert', 'soon')),
+    count(supabase.from('stock_planning').select('*', head).eq('critical', true).eq('reorder_now', true)),
   ]);
   // sertifikat terbaru per karyawan & kompetensi
   const latest = new Map<string, Cert>();
@@ -49,7 +52,7 @@ export const getAlerts = cache(async () => {
     mcuExp: cert(mcu, 'expired'), mcuSoon: cert(mcu, 'expiring'), simExp: cert(simper, 'expired'), simSoon: cert(simper, 'expiring'),
     othExp: cert(other, 'expired'), spipExp: (spip.data ?? []).filter(r => r.validity === 'expired').length,
     spipSoon: (spip.data ?? []).filter(r => r.validity === 'expiring').length, hazardOpen, hazardLate, capaLate, mrWait, poWait, lowStock, tasks, unread,
-    contractExp, contractSoon, leaveWait, otWait, claimWait, advWait, advLate, reqWait, perfWait, courseDue, compDue, fuelAnom,
+    contractExp, contractSoon, leaveWait, otWait, claimWait, advWait, advLate, reqWait, perfWait, courseDue, compDue, fuelAnom, tyreReplace, tyreSoon, criticalLow,
   };
   const items = ([
     [c.unread, 'accent', 'notifikasi baru', 'Belum dibaca', '/tugas'],
@@ -61,6 +64,9 @@ export const getAlerts = cache(async () => {
     [c.reqWait, 'warn', 'FPTK menunggu keputusan Anda', 'Permintaan tenaga kerja', '/tugas'],
     [c.perfWait, 'warn', 'penilaian kinerja menunggu tindakan Anda', 'KPI, penilaian diri atau nilai atasan', '/saya?tab=kinerja'],
     [c.fuelAnom, 'warn', 'unit konsumsi BBM tidak wajar', 'L/HM 14 hari terakhir jauh di atas rata-rata', '/logistik/bbm'],
+    [c.tyreReplace, 'crit', 'ban sudah di batas buang', 'Alur habis; ganti sebelum dipakai lagi', '/plant/ban?alert=replace'],
+    [c.tyreSoon, 'warn', 'ban segera diganti', 'Alur mendekati batas buang', '/plant/ban?alert=soon'],
+    [c.criticalLow, 'crit', 'suku cadang kritis perlu dipesan', 'Stok + PO di bawah titik pesan ulang', '/logistik?pesan=1&kritis=1'],
     [c.compDue, 'warn', 'komponen segera overhaul', 'Umur mendekati target (≥ 90%)', '/plant/komponen'],
     [c.courseDue, 'accent', 'kursus e-learning ditugaskan', 'Selesaikan materi dan kuis', '/belajar'],
     [c.advLate, 'crit', 'uang muka belum dipertanggungjawabkan', 'Lewat batas laporan', '/hrga/klaim?tab=kasbon'],

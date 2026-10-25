@@ -2143,6 +2143,19 @@ await test('perencanaan stok: ROP dari pemakaian 90 hari, usulan pesan, ABC, suk
   eq(q.sq, 19); eq(q.reorder_now, true);
   eq((await as(db, logStaff, `select count(*)::int c from public.unit_productivity`)).rows[0].c >= 1, true);
 });
+await test('reservasi: MR disetujui belum keluar mengurangi stok tersedia; WO menampilkan partnya dan kekurangan', async () => {
+  const m = (await db.query(`insert into public.materials(code, name, category, uom, stock_qty) values ('RSV-TEST', 'Part uji reservasi', 'spare_part', 'pcs', 10) returning id`)).rows[0];
+  const wo = (await db.query(`select id from public.work_orders limit 1`)).rows[0];
+  const mr = (await db.query(`insert into public.material_requests(mr_no, department_id, purpose, wo_id, status, requested_by) values ('MR-RSV-1', $1, 'uji', $2, 'approved', $3) returning id`, [PLT, wo.id, ownerId])).rows[0];
+  await db.query(`insert into public.material_request_lines(mr_id, material_id, qty, qty_approved, qty_issued) values ($1, $2, 8, 8, 3)`, [mr.id, m.id]);
+  eq(Number((await as(db, spvPlt, `select reserved_qty from public.material_reservation where material_id = $1`, [m.id])).rows[0].reserved_qty), 5);
+  const p = (await as(db, spvPlt, `select reserved_qty::int r from public.stock_planning where material_id = $1`, [m.id])).rows[0];
+  eq(p.r, 5);
+  const w = (await as(db, spvPlt, `select available_qty::int a, short, mr_no from public.wo_parts where wo_id = $1`, [wo.id])).rows[0];
+  eq(w.a, 5); eq(w.short, false); eq(w.mr_no, 'MR-RSV-1');
+  await db.query(`update public.materials set stock_qty = 4 where id = $1`, [m.id]);
+  eq((await as(db, spvPlt, `select short from public.wo_parts where wo_id = $1`, [wo.id])).rows[0].short, true);
+});
 await test('pengguna tanpa audit.read tidak melihat audit log', async () => {
   eq((await as(db, staffId, `select 1 from public.audit_logs`)).rowCount, 0);
 });

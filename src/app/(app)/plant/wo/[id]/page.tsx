@@ -6,6 +6,7 @@ import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { fmtDateTime } from '@/lib/documents';
 import { DOWNTIME, PRIORITY, WO_STATUS, WO_TYPE, rp } from '@/lib/plant';
+import { MR_STATUS, qty } from '@/lib/logistics';
 import { cancelWo, completeWo, setWoCosting, startWo, waitPart } from '../../actions';
 import { AttachmentList, Files } from '../../../she/fields';
 
@@ -16,14 +17,18 @@ type Wo = {
   downtime_hours: number; pm_task: string | null; source_table: string | null; source_id: string | null;
 };
 
+type Part = { mr_id: string; mr_no: string; mr_status: string; line_id: string; code: string; name: string; uom: string; qty: number; qty_approved: number | null;
+  qty_issued: number; available_qty: number; short: boolean };
+
 export default async function WoDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const s = await getSession();
   const supabase = await createClient();
-  const [{ data: w }, { data: cost }] = await Promise.all([
+  const [{ data: w }, { data: cost }, { data: parts }] = await Promise.all([
     supabase.from('work_order_register').select('*').eq('id', id).maybeSingle<Wo>(),
     supabase.from('wo_cost').select('parts_cost, labor_cost, total_cost, labor_hours, downtime_code').eq('wo_id', id)
       .maybeSingle<{ parts_cost: number; labor_cost: number; total_cost: number; labor_hours: number; downtime_code: string | null }>(),
+    supabase.from('wo_parts').select('*').eq('wo_id', id).order('mr_no').returns<Part[]>(),
   ]);
   if (!w) notFound();
   const work = s.can('plant.work');
@@ -62,6 +67,26 @@ export default async function WoDetail({ params }: { params: Promise<{ id: strin
                 </ActionForm>
               </Panel>
             </>
+          )}
+          {w.status !== 'cancelled' && (
+            <Panel title="Suku cadang" sub="Diminta lewat material request yang ditautkan ke WO ini. Part yang sudah disetujui tetapi belum keluar dicadangkan dari stok.">
+              {parts?.length ? (
+                <ul className="grid gap-2 text-sm">
+                  {parts.map(p => (
+                    <li key={p.line_id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-line px-3 py-2">
+                      <span className="font-mono text-xs">{p.code}</span><span>{p.name}</span>
+                      <span className="tabular text-xs text-muted">{qty(p.qty_issued)} / {qty(p.qty_approved ?? p.qty)} {p.uom} keluar</span>
+                      <Link href={`/logistik/mr/${p.mr_id}`} className="font-mono text-xs text-accent">{p.mr_no}</Link>
+                      <Pill tone={MR_STATUS[p.mr_status]?.[0] ?? 'muted'}>{MR_STATUS[p.mr_status]?.[1] ?? p.mr_status}</Pill>
+                      {p.short && <Pill tone="crit">Stok kurang (tersedia {qty(p.available_qty)})</Pill>}
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="text-sm text-muted">Belum ada permintaan suku cadang untuk WO ini.</p>}
+              {open && s.can('log.request') && (
+                <Link href={`/logistik/mr?wo=${w.id}`} className="mt-3 inline-block rounded-xl border border-line px-3 py-1.5 text-sm font-semibold hover:border-violet/50">Minta suku cadang</Link>
+              )}
+            </Panel>
           )}
           {work && w.status !== 'cancelled' && (
             <Panel title="Kode downtime & biaya" sub="Dasar analisis akar masalah, MTTR, dan biaya per jam unit (CPH).">
