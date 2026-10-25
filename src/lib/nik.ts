@@ -1,6 +1,6 @@
 // Login NIK (NRP): akun memakai alamat sintetis yang tidak pernah dikirimi email.
 export const NIK_DOMAIN = 'nrp.bsb.local';
-const NRP = /^[A-Z0-9][A-Z0-9-]{2,19}$/;
+const NRP = /^[A-Z0-9][A-Z0-9.-]{2,19}$/;
 
 export const normalizeNrp = (v: string) => v.trim().toUpperCase().replace(/\s+/g, '');
 export const isNrp = (v: string) => NRP.test(v);

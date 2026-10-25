@@ -27,7 +27,7 @@ export function NikForm({ next }: { next?: string }) {
       <form action={mode === 'masuk' ? loginAction : regAction} className="grid gap-3" autoComplete="on">
         <input type="hidden" name="next" value={next ?? ''} />
         <label className="grid gap-1 text-sm">NIK
-          <input name="nrp" required autoCapitalize="characters" autoComplete="username" inputMode="text" placeholder="BSB-0123" className={`${field} uppercase`} />
+          <input name="nrp" required autoCapitalize="characters" autoComplete="username" inputMode="text" placeholder="24.05.064" className={`${field} uppercase`} />
         </label>
         {mode === 'daftar' && (
           <>

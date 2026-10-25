@@ -31,7 +31,7 @@ export async function registerNik(_: NikState, f: FormData): Promise<NikState> {
   const name = str(f, 'name').slice(0, 100);
   const birth = str(f, 'birth');
   const password = String(f.get('password') ?? '');
-  if (!isNrp(nrp)) return { error: 'NIK tidak valid (huruf besar, angka, strip; contoh BSB-0123)' };
+  if (!isNrp(nrp)) return { error: 'NIK tidak valid (contoh 24.05.064)' };
   if (name.length < 3) return { error: 'Isi nama lengkap' };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(birth) || Number.isNaN(Date.parse(birth))) return { error: 'Isi tanggal lahir' };
   if (password !== String(f.get('confirm') ?? '')) return { error: 'Konfirmasi sandi tidak sama' };

@@ -84,7 +84,7 @@ export default async function HrgaPage({ searchParams }: { searchParams: Promise
               <label className="grid gap-1 text-sm">Tanggal masuk<input type="date" name="join_date" className={input} /></label>
               <label className="grid gap-1 text-sm sm:col-span-2">Email akun aplikasi (opsional)<input type="email" name="email" className={input} placeholder="Akun harus sudah pernah login" /></label>
             </div>
-            <p className="text-xs text-muted">NIK dibuat otomatis (BSB-0001, 0002, …) dan tidak pernah sama. Isi hanya untuk memperbarui karyawan yang sudah ada.</p>
+            <p className="text-xs text-muted">NIK dibuat otomatis (format tahun.bulan masuk.nomor urut, mis. 24.05.064) dan tidak pernah sama. Isi hanya untuk memperbarui karyawan yang sudah ada.</p>
           </ActionForm>
         </Panel>
       )}

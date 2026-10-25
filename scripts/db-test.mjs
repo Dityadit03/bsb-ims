@@ -1246,12 +1246,17 @@ await test('data pribadi hanya HRGA & karyawan ybs; karyawan hanya boleh ubah ko
 await test('NIK karyawan otomatis tanpa duplikat; No. KTP unik; profil lengkap menghitung umur & masa kerja', async () => {
   const a = (await as(db, hrStaff, EMP_SQL, [null, 'Karyawan Otomatis A', PRD, OPRDT, 'contract', null, null])).rows[0];
   const b = (await as(db, hrStaff, EMP_SQL, ['', 'Karyawan Otomatis B', PRD, OPRDT, 'contract', null, null])).rows[0];
-  eq(/^BSB-\d{4}$/.test(a.nrp), true); eq(a.nrp !== b.nrp, true);
-  // nomor yang sudah terpakai (hasil impor) dilompati
-  const nxt = Number(b.nrp.slice(4)) + 1;
-  await as(db, hrStaff, EMP_SQL, [`BSB-${String(nxt).padStart(4, '0')}`, 'Impor Lama', PRD, OPRDT, 'contract', null, null]);
-  const c = (await as(db, hrStaff, EMP_SQL, [null, 'Karyawan Otomatis C', PRD, OPRDT, 'contract', null, null])).rows[0];
-  eq(c.nrp !== `BSB-${String(nxt).padStart(4, '0')}`, true);
+  eq(/^\d{2}\.\d{2}\.\d{3}$/.test(a.nrp), true); eq(a.nrp !== b.nrp, true);
+  // format YY.MM.NNN dari tanggal masuk; urutan per tahun
+  const EMPJ = `select (e).* from public.employee_save($1, $2, $3, $4, $5, $6, $7::date, null) e`;
+  const j = (await as(db, hrStaff, EMPJ, [null, 'Masuk 2031', PRD, OPRDT, 'contract', null, '2031-03-05'])).rows[0];
+  eq(j.nrp, '31.03.001');
+  const j2 = (await as(db, hrStaff, EMPJ, [null, 'Masuk 2031 B', PRD, OPRDT, 'contract', null, '2031-07-01'])).rows[0];
+  eq(j2.nrp, '31.07.002');
+  // nomor yang sudah terpakai (hasil impor, lintas bulan) dilompati
+  await as(db, hrStaff, EMPJ, ['31.09.003', 'Impor Lama', PRD, OPRDT, 'contract', null, '2031-09-01']);
+  const c = (await as(db, hrStaff, EMPJ, [null, 'Masuk 2031 C', PRD, OPRDT, 'contract', null, '2031-09-10'])).rows[0];
+  eq(c.nrp, '31.09.004');
   await as(db, hrStaff, `select public.employee_private_save($1, $2::jsonb)`, [a.id, JSON.stringify({ nik: '6471010101900099', kelurahan: 'Gunung Bahagia', kecamatan: 'Balikpapan Selatan', kabupaten: 'Balikpapan', provinsi: 'Kalimantan Timur', sim_no: 'SIM-123', children_count: '2', birth_date: '1990-01-01' })]);
   await expectError('23505', async () => as(db, hrStaff, `select public.employee_private_save($1, $2::jsonb)`, [b.id, JSON.stringify({ nik: '6471010101900099' })]));
   await as(db, hrStaff, `select public.employee_classify($1, 'local', 'non_staff')`, [a.id]);
