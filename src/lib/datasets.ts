@@ -89,6 +89,20 @@ export const DATASETS: Dataset[] = [
     ['recruitment_origin', 'Status penerimaan', v => (v === 'local' ? 'Lokal' : v === 'non_local' ? 'Non lokal' : '')], ['join_date', 'Date of hire'],
     ['worker_class', 'Status karyawan', v => (v === 'staff' ? 'Staff' : v === 'non_staff' ? 'Non staff' : '')],
     ['tenure_months', 'Masa kerja (bulan)'], ['department_code', 'Dept'], ['position_name', 'Jabatan']] },
+  { key: 'keandalan', label: 'Keandalan unit 90 hari (MTBF, MTTR, PA, UA)', group: 'Plant', view: 'unit_reliability', order: 'unit_no', feed: false, columns: [
+    ['unit_no', 'No. unit'], ['unit_type', 'Jenis'], ['failures_90d', 'Kerusakan'], ['downtime_hours_90d', 'Jam henti'], ['pa_90d', 'PA (%)'],
+    ['mtbf_hours', 'MTBF (jam)'], ['mttr_hours', 'MTTR (jam)'], ['ua_90d', 'UA (%)'], ['pm_opened_90d', 'WO PM dibuka'], ['pm_done_90d', 'WO PM selesai'],
+    ['pm_compliance_pct', 'Kepatuhan PM (%)']] },
+  { key: 'biaya_unit', label: 'Biaya & CPH unit 90 hari', group: 'Plant', view: 'unit_cost_summary', order: 'unit_no', feed: false, columns: [
+    ['unit_no', 'No. unit'], ['unit_type', 'Jenis'], ['parts_cost_90d', 'Suku cadang'], ['fuel_cost_90d', 'BBM'], ['labor_cost_90d', 'Jam mekanik'],
+    ['total_cost_90d', 'Total'], ['hm_90d', 'Selisih HM'], ['cph', 'CPH (Rp/HM)'], ['fuel_liters_90d', 'BBM (L)'], ['fuel_l_per_hm', 'BBM L/HM']] },
+  { key: 'komponen', label: 'Register umur komponen', group: 'Plant', view: 'component_view', order: 'comp_no', feed: false, columns: [
+    ['comp_no', 'No.'], ['component_type', 'Jenis'], ['serial_no', 'No. seri'], ['brand', 'Merek'], ['part_no', 'Part number'], ['status', 'Status'],
+    ['unit_no', 'Unit'], ['position', 'Posisi'], ['life_hm', 'Umur (HM)'], ['life_target_hm', 'Target (HM)'], ['life_pct', 'Umur (%)'],
+    ['remaining_hm', 'Sisa (HM)'], ['rebuild_count', 'Overhaul']] },
+  { key: 'riwayat_komponen', label: 'Riwayat pasang / lepas komponen', group: 'Plant', view: 'component_event_view', order: 'created_at', desc: true, feed: false, columns: [
+    ['created_at', 'Waktu'], ['comp_no', 'No.'], ['component_type', 'Jenis'], ['serial_no', 'No. seri'], ['kind', 'Kejadian'], ['unit_no', 'Unit'],
+    ['unit_hm', 'HM unit'], ['run_hm', 'Jam pakai'], ['reason', 'Alasan'], ['wo_no', 'WO'], ['cost', 'Biaya'], ['note', 'Catatan'], ['by_name', 'Oleh']] },
   { key: 'kompetensi', label: 'Sertifikat, MCU & SIMPER', group: 'HRGA', view: 'employee_competency_view', order: 'nrp', feed: false, columns: [
     ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['competency_code', 'Kode'], ['competency_name', 'Kompetensi'],
     ['unit_type', 'Jenis unit'], ['cert_no', 'No. sertifikat'], ['issuer', 'Penerbit'], ['issued_on', 'Terbit'], ['valid_until', 'Berlaku sampai'],

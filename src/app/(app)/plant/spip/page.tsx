@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ExportLinks } from '@/components/export-links';
 import { ActionForm } from '@/components/action-form';
+import { PlantTabs } from '../tabs';
 import { PageHeader, Panel, Pill, Stat, Table, btnGhost, input, paginate, Pager } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
@@ -36,6 +37,7 @@ export default async function SpipPage({ searchParams }: { searchParams: Promise
         <ExportLinks dataset="spip" />
         <Link href="/plant" className="text-sm text-accent hover:underline">← Unit</Link>
       </PageHeader>
+      <PlantTabs active="/plant/spip" />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Berlaku" value={count('valid')} href="/plant/spip?status=valid" />
         <Stat label="Segera habis" value={count('expiring')} href="/plant/spip?status=expiring" note="≤ 30 hari" />

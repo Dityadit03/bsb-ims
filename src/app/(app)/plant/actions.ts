@@ -75,3 +75,8 @@ export async function completeWo(_: ActionState, f: FormData) {
 export async function cancelWo(_: ActionState, f: FormData) {
   return run(`/plant/wo/${str(f, 'id')}`, 'WO dibatalkan', () => rpc('wo_cancel', { p_id: str(f, 'id'), p_reason: str(f, 'reason') }));
 }
+
+export async function setWoCosting(_: ActionState, f: FormData) {
+  return run(`/plant/wo/${str(f, 'id')}`, 'Kode downtime dan jam kerja disimpan', () =>
+    rpc('wo_costing', { p_id: str(f, 'id'), p_downtime_code: str(f, 'downtime_code'), p_labor_hours: num(f, 'labor_hours') ?? 0 }));
+}

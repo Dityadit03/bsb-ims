@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import { UNIT_STATUS, paTone } from '@/lib/plant';
 import { UNIT_TYPE } from '@/lib/she';
 import { saveUnit } from './actions';
+import { PlantTabs } from './tabs';
 import { DeptSelect, sheMasters } from '../she/fields';
 
 export const metadata = { title: 'Unit' };
@@ -35,8 +36,8 @@ export default async function PlantPage({ searchParams }: { searchParams: Promis
     <>
       <PageHeader eyebrow="SMKP 4.4 · Sarana, prasarana, instalasi & peralatan" title="Unit & work order">
         <ExportLinks dataset="unit" />
-        <span className="flex gap-4 text-sm"><Link href="/plant/spip" className="text-accent hover:underline">Komisioning SPIP →</Link><Link href="/plant/wo" className="text-accent hover:underline">Work order →</Link></span>
       </PageHeader>
+      <PlantTabs active="/plant" />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="Unit aktif" value={all.length} />
         <Stat label="Breakdown sekarang" value={bd} href="/plant?status=breakdown" />

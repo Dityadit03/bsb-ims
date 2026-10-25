@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ExportLinks } from '@/components/export-links';
+import { PlantTabs } from '../tabs';
 import { PageHeader, Panel, Pill, Table, input } from '@/components/ui';
 import { createClient } from '@/lib/supabase/server';
 import { fmtDateTime } from '@/lib/documents';
@@ -30,6 +31,7 @@ export default async function WoPage({ searchParams }: { searchParams: Promise<R
         <ExportLinks dataset="wo" />
         <Link href="/plant" className="text-sm text-accent hover:underline">← Register unit</Link>
       </PageHeader>
+      <PlantTabs active="/plant/wo" />
       {pm?.length ? (
         <Panel title="Servis berkala jatuh tempo">
           <ul className="grid gap-2 text-sm sm:grid-cols-2">

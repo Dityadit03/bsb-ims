@@ -1845,6 +1845,52 @@ await test('analitik HR: hanya HRGA; angka konsisten dengan data; gaji hanya unt
   eq(pay.code, '42501');
 });
 
+console.log('Plant: biaya, keandalan, komponen');
+await test('biaya WO: kode downtime & jam mekanik; suku cadang dari pengeluaran stok; KPI keandalan terhitung', async () => {
+  const wo = (await as(db, dhPlt, `select (w).* from public.wo_create($1, 'repair', 'Ganti hose hidrolik', 'medium') w`, [unit.id])).rows[0];
+  await expectError('42501', async () => as(db, spvHse, `select public.wo_costing($1, 'breakdown', 2)`, [wo.id]));
+  await expectError('22023', async () => as(db, spvPlt, `select public.wo_costing($1, 'salah', 2)`, [wo.id]));
+  await expectError('22023', async () => as(db, spvPlt, `select public.wo_costing($1, 'breakdown', -1)`, [wo.id]));
+  await as(db, spvPlt, `select public.wo_costing($1, 'waiting_part', 4)`, [wo.id]);
+  const m = (await db.query(`select id from public.materials limit 1`)).rows[0];
+  await db.query(`insert into public.stock_movements(movement_type, material_id, qty, unit_cost, wo_id, unit_id, moved_by) values ('issue', $1, -2, 150000, $2, $3, $4)`, [m.id, wo.id, unit.id, ownerId]);
+  const c = (await as(db, spvPlt, `select parts_cost::int p, labor_cost::int l, total_cost::int t from public.wo_cost where wo_id = $1`, [wo.id])).rows[0];
+  eq(c.p, 300000); eq(c.l, 200000); eq(c.t, 500000);
+  const r = (await as(db, spvPlt, `select failures_90d::int f, pa_90d::float pa from public.unit_reliability where unit_id = $1`, [unit.id])).rows[0];
+  eq(r.f >= 1, true); eq(r.pa > 90 && r.pa <= 100, true);
+  eq((await as(db, spvPlt, `select count(*)::int c from public.downtime_by_code`)).rows[0].c >= 1, true);
+  const cs = (await as(db, spvPlt, `select total_cost_90d::int t, hm_90d::float h from public.unit_cost_summary where unit_id = $1`, [unit.id])).rows[0];
+  eq(cs.t >= 500000, true);
+  eq((await db.query(`select count(*)::int c from public.unit_hm_log where unit_id = $1`, [unit.id])).rows[0].c >= 2, true);
+});
+await test('komponen: daftar unik per nomor seri; pasang butuh stok & HM tidak mundur; lepas menambah umur; overhaul reset', async () => {
+  await expectError('42501', async () => as(db, spvPlt, `select public.component_save('engine', 'ENG-001', 'Cummins', 'QSM11', 15000)`));
+  const c = (await as(db, dhPlt, `select (c).* from public.component_save('engine', 'eng-001', 'Cummins', 'QSM11', 15000, 1000) c`)).rows[0];
+  eq(/^CMP-BSB-\d{5}$/.test(c.comp_no), true); eq(c.serial_no, 'ENG-001');
+  await expectError('23505', async () => as(db, dhPlt, `select public.component_save('engine', 'ENG-001', null, null, 100)`));
+  const hm0 = Number((await db.query(`select current_hm from public.units where id = $1`, [unit.id])).rows[0].current_hm);
+  await expectError('42501', async () => as(db, spvHse, `select public.component_install($1, $2, $3)`, [c.id, unit.id, hm0]));
+  await expectError('22023', async () => as(db, spvPlt, `select public.component_install($1, $2, $3)`, [c.id, unit.id, hm0 - 10]));
+  await as(db, spvPlt, `select public.component_install($1, $2, $3, 'Engine')`, [c.id, unit.id, hm0]);
+  const c2 = (await as(db, dhPlt, `select (c).* from public.component_save('engine', 'ENG-002', 'Cummins', null, 15000) c`)).rows[0];
+  await expectError('23505', async () => as(db, spvPlt, `select public.component_install($1, $2, $3, 'Engine')`, [c2.id, unit.id, hm0]));
+  await expectError('22023', async () => as(db, spvPlt, `select public.component_install($1, $2, $3)`, [c.id, unit.id, hm0]));
+  await db.query(`update public.units set current_hm = current_hm + 5000 where id = $1`, [unit.id]);
+  const v = (await as(db, spvPlt, `select life_hm::float l, life_pct::int p, due from public.component_view where id = $1`, [c.id])).rows[0];
+  eq(v.l, 6000); eq(v.p, 40); eq(v.due, false);
+  await expectError('22023', async () => as(db, spvPlt, `select public.component_remove($1, $2, null)`, [c.id, hm0 + 5000]));
+  await expectError('22023', async () => as(db, spvPlt, `select public.component_remove($1, $2, 'failure')`, [c.id, hm0 + 100]));
+  const r = (await as(db, spvPlt, `select (c).* from public.component_remove($1, $2, 'failure', 'rebuild') c`, [c.id, hm0 + 5000])).rows[0];
+  eq(r.status, 'rebuild'); eq(Number(r.accumulated_hm), 6000);
+  await expectError('42501', async () => as(db, spvPlt, `select public.component_rebuild_done($1, 1000000)`, [c.id]));
+  const rb = (await as(db, dhPlt, `select (c).* from public.component_rebuild_done($1, 25000000) c`, [c.id])).rows[0];
+  eq(rb.status, 'in_stock'); eq(Number(rb.accumulated_hm), 0); eq(rb.rebuild_count, 1);
+  eq((await as(db, spvPlt, `select count(*)::int c from public.component_event_view where component_id = $1`, [c.id])).rows[0].c, 4);
+  const st = (await as(db, spvPlt, `select failures::int f from public.component_life_stats where component_type = 'engine'`)).rows[0];
+  eq(st.f, 1);
+  await expectError('22023', async () => as(db, dhPlt, `select public.component_scrap($1, '')`, [c2.id]));
+  await as(db, dhPlt, `select public.component_scrap($1, 'Blok retak')`, [c2.id]);
+});
 console.log('audit trail');
 await test('setiap penerbitan nomor tercatat', async () => {
   const r = await db.query(`select count(*)::int c from public.audit_logs where action = 'numbering.issue'`);

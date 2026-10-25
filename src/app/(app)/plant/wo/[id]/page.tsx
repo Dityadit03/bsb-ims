@@ -5,8 +5,8 @@ import { PageHeader, Panel, Pill, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { fmtDateTime } from '@/lib/documents';
-import { PRIORITY, WO_STATUS, WO_TYPE } from '@/lib/plant';
-import { cancelWo, completeWo, startWo, waitPart } from '../../actions';
+import { DOWNTIME, PRIORITY, WO_STATUS, WO_TYPE, rp } from '@/lib/plant';
+import { cancelWo, completeWo, setWoCosting, startWo, waitPart } from '../../actions';
 import { AttachmentList, Files } from '../../../she/fields';
 
 type Wo = {
@@ -20,7 +20,11 @@ export default async function WoDetail({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const s = await getSession();
   const supabase = await createClient();
-  const { data: w } = await supabase.from('work_order_register').select('*').eq('id', id).maybeSingle<Wo>();
+  const [{ data: w }, { data: cost }] = await Promise.all([
+    supabase.from('work_order_register').select('*').eq('id', id).maybeSingle<Wo>(),
+    supabase.from('wo_cost').select('parts_cost, labor_cost, total_cost, labor_hours, downtime_code').eq('wo_id', id)
+      .maybeSingle<{ parts_cost: number; labor_cost: number; total_cost: number; labor_hours: number; downtime_code: string | null }>(),
+  ]);
   if (!w) notFound();
   const work = s.can('plant.work');
   const open = ['open', 'in_progress', 'waiting_part'].includes(w.status);
@@ -58,6 +62,21 @@ export default async function WoDetail({ params }: { params: Promise<{ id: strin
                 </ActionForm>
               </Panel>
             </>
+          )}
+          {work && w.status !== 'cancelled' && (
+            <Panel title="Kode downtime & biaya" sub="Dasar analisis akar masalah, MTTR, dan biaya per jam unit (CPH).">
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm [&_dt]:text-muted sm:grid-cols-4">
+                <dt>Suku cadang</dt><dd className="tabular">{rp(cost?.parts_cost ?? 0)}</dd>
+                <dt>Jam mekanik</dt><dd className="tabular">{rp(cost?.labor_cost ?? 0)}</dd>
+                <dt>Total</dt><dd className="tabular font-semibold">{rp(cost?.total_cost ?? 0)}</dd>
+              </dl>
+              <ActionForm action={setWoCosting} label="Simpan" hidden={{ id: w.id }} className="sm:grid-cols-3 sm:items-end">
+                <label className="grid gap-1 text-sm">Kode downtime
+                  <select name="downtime_code" defaultValue={cost?.downtime_code ?? ''} className={input}><option value="">–</option>
+                    {Object.entries(DOWNTIME).filter(([k]) => k !== 'unclassified').map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
+                <label className="grid gap-1 text-sm">Jam kerja mekanik<input type="number" name="labor_hours" min={0} max={1000} step="0.5" defaultValue={cost?.labor_hours ?? 0} className={input} /></label>
+              </ActionForm>
+            </Panel>
           )}
           {open && s.can('plant.manage') && (
             <Panel title="Batalkan">
