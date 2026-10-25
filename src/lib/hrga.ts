@@ -110,3 +110,27 @@ export const APP_STAGE: Record<string, [Tone, string]> = {
 export const CAND_SOURCE: Record<string, string> = {
   walk_in: 'Walk-in', referral: 'Referensi karyawan', job_portal: 'Job portal', disnaker: 'Disnaker', internal: 'Internal', social_media: 'Media sosial', other: 'Lainnya',
 };
+
+// Penilaian kinerja
+export const CYCLE_STATUS: Record<string, [Tone, string]> = {
+  draft: ['muted', 'Draf'], goal_setting: ['accent', 'Penyusunan KPI'], review: ['warn', 'Penilaian'], calibration: ['warn', 'Kalibrasi'], closed: ['ok', 'Ditutup'],
+};
+export const CYCLE_NEXT: Record<string, string> = {
+  draft: 'Mulai penyusunan KPI', goal_setting: 'Buka penilaian', review: 'Masuk kalibrasi', calibration: 'Tutup & terbitkan hasil',
+};
+export const PERF_STATUS: Record<string, [Tone, string]> = {
+  goal_draft: ['muted', 'Menyusun KPI'], goal_submitted: ['warn', 'KPI menunggu atasan'], goal_approved: ['accent', 'KPI disetujui'],
+  self_done: ['warn', 'Menunggu nilai atasan'], manager_done: ['accent', 'Dinilai atasan'], done: ['ok', 'Hasil terbit'], acknowledged: ['ok', 'Dikonfirmasi'],
+};
+export const GRADE: Record<string, [Tone, string]> = {
+  A: ['ok', 'Istimewa'], B: ['ok', 'Baik'], C: ['accent', 'Cukup'], D: ['warn', 'Kurang'], E: ['crit', 'Sangat kurang'],
+};
+export const SCORE_LABEL = ['', 'Jauh di bawah', 'Di bawah', 'Sesuai', 'Di atas', 'Jauh di atas'] as const;
+
+// E-learning
+export const COURSE_STATUS: Record<string, [Tone, string]> = { draft: ['muted', 'Draf'], published: ['ok', 'Terbit'], archived: ['muted', 'Diarsipkan'] };
+export const ASSIGN_STATUS: Record<string, [Tone, string]> = {
+  assigned: ['muted', 'Belum mulai'], in_progress: ['accent', 'Sedang belajar'], failed: ['warn', 'Belum lulus'], overdue: ['crit', 'Lewat tenggat'],
+  completed: ['ok', 'Lulus'],
+};
+export const MATERIAL_KIND: Record<string, string> = { text: 'Bacaan', video: 'Video', link: 'Tautan', file: 'Berkas' };

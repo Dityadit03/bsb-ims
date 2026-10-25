@@ -7,6 +7,7 @@ import { TaskActions } from './task-actions';
 import { LeaveTable, OvertimeTable, type LeaveRow, type OtRow } from '../hrga/time-tables';
 import { AdvanceTable, ClaimTable, type AdvanceRow, type ClaimRow } from '../hrga/claims';
 import type { ReqRow } from '../hrga/rekrutmen/parts';
+import { ReviewTable, type ReviewRow } from '../hrga/kinerja/parts';
 import { REQ_REASON, REQ_STATUS } from '@/lib/hrga';
 
 export const metadata = { title: 'Kotak tugas' };
@@ -26,12 +27,13 @@ export default async function TugasPage() {
         .select('id, revision, change_summary, draft_sha256, draft:draft_attachment_id(file_name), documents(id, title, registration_no, type_code, departments(code))')
         .in('id', verIds).returns<Ver[]>()
     : { data: [] as Ver[] };
-  const [{ data: leaves }, { data: ots }, { data: claims }, { data: advs }, { data: reqs }] = await Promise.all([
+  const [{ data: leaves }, { data: ots }, { data: claims }, { data: advs }, { data: reqs }, { data: perf }] = await Promise.all([
     supabase.from('leave_register').select('*').eq('can_decide', true).order('start_date').limit(100).returns<LeaveRow[]>(),
     supabase.from('overtime_register').select('*').eq('can_decide', true).order('work_date').limit(100).returns<OtRow[]>(),
     supabase.from('expense_claim_register').select('*').eq('can_decide', true).order('created_at').limit(100).returns<ClaimRow[]>(),
     supabase.from('cash_advance_register').select('*').eq('can_decide', true).order('created_at').limit(100).returns<AdvanceRow[]>(),
     supabase.from('requisition_register').select('*').eq('can_decide', true).order('created_at').limit(100).returns<ReqRow[]>(),
+    supabase.from('perf_review_register').select('*').not('my_action', 'is', null).order('full_name').limit(200).returns<ReviewRow[]>(),
   ]);
   const { data: notes } = await supabase.from('notifications').select('id, title, body, link, created_at, read_at')
     .order('created_at', { ascending: false }).limit(10);
@@ -44,6 +46,7 @@ export default async function TugasPage() {
       {!!ots?.length && <Panel title={`Persetujuan lembur / SPL (${ots.length})`}><OvertimeTable rows={ots} /></Panel>}
       {!!claims?.length && <Panel title={`Persetujuan klaim (${claims.length})`}><ClaimTable rows={claims} mode="manage" /></Panel>}
       {!!advs?.length && <Panel title={`Persetujuan kasbon / uang muka (${advs.length})`}><AdvanceTable rows={advs} mode="manage" /></Panel>}
+      {!!perf?.length && <Panel title={`Penilaian kinerja (${perf.length})`}><ReviewTable rows={perf} /></Panel>}
       {!!reqs?.length && (
         <Panel title={`Persetujuan FPTK (${reqs.length})`}>
           <ul className="grid gap-2">

@@ -2,7 +2,7 @@
 import { HAZARD_TYPE, INCIDENT_CLASS, OPEN_CLOSED, VALIDITY } from '@/lib/she';
 import { UNIT_STATUS, WO_STATUS, WO_TYPE } from '@/lib/plant';
 import { CATEGORY, MOVE, MR_STATUS, PO_STATUS, PR_STATUS, STAGE } from '@/lib/logistics';
-import { ATT_STATUS, CARD_STATUS, CONTRACT, CONTRACT_STATUS, DAY_TYPE, EMPLOYMENT, LEAVE_STATUS, MOVE as MOVEMENT, OT_STATUS, RUN_KIND, RUN_STATUS, CLAIM_STATUS, ADV_STATUS, ADV_KIND, PAY_METHOD, REQ_STATUS, REQ_REASON, APP_STAGE, CAND_SOURCE } from '@/lib/hrga';
+import { ATT_STATUS, CARD_STATUS, CONTRACT, CONTRACT_STATUS, DAY_TYPE, EMPLOYMENT, LEAVE_STATUS, MOVE as MOVEMENT, OT_STATUS, RUN_KIND, RUN_STATUS, CLAIM_STATUS, ADV_STATUS, ADV_KIND, PAY_METHOD, REQ_STATUS, REQ_REASON, APP_STAGE, CAND_SOURCE, PERF_STATUS, ASSIGN_STATUS, COURSE_STATUS } from '@/lib/hrga';
 
 type Label = Record<string, string | [string, string]>;
 const lbl = (m: Label) => (v: unknown) => { const x = m[String(v)]; return x == null ? v : Array.isArray(x) ? x[1] : x; };
@@ -144,6 +144,13 @@ export const DATASETS: Dataset[] = [
     ['education_level', 'Pendidikan'], ['experience_years', 'Pengalaman (th)'], ['domicile', 'Domisili'], ['is_local', 'Lokal', yn],
     ['source', 'Sumber', lbl(CAND_SOURCE)], ['stage', 'Tahap', lbl(APP_STAGE)], ['stage_at', 'Sejak'], ['psikotes_score', 'Nilai psikotes'],
     ['interview_score', 'Nilai interview'], ['close_reason', 'Alasan gugur']] },
+  { key: 'kinerja', label: 'Penilaian kinerja per siklus', group: 'HRGA', view: 'perf_review_register', order: 'department_code', feed: false, filter: ['siklus', 'cycle_id'], columns: [
+    ['cycle_name', 'Siklus'], ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['position_name', 'Jabatan'], ['supervisor_name', 'Atasan'],
+    ['goals', 'Jumlah KPI'], ['weight_total', 'Total bobot'], ['status', 'Status', lbl(PERF_STATUS)], ['final_score', 'Nilai akhir'], ['computed_grade', 'Predikat hitung'],
+    ['calibrated_grade', 'Predikat kalibrasi'], ['final_grade', 'Predikat akhir']] },
+  { key: 'elearning', label: 'Penugasan e-learning', group: 'HRGA', view: 'course_assignment_register', order: 'course_code', feed: false, columns: [
+    ['course_code', 'Kursus'], ['course_title', 'Judul'], ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['position_name', 'Jabatan'],
+    ['due_on', 'Tenggat'], ['status', 'Status', lbl(ASSIGN_STATUS)], ['attempts', 'Percobaan'], ['best_score', 'Nilai terbaik'], ['cert_no', 'No. sertifikat'], ['completed_at', 'Tgl lulus']] },
   // payroll: hanya terbaca pemegang peran payroll (RLS); tidak pernah jadi feed
   { key: 'slip_gaji', label: 'Rincian gaji per karyawan', group: 'HRGA', view: 'payroll_slip_register', order: 'period', desc: true, feed: false, filter: ['run', 'run_id'], columns: [
     ['run_no', 'No. proses'], ['period', 'Periode'], ['kind', 'Jenis', lbl(RUN_KIND)], ['run_status', 'Status', lbl(RUN_STATUS)], ['parallel', 'Uji paralel', yn],
@@ -296,6 +303,17 @@ export const IMPORTS: ImportKind[] = [
     f('pengalaman', 'Pengalaman (tahun)', ['pengalaman', 'pengalaman kerja', 'lama kerja'], '3'),
     f('perusahaan_terakhir', 'Perusahaan terakhir', ['perusahaan terakhir', 'tempat kerja terakhir'], ''),
     f('lokal', 'Warga lokal', ['lokal', 'warga lokal', 'putra daerah'], 'Ya'), f('keterangan', 'Keterangan', ['keterangan', 'catatan', 'posisi dilamar'], 'Operator DT')] },
+  { key: 'kpi', label: 'KPI karyawan', perm: 'hr.manage', note: 'Ke siklus yang sedang menyusun KPI. Satu baris satu KPI; total bobot per karyawan harus 100% sebelum dikirim. Tidak untuk KPI yang sudah disetujui.', fields: [
+    f('nrp', 'NRP', ['nrp', 'no karyawan'], 'BSB-0123', { required: true }),
+    f('kpi', 'KPI', ['kpi', 'sasaran', 'sasaran kerja'], 'Ritase DT tercapai', { required: true }),
+    f('indikator', 'Indikator', ['indikator', 'cara ukur'], 'Laporan hauling'), f('target', 'Target', ['target'], '>= 95%', { required: true }),
+    f('bobot', 'Bobot (%)', ['bobot', 'weight'], '40', { required: true }), f('siklus', 'Nama siklus', ['siklus', 'periode'], 'Penilaian 2026')] },
+  { key: 'soal_kursus', label: 'Bank soal kursus', perm: 'lms.manage', note: 'Kursus harus sudah dibuat (kode kursus). Jawaban: huruf A-E sesuai pilihan.', fields: [
+    f('kode_kursus', 'Kode kursus', ['kode kursus', 'kursus', 'kode'], 'K3-DASAR', { required: true }),
+    f('pertanyaan', 'Pertanyaan', ['pertanyaan', 'soal'], 'Jarak aman antar DT?', { required: true }),
+    f('opsi_a', 'Pilihan A', ['a', 'opsi a', 'pilihan a'], '50 m', { required: true }), f('opsi_b', 'Pilihan B', ['b', 'opsi b', 'pilihan b'], '10 m', { required: true }),
+    f('opsi_c', 'Pilihan C', ['c', 'opsi c', 'pilihan c'], '5 m'), f('opsi_d', 'Pilihan D', ['d', 'opsi d', 'pilihan d'], ''), f('opsi_e', 'Pilihan E', ['e', 'opsi e', 'pilihan e'], ''),
+    f('jawaban', 'Jawaban benar', ['jawaban', 'kunci', 'jawaban benar'], 'A', { required: true })] },
   { key: 'unit', label: 'Unit / sarana', perm: 'plant.manage', note: 'No. unit yang sudah ada diperbarui. Jenis: DT, LV, ST, FT, WT, BUS, EXC, OTHER.', fields: [
     f('no_unit', 'No. unit', ['no unit', 'no lambung', 'unit', 'kode unit'], 'DT-21', { required: true }),
     f('jenis', 'Jenis', ['jenis', 'tipe unit', 'type'], 'DT', { required: true }),

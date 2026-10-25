@@ -11,17 +11,18 @@ import { saveMyPrivate } from '../hrga/actions';
 import { LeaveForm, OvertimeForm } from '../hrga/time-forms';
 import { LeaveTable, OvertimeTable, type LeaveRow, type OtRow } from '../hrga/time-tables';
 import { AdvanceForm, AdvanceTable, ClaimForm, ClaimTable, type AdvanceRow, type ClaimRow } from '../hrga/claims';
+import { ReviewTable, type ReviewRow } from '../hrga/kinerja/parts';
 
 export const metadata = { title: 'Saya' };
 
-const TABS = [['/saya', 'Profil'], ['/saya?tab=absen', 'Kehadiran'], ['/saya?tab=cuti', 'Cuti'], ['/saya?tab=lembur', 'Lembur'], ['/saya?tab=klaim', 'Klaim & kasbon'], ['/saya?tab=gaji', 'Slip gaji']] as const;
+const TABS = [['/saya', 'Profil'], ['/saya?tab=absen', 'Kehadiran'], ['/saya?tab=cuti', 'Cuti'], ['/saya?tab=lembur', 'Lembur'], ['/saya?tab=klaim', 'Klaim & kasbon'], ['/saya?tab=gaji', 'Slip gaji'], ['/saya?tab=kinerja', 'Kinerja']] as const;
 
 // Employee self service: profil & data kontak, rekap kehadiran, pengajuan cuti dan SPL milik sendiri.
 export default async function SayaPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
   const { profile } = await getSession();
   const supabase = await createClient();
-  const tab = ['absen', 'cuti', 'lembur', 'klaim', 'gaji'].includes(sp.tab ?? '') ? sp.tab! : 'profil';
+  const tab = ['absen', 'cuti', 'lembur', 'klaim', 'gaji', 'kinerja'].includes(sp.tab ?? '') ? sp.tab! : 'profil';
   const { data: me } = await supabase.from('employee_register').select('*').eq('profile_id', profile.id).eq('status', 'active').maybeSingle();
 
   return (
@@ -38,6 +39,7 @@ export default async function SayaPage({ searchParams }: { searchParams: Promise
           {tab === 'lembur' && <Lembur id={me.id} supabase={supabase} />}
           {tab === 'klaim' && <Klaim id={me.id} supabase={supabase} />}
           {tab === 'gaji' && <Gaji id={me.id} supabase={supabase} />}
+          {tab === 'kinerja' && <Kinerja id={me.id} supabase={supabase} />}
         </>
       )}
     </>
@@ -219,6 +221,25 @@ async function Klaim({ id, supabase }: { id: string; supabase: Client }) {
       <Panel title="Kasbon & uang muka">
         {advs?.length ? <AdvanceTable rows={advs} mode="self" /> : <p className="text-sm text-muted">Belum ada kasbon atau uang muka.</p>}
       </Panel>
+    </>
+  );
+}
+
+async function Kinerja({ id, supabase }: { id: string; supabase: Client }) {
+  const [{ data: mine }, { data: team }] = await Promise.all([
+    supabase.from('perf_review_register').select('*').eq('employee_id', id).order('period_start', { ascending: false }).returns<ReviewRow[]>(),
+    supabase.from('perf_review_register').select('*').eq('is_manager', true).neq('cycle_status', 'closed').order('full_name').limit(500).returns<ReviewRow[]>(),
+  ]);
+  return (
+    <>
+      <Panel title="Penilaian saya" sub="Susun KPI, isi penilaian diri, lalu lihat hasil setelah HRGA menerbitkan.">
+        {mine?.length ? <ReviewTable rows={mine} cycle /> : <p className="text-sm text-muted">Belum ada siklus penilaian untuk Anda.</p>}
+      </Panel>
+      {!!team?.length && (
+        <Panel title={`Tim saya (${team.length})`} sub="Karyawan yang Anda nilai sebagai atasan langsung atau atasan departemen.">
+          <ReviewTable rows={team} />
+        </Panel>
+      )}
     </>
   );
 }

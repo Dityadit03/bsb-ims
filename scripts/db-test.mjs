@@ -1675,6 +1675,131 @@ console.log('HRIS: Rekrutmen');
   });
 }
 
+console.log('HRIS: Kinerja & e-learning');
+{
+  const REG = `select * from public.perf_review_register where employee_id = $1`;
+  const GOAL = `select (g).* from public.perf_goal_save($1, null, $2, null, $3, $4) g`;
+  const ADV = `select (c).status from public.perf_cycle_advance($1) c`;
+  const noAcc = (await as(db, hrStaff, EMP_SQL, ['BSB-401', 'Operator Tanpa Akun', PRD, OPRDT, 'permanent', null, null])).rows[0];
+  const behaviors = (await db.query(`select id from public.perf_behaviors where active order by sort_order`)).rows.map(r => r.id);
+  const items = (goals, scores, beh) => JSON.stringify([...goals.map((g, i) => ({ kind: 'goal', id: g.id, score: scores[i], actual: 'tercapai' })),
+    ...behaviors.map(id => ({ kind: 'behavior', id, score: beh }))]);
+  let cyc, rev, revNo, goals = [];
+  await test('kinerja: siklus oleh HRGA; KPI wajib total bobot 100%; atasan mengembalikan dengan catatan lalu menyetujui', async () => {
+    await expectError('42501', async () => as(db, absUser, `select public.perf_cycle_save(null, 'X', '2026-01-01', '2026-12-31', 70)`));
+    cyc = (await as(db, hrStaff, `select (c).* from public.perf_cycle_save(null, 'Penilaian 2026', '2026-01-01', '2026-12-31', 70) c`)).rows[0];
+    eq((await as(db, absUser, `select 1 from public.perf_cycles where id = $1`, [cyc.id])).rowCount, 0);
+    eq((await as(db, hrStaff, ADV, [cyc.id])).rows[0].status, 'goal_setting');
+    rev = (await as(db, absUser, REG, [wk.id])).rows[0];
+    eq(rev.my_action, 'Susun KPI');
+    eq((await as(db, dhHse, REG, [wk.id])).rowCount, 0);
+    goals.push((await as(db, absUser, GOAL, [rev.id, 'Ritase DT', '≥ 95% target', 60])).rows[0]);
+    goals.push((await as(db, absUser, GOAL, [rev.id, 'Zero LTI', '0 kejadian', 30])).rows[0]);
+    await expectError('22023', async () => as(db, absUser, `select public.perf_goals_submit($1)`, [rev.id]));
+    goals.push((await as(db, absUser, GOAL, [rev.id, 'P2H tepat waktu', '100%', 10])).rows[0]);
+    await expectError('42501', async () => as(db, dhPrd, `select public.perf_goals_submit($1)`, [rev.id]));
+    await as(db, absUser, `select public.perf_goals_submit($1)`, [rev.id]);
+    eq((await as(db, dhPrd, REG, [wk.id])).rows[0].my_action, 'Setujui KPI');
+    await expectError('42501', async () => as(db, absUser, `select public.perf_goals_decide($1, true)`, [rev.id]));
+    await expectError('22023', async () => as(db, dhPrd, `select public.perf_goals_decide($1, false, null)`, [rev.id]));
+    await as(db, dhPrd, `select public.perf_goals_decide($1, false, 'Tambahkan target jam kerja aman')`, [rev.id]);
+    eq((await as(db, absUser, REG, [wk.id])).rows[0].return_note, 'Tambahkan target jam kerja aman');
+    await as(db, absUser, `select public.perf_goals_submit($1)`, [rev.id]);
+    await as(db, dhPrd, `select public.perf_goals_decide($1, true)`, [rev.id]);
+    await expectError('42501', async () => as(db, absUser, GOAL, [rev.id, 'KPI baru', '1', 5]));
+    // karyawan tanpa akun: KPI diimpor HRGA, disetujui atasan langsung dari draf
+    revNo = (await as(db, hrStaff, REG, [noAcc.id])).rows[0];
+    const rows = JSON.stringify([{ nrp: 'BSB-401', kpi: 'Ritase', target: '95%', bobot: '70%' }, { nrp: 'BSB-401', kpi: 'Zero LTI', target: '0', bobot: '30' }]);
+    eq((await as(db, hrStaff, `select public.import_rows('kpi', $1::jsonb, true) r`, [rows])).rows[0].r.ok, 2);
+    await as(db, dhPrd, `select public.perf_goals_decide($1, true)`, [revNo.id]);
+  });
+  await test('kinerja: penilaian diri lalu atasan; nilai = KPI×70% + perilaku×30%; hasil tersembunyi dari karyawan sebelum terbit', async () => {
+    const SELF = `select public.perf_self_review($1, $2::jsonb, 'Target tercapai')`;
+    const MGR = `select (x).* from public.perf_manager_review($1, $2::jsonb, 'Konsisten', 'Pelatihan defensive driving') x`;
+    await expectError('22023', async () => as(db, absUser, SELF, [rev.id, items(goals, [5, 5, 5], 5)]));
+    await as(db, hrStaff, ADV, [cyc.id]);
+    eq((await as(db, absUser, REG, [wk.id])).rows[0].my_action, 'Isi penilaian diri');
+    await expectError('22023', async () => as(db, dhPrd, MGR, [rev.id, items(goals, [5, 4, 3], 4)]));
+    await expectError('22023', async () => as(db, absUser, SELF, [rev.id, JSON.stringify([{ kind: 'goal', id: goals[0].id, score: 5 }])]));
+    await as(db, absUser, SELF, [rev.id, items(goals, [5, 5, 4], 5)]);
+    await expectError('42501', async () => as(db, absUser, MGR, [rev.id, items(goals, [5, 5, 5], 5)]));
+    const x = (await as(db, dhPrd, MGR, [rev.id, items(goals, [5, 4, 3], 4)])).rows[0];
+    eq(Number(x.kpi_score), 4.5); eq(Number(x.behavior_score), 4); eq(Number(x.final_score), 4.35); eq(x.computed_grade, 'B');
+    eq((await as(db, absUser, `select 1 from public.perf_results`)).rowCount, 0);
+    eq((await as(db, absUser, `select 1 from public.perf_ratings where rater = 'manager'`)).rowCount, 0);
+    eq((await as(db, absUser, `select count(*)::int c from public.perf_ratings where rater = 'self'`)).rows[0].c, 3 + behaviors.length);
+    eq((await as(db, absUser, REG, [wk.id])).rows[0].final_grade, null);
+    eq((await as(db, dhPrd, REG, [wk.id])).rows[0].final_grade, 'B');
+    // tanpa akun: atasan menilai tanpa penilaian diri
+    const ng = (await db.query(`select id from public.perf_goals where review_id = $1 order by sort_order`, [revNo.id])).rows;
+    eq((await as(db, dhPrd, MGR, [revNo.id, items(ng, [3, 3], 3)])).rows[0].computed_grade, 'C');
+    const ev = (await as(db, dhPrd, `select public.perf_evidence($1) e`, [rev.id])).rows[0].e;
+    eq(typeof ev.hadir, 'number'); eq(typeof ev.pelanggaran, 'number');
+    eq((await as(db, dhHse, `select 1 from public.perf_reviews where id = $1`, [rev.id])).rowCount, 0);
+  });
+  await test('kinerja: kalibrasi HRGA wajib alasan; hasil terbit saat siklus ditutup lalu dikonfirmasi karyawan', async () => {
+    const CAL = `select (x).* from public.perf_calibrate($1, $2, $3) x`;
+    await expectError('22023', async () => as(db, hrStaff, CAL, [rev.id, 'A', 'x']));
+    await as(db, hrStaff, ADV, [cyc.id]);
+    await expectError('42501', async () => as(db, dhPrd, CAL, [rev.id, 'A', 'x']));
+    await expectError('22023', async () => as(db, hrStaff, CAL, [rev.id, 'A', null]));
+    eq((await as(db, hrStaff, CAL, [rev.id, 'A', 'Zero incident sepanjang tahun, nilai dinaikkan komite'])).rows[0].calibrated_grade, 'A');
+    await expectError('22023', async () => as(db, absUser, `select public.perf_acknowledge($1)`, [rev.id]));
+    eq((await as(db, hrStaff, ADV, [cyc.id])).rows[0].status, 'closed');
+    const r = (await as(db, absUser, REG, [wk.id])).rows[0];
+    eq(r.final_grade, 'A'); eq(r.my_action, 'Konfirmasi hasil');
+    eq((await as(db, absUser, `select count(*)::int c from public.perf_ratings where rater = 'manager'`)).rows[0].c, 3 + behaviors.length);
+    await as(db, absUser, `select public.perf_acknowledge($1, 'Terima kasih')`, [rev.id]);
+    eq((await db.query(`select status from public.perf_reviews where id = $1`, [rev.id])).rows[0].status, 'acknowledged');
+    eq((await db.query(`select count(*)::int c from public.notifications where user_id = $1 and title like 'Hasil penilaian%'`, [absUser])).rows[0].c, 1);
+  });
+
+  let course;
+  const QS = `select (q).* from public.course_question_save($1, null, $2, $3::text[], $4) q`;
+  await test('e-learning: kursus disusun departemen pemilik; terbit wajib ada soal; kunci jawaban tidak terbaca peserta', async () => {
+    const SAVE = `select (c).* from public.course_save(null, $1::jsonb) c`;
+    await expectError('42501', async () => as(db, absUser, SAVE, [JSON.stringify({ code: 'K3-01', title: 'K3', department_id: HSE })]));
+    await expectError('42501', async () => as(db, dhHse, SAVE, [JSON.stringify({ code: 'PRD-01', title: 'Produksi', department_id: PRD })]));
+    course = (await as(db, dhHse, SAVE, [JSON.stringify({ code: 'k3-dasar', title: 'Induksi K3 dasar', department_id: HSE, competency_id: INDUKSI,
+      pass_score: 70, max_attempts: 2 })])).rows[0];
+    eq(course.code, 'K3-DASAR');
+    await as(db, dhHse, `select public.course_material_save($1, null, 'Aturan lalu lintas tambang', 'text', 'Jarak aman 50 m', null)`, [course.id]);
+    await expectError('22023', async () => as(db, dhHse, `select public.course_set_status($1, 'published')`, [course.id]));
+    await expectError('22023', async () => as(db, dhHse, QS, [course.id, 'Jarak aman?', ['50 m'], 1]));
+    await as(db, dhHse, QS, [course.id, 'Jarak aman antar DT?', ['50 m', '10 m', '5 m'], 1]);
+    await as(db, dhHse, QS, [course.id, 'APD wajib di pit?', ['Sandal', 'Helm, rompi, safety shoes', 'Topi'], 2]);
+    const rows = JSON.stringify([{ kode_kursus: 'K3-DASAR', pertanyaan: 'P2H dilakukan?', opsi_a: 'Setelah shift', opsi_b: 'Kapan saja', opsi_c: 'Sebelum operasi', jawaban: 'C' }]);
+    eq((await as(db, dhHse, `select public.import_rows('soal_kursus', $1::jsonb, true) r`, [rows])).rows[0].r.ok, 1);
+    eq((await db.query(`select answer from public.course_questions where question = 'P2H dilakukan?'`)).rows[0].answer, 3);
+    await as(db, dhHse, `select public.course_set_status($1, 'published')`, [course.id]);
+    eq((await as(db, absUser, `select 1 from public.courses where id = $1`, [course.id])).rowCount, 1);
+    eq((await as(db, absUser, `select 1 from public.course_questions`)).rowCount, 0);
+    eq((await as(db, dhHse, `select public.course_assign($1, array[$2]::uuid[], null, null, '2026-12-31') n`, [course.id, wk.id])).rows[0].n, 1);
+    eq((await as(db, absUser, `select my_assigned from public.course_register where id = $1`, [course.id])).rows[0].my_assigned, true);
+  });
+  await test('e-learning: kuis setelah materi selesai; lulus → sertifikat LMS jadi kompetensi; batas percobaan', async () => {
+    await expectError('22023', async () => as(db, absUser, `select public.course_start($1)`, [course.id]));
+    const mat = (await db.query(`select id from public.course_materials where course_id = $1`, [course.id])).rows[0];
+    await as(db, absUser, `select public.course_material_done($1)`, [mat.id]);
+    let s = (await as(db, absUser, `select public.course_start($1) s`, [course.id])).rows[0].s;
+    eq(s.questions.length, 3); eq(s.questions[0].answer, undefined);
+    eq((await as(db, absUser, `select public.course_start($1) s`, [course.id])).rows[0].s.attempt_id, s.attempt_id);
+    const key = Object.fromEntries((await db.query(`select id, answer from public.course_questions where course_id = $1`, [course.id])).rows.map(r => [r.id, r.answer]));
+    const wrong = s.questions.map(q => (key[q.id] % q.options.length) + 1);
+    const a1 = (await as(db, absUser, `select (a).* from public.course_submit($1, $2::int[]) a`, [s.attempt_id, wrong])).rows[0];
+    eq(a1.passed, false); eq(Number(a1.score), 0); eq(a1.cert_no, null);
+    await expectError('22023', async () => as(db, absUser, `select public.course_submit($1, $2::int[])`, [s.attempt_id, wrong]));
+    s = (await as(db, absUser, `select public.course_start($1) s`, [course.id])).rows[0].s;
+    const a2 = (await as(db, absUser, `select (a).* from public.course_submit($1, $2::int[]) a`, [s.attempt_id, s.questions.map(q => key[q.id])])).rows[0];
+    eq(a2.passed, true); eq(Number(a2.score), 100); eq(a2.cert_no.startsWith('LMS-BSB-'), true);
+    const ec = (await db.query(`select cert_no, valid_until is not null v from public.employee_competencies where id = $1`, [a2.employee_competency_id])).rows[0];
+    eq(ec.cert_no, a2.cert_no); eq(ec.v, true);
+    eq((await as(db, dhHse, `select status from public.course_assignment_register where course_id = $1 and employee_id = $2`, [course.id, wk.id])).rows[0].status, 'completed');
+    await expectError('22023', async () => as(db, absUser, `select public.course_start($1)`, [course.id]));
+    await expectError('22023', async () => as(db, absUser, `select public.course_submit($1, $2::int[])`, [s.attempt_id, []]));
+  });
+}
+
 console.log('audit trail');
 await test('setiap penerbitan nomor tercatat', async () => {
   const r = await db.query(`select count(*)::int c from public.audit_logs where action = 'numbering.issue'`);
