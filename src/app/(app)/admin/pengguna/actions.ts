@@ -2,8 +2,16 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 
+const EXPIRED = 'Sesi Anda sudah habis. Muat ulang halaman (F5) atau masuk lagi, lalu coba sekali lagi.';
+// Token kedaluwarsa membuat database melihat pemanggil sebagai anonim: tampilkan sebabnya, bukan "Tidak berwenang"
+async function sessionOk(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data } = await supabase.auth.getUser();
+  return !!data.user;
+}
+
 export async function activateUser(_: { error?: string }, form: FormData): Promise<{ error?: string }> {
   const supabase = await createClient();
+  if (!(await sessionOk(supabase))) return { error: EXPIRED };
   const { error } = await supabase.rpc('activate_user', {
     p_user: String(form.get('user')),
     p_role: String(form.get('role')),
@@ -17,6 +25,7 @@ export async function activateUser(_: { error?: string }, form: FormData): Promi
 
 export async function activateNikUser(_: { error?: string }, form: FormData): Promise<{ error?: string }> {
   const supabase = await createClient();
+  if (!(await sessionOk(supabase))) return { error: EXPIRED };
   const { error } = await supabase.rpc('activate_nik_user', {
     p_user: String(form.get('user')),
     p_role: String(form.get('role')),
@@ -30,6 +39,7 @@ export async function activateNikUser(_: { error?: string }, form: FormData): Pr
 
 export async function rejectNikUser(_: { error?: string }, form: FormData): Promise<{ error?: string }> {
   const supabase = await createClient();
+  if (!(await sessionOk(supabase))) return { error: EXPIRED };
   const { error } = await supabase.rpc('reject_nik_user', { p_user: String(form.get('user')), p_reason: String(form.get('reason') ?? '') });
   if (error) return { error: error.message };
   revalidatePath('/admin/pengguna');
@@ -39,6 +49,7 @@ export async function rejectNikUser(_: { error?: string }, form: FormData): Prom
 // Reset sandi: Edge Function memeriksa izin lewat database lalu mengganti sandi dengan sandi sementara (ditampilkan sekali).
 export async function resetPassword(_: { error?: string; password?: string }, form: FormData): Promise<{ error?: string; password?: string }> {
   const supabase = await createClient();
+  if (!(await sessionOk(supabase))) return { error: EXPIRED };
   const { data, error } = await supabase.functions.invoke('admin-reset-password', { body: { user_id: String(form.get('user')) } });
   if (error) {
     let msg = error.message;
