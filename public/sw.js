@@ -51,3 +51,27 @@ self.addEventListener('fetch', e => {
     })());
   }
 });
+
+// Pemberitahuan dorong: isi minimal (judul, cuplikan, tautan). Rincian dibuka di aplikasi setelah masuk.
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch { /* isi tidak valid */ }
+  e.waitUntil(self.registration.showNotification(d.title || 'BSB IMS', {
+    body: d.body || '',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: d.tag,
+    data: { link: typeof d.link === 'string' && d.link.startsWith('/') ? d.link : '/tugas' },
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const link = (e.notification.data && e.notification.data.link) || '/tugas';
+  e.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of all) {
+      if ('focus' in c) { await c.focus(); if ('navigate' in c) await c.navigate(link); return; }
+    }
+    await self.clients.openWindow(link);
+  })());
+});

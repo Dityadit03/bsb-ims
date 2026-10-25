@@ -2011,6 +2011,52 @@ await test('audit log tidak bisa diubah bahkan oleh pemilik database', async () 
   await expectError('42501', () => db.query(`update public.audit_logs set action = 'x'`));
   await expectError('42501', () => db.query(`delete from public.audit_logs`));
 });
+await test('push: langganan milik sendiri, pindah akun bila endpoint sama, antrean hanya untuk yang berlangganan dan tidak menolak', async () => {
+  const ep = 'https://push.example/abc';
+  await as(db, staffId, `select public.push_subscribe($1, 'p256', 'authk', 'UA')`, [ep]);
+  eq((await as(db, staffId, `select public.push_status() s`)).rows[0].s.devices, 1);
+  eq((await as(db, adminId, `select public.push_status() s`)).rows[0].s.devices, 0);
+  await expectError('42501', () => as(db, staffId, `select * from public.push_subscriptions`));
+  await expectError('22023', () => as(db, staffId, `select public.push_subscribe('http://x', 'a', 'b')`));
+  await db.query(`insert into public.notifications(user_id, kind, title, body, link) values ($1, 't', 'Judul', 'Isi', '/tugas'), ($2, 't', 'Lain', 'x', '/')`, [staffId, adminId]);
+  const q = await db.query(`select user_id, channel from public.notification_outbox`);
+  eq(q.rowCount, 1); eq(q.rows[0].user_id, staffId);
+  // HP dipakai bergantian: endpoint yang sama pindah ke akun yang sedang masuk
+  await as(db, adminId, `select public.push_subscribe($1, 'p2', 'a2', 'UA')`, [ep]);
+  eq((await as(db, staffId, `select public.push_status() s`)).rows[0].s.devices, 0);
+  eq((await as(db, adminId, `select public.push_status() s`)).rows[0].s.devices, 1);
+  // matikan lewat preferensi
+  await as(db, staffId, `select public.push_subscribe('https://push.example/s', 'p', 'a', null)`);
+  await as(db, staffId, `select public.push_set_pref(false)`);
+  await db.query(`insert into public.notifications(user_id, kind, title) values ($1, 't', 'Tidak dikirim')`, [staffId]);
+  eq((await db.query(`select count(*)::int c from public.notification_outbox where user_id = $1`, [staffId])).rows[0].c, 1);
+});
+await test('push: klaim dan penyelesaian antrean hanya untuk service_role; 3 kali gagal -> failed; langganan mati dihapus', async () => {
+  await expectError('42501', () => as(db, adminId, `select public.dispatch_claim_push(10)`));
+  await expectError('42501', () => as(db, adminId, `select public.dispatch_complete_push(gen_random_uuid(), true)`));
+  const svc = async (sql, params = []) => {
+    await db.query('begin');
+    try {
+      await db.query(`select set_config('request.jwt.claims', '{"role":"service_role"}', true)`);
+      await db.query('set local role service_role');
+      const r = await db.query(sql, params); await db.query('commit'); return r;
+    } catch (e) { await db.query('rollback'); throw e; }
+  };
+  await db.query(`update public.notification_outbox set status = 'pending', attempts = 0`);
+  await db.query(`insert into public.push_subscriptions(user_id, endpoint, p256dh, auth) values ($1, 'https://push.example/dead', 'p', 'a')`, [staffId]);
+  const claimed = (await svc(`select public.dispatch_claim_push(10) c`)).rows[0].c;
+  eq(claimed.length, 1);
+  eq(claimed[0].title, 'Judul');
+  eq(claimed[0].subs.length, 2, 'dua langganan milik staff (s dan dead)');
+  const id = claimed[0].id;
+  eq((await svc(`select public.dispatch_claim_push(10) c`)).rows[0].c.length, 0, 'sudah diklaim');
+  await svc(`select public.dispatch_complete_push($1, false, 'boom', '{}')`, [id]);
+  eq((await db.query(`select status from public.notification_outbox where id = $1`, [id])).rows[0].status, 'pending');
+  await svc(`select public.dispatch_claim_push(10)`); await svc(`select public.dispatch_complete_push($1, false, 'boom', '{}')`, [id]);
+  await svc(`select public.dispatch_claim_push(10)`); await svc(`select public.dispatch_complete_push($1, false, 'boom', ARRAY['https://push.example/dead'])`, [id]);
+  eq((await db.query(`select status from public.notification_outbox where id = $1`, [id])).rows[0].status, 'failed');
+  eq((await db.query(`select count(*)::int c from public.push_subscriptions where endpoint = 'https://push.example/dead'`)).rows[0].c, 0);
+});
 await test('pengguna tanpa audit.read tidak melihat audit log', async () => {
   eq((await as(db, staffId, `select 1 from public.audit_logs`)).rowCount, 0);
 });

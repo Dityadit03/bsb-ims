@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { NAV } from '@/lib/modules';
 import type { Alert } from '@/lib/alerts';
+import { PushToggle } from './push-toggle';
+import { forgetDevice } from '@/lib/push';
 
 // Aksi yang paling sering dipakai di lapangan, selalu terlihat di bawah layar HP
 const QUICK = [['/', 'Beranda', '⌂'], ['/absen', 'Absen', '◉'], ['/she/p2h', 'P2H', '✓'], ['/she/hazard', 'Hazard', '⚠'], ['/tugas', 'Tugas', '✉']] as const;
@@ -161,6 +163,7 @@ export function Sidebar({ permissions, name, email, role, unit, alerts, alertTot
                     ))}
                   </span>
                 </div>
+                <PushToggle />
                 <div className={row}>
                   <span className="grid"><span className="text-sm font-medium">Tautan Google Drive</span><span className="text-xs text-muted">Link Form / Sheet / Drive di Pusat Data</span></span>
                   <Link href="/pusat-data" className={small}>Atur tautan</Link>
@@ -181,7 +184,7 @@ export function Sidebar({ permissions, name, email, role, unit, alerts, alertTot
                 )}
                 <div className={row}>
                   <span className="grid min-w-0"><span className="text-sm font-medium">Akses Anda</span><span className="truncate text-xs text-muted">{name} · {role}</span></span>
-                  <form action="/auth/keluar" method="post"><button className={small}>Keluar</button></form>
+                  <form action="/auth/keluar" method="post" onSubmit={async e => { e.preventDefault(); const f = e.currentTarget; await forgetDevice(); f.submit(); }}><button className={small}>Keluar</button></form>
                 </div>
               </div>
             )}
@@ -197,7 +200,7 @@ export function Sidebar({ permissions, name, email, role, unit, alerts, alertTot
                 <Link href="/tugas" className="block rounded-lg px-2 py-1.5 text-sm hover:bg-ground">Kotak tugas</Link>
                 {email.endsWith('@nrp.bsb.local') && <Link href="/ganti-sandi" className="block rounded-lg px-2 py-1.5 text-sm hover:bg-ground">Ganti sandi</Link>}
                 <button onClick={() => setPop('settings')} className="block w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-ground">Pengaturan</button>
-                <form action="/auth/keluar" method="post"><button className="w-full rounded-lg px-2 py-1.5 text-left text-sm text-crit hover:bg-ground">Keluar</button></form>
+                <form action="/auth/keluar" method="post" onSubmit={async e => { e.preventDefault(); const f = e.currentTarget; await forgetDevice(); f.submit(); }}><button className="w-full rounded-lg px-2 py-1.5 text-left text-sm text-crit hover:bg-ground">Keluar</button></form>
               </div>
             )}
           </div>
