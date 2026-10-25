@@ -1419,6 +1419,107 @@ await test('lembur (SPL): batas jam per hari & minggu, tidak bentrok, disetujui 
   await as(db, absUser, `select public.overtime_request_cancel($1)`, [r.id]);
 });
 
+console.log('HRIS: Payroll');
+const payOff = await createUser('payroll@bsb.co.id');
+const payApp = await createUser('fin.mgr@bsb.co.id');
+const payEmpUser = await createUser('gilang@bsb.co.id');
+await db.query(`insert into public.user_roles(user_id, role_code, department_id) values ($1,'PAYROLL_OFFICER',null), ($2,'PAYROLL_APPROVER',null), ($3,'STAFF',$4)`,
+  [payOff, payApp, payEmpUser, PRD]);
+const pe = (await as(db, hrStaff, EMP_SQL, ['BSB-200', 'Gilang Payroll', PRD, OPRDT, 'permanent', null, 'gilang@bsb.co.id'])).rows[0];
+await db.query(`update public.employees set join_date = '2025-01-01' where id = $1`, [pe.id]);
+const PAYSET = `select public.employee_pay_set($1, $2, $3, '2026-01-01')`;
+const slipOf = async run => (await db.query(`select * from public.payroll_slip_register where run_id = $1 and employee_id = $2`, [run, pe.id])).rows[0];
+const RUN = `select (r).* from public.payroll_run_create($1, $2, $3::date, $4) r`;
+let run;
+await test('struktur gaji hanya oleh bagian payroll; HRGA biasa tidak melihat nominal gaji', async () => {
+  await expectError('42501', async () => as(db, hrStaff, PAYSET, [pe.id, 'GP', 8000000]));
+  for (const [c, v] of [['GP', 8000000], ['TJAB', 1000000], ['TMAKAN', 50000]]) await as(db, payOff, PAYSET, [pe.id, c, v]);
+  await expectError('22023', async () => as(db, payOff, PAYSET, [pe.id, 'KASBON', 1]));
+  eq((await as(db, hrStaff, `select 1 from public.employee_pay`)).rowCount, 0);
+  eq(Number((await as(db, payApp, `select fixed_wage from public.employee_pay_current where employee_id = $1`, [pe.id])).rows[0].fixed_wage), 9000000);
+  await as(db, hrStaff, `select public.employee_private_save($1, '{"ptkp_status":"TK/0","bank_name":"BRI","bank_account":"0011"}'::jsonb)`, [pe.id]);
+});
+await test('gaji bulanan: BPJS dan PPh 21 TER kategori A (PP 58/2023), potongan kasbon', async () => {
+  await expectError('42501', async () => as(db, hrStaff, RUN, ['2027-03', 'regular', '2027-03-25', false]));
+  run = (await as(db, payOff, RUN, ['2027-03', 'regular', '2027-03-25', false])).rows[0];
+  eq(run.att_from.toISOString ? run.att_from.toISOString().slice(0, 10) : run.att_from, '2027-02-21');
+  await expectError('22023', async () => as(db, payOff, RUN, ['2027-03', 'regular', '2027-03-25', false]));
+  await expectError('22023', async () => as(db, payOff, `select public.payroll_input_add($1, $2, 'GP', 1)`, [run.id, pe.id]));
+  await as(db, payOff, `select public.payroll_input_add($1, $2, 'KASBON', 200000, 'Kasbon Feb')`, [run.id, pe.id]);
+  await as(db, payOff, `select public.payroll_calculate($1)`, [run.id]);
+  const s = await slipOf(run.id);
+  eq(Number(s.fixed_wage), 9000000); eq(Number(s.earnings), 9000000);
+  eq(Number(s.gross_tax), 9501300); eq(Number(s.ter_rate), 1.75); eq(Number(s.pph21), 166272);
+  eq(Number(s.bpjs_ee), 360000); eq(Number(s.bpjs_er), 1014300); eq(Number(s.net), 8273728);
+  eq(s.warnings.some(w => w.includes('absensi')), true);
+  eq((await as(db, payEmpUser, `select 1 from public.payroll_slips`)).rowCount, 0);
+  eq((await as(db, hrStaff, `select 1 from public.payroll_slips`)).rowCount, 0);
+});
+await test('gaji disetujui orang lain, lalu slip terbit hanya untuk karyawan ybs', async () => {
+  await expectError('42501', async () => as(db, payOff, `select public.payroll_approve($1)`, [run.id]));
+  await expectError('22023', async () => as(db, payOff, `select public.payroll_publish($1)`, [run.id]));
+  await as(db, payApp, `select public.payroll_approve($1)`, [run.id]);
+  await expectError('22023', async () => as(db, payOff, `select public.payroll_calculate($1)`, [run.id]));
+  await as(db, payOff, `select public.payroll_publish($1)`, [run.id]);
+  eq((await as(db, payEmpUser, `select net from public.payroll_slips`)).rows.length, 1);
+  eq((await as(db, payEmpUser, `select 1 from public.payroll_lines`)).rowCount > 3, true);
+  eq((await as(db, absUser, `select 1 from public.payroll_slips`)).rowCount, 0);
+  eq((await db.query(`select count(*)::int c from public.notifications where user_id = $1 and kind = 'payroll'`, [payEmpUser])).rows[0].c, 1);
+});
+await test('THR: masa kerja >= 12 bulan = 1 bulan upah tetap; PPh TER atas gabungan gaji + THR di bulan yang sama', async () => {
+  const thr = (await as(db, payOff, RUN, ['2027-03', 'thr', '2027-03-25', false])).rows[0];
+  await as(db, payOff, `select public.payroll_calculate($1)`, [thr.id]);
+  const s = await slipOf(thr.id);
+  eq(Number(s.earnings), 9000000); eq(Number(s.bpjs_ee), 0); eq(Number(s.ter_rate), 8); eq(Number(s.pph21), 1313832);
+});
+await test('masa pajak Desember: PPh 21 setahun tarif Pasal 17 dikurangi PPh yang sudah dipotong', async () => {
+  await as(db, payOff, `select public.payroll_ytd_set($1, 2028, 104514300, 1828992, 2970000, 11)`, [pe.id]);
+  const dec = (await as(db, payOff, RUN, ['2028-12', 'regular', '2028-12-25', false])).rows[0];
+  await as(db, payOff, `select public.payroll_calculate($1)`, [dec.id]);
+  const s = await slipOf(dec.id);
+  eq(s.annualized, true); eq(Number(s.pph21), 724708);
+  const pkp = (await db.query(`select amount from public.payroll_lines l join public.payroll_slips s on s.id = l.slip_id where s.run_id = $1 and l.code = 'Y_PKP'`, [dec.id])).rows[0];
+  eq(Number(pkp.amount), 51074000);
+});
+await test('lembur dari SPL disetujui: upah sejam 1/173 upah tetap, jam pertama x1,5 berikutnya x2', async () => {
+  await as(db, spvPrd, ROSTER, [pe.id, today, today, 'D']);
+  const o = (await as(db, payEmpUser, `select (o).* from public.overtime_request_create(null, $1::date, '18:00', '21:00', 'Bongkar muat') o`, [today])).rows[0];
+  await as(db, spvPrd, `select public.overtime_request_decide($1, true)`, [o.id]);
+  const period = (await db.query(`select to_char(app.site_today() + case when extract(day from app.site_today()) > 20 then interval '1 month' else interval '0' end, 'YYYY-MM') p`)).rows[0].p;
+  const r = (await as(db, payOff, RUN, [period, 'regular', today, true])).rows[0];
+  await as(db, payOff, `select public.payroll_calculate($1)`, [r.id]);
+  const l = (await db.query(`select l.amount, l.qty from public.payroll_lines l join public.payroll_slips s on s.id = l.slip_id where s.run_id = $1 and s.employee_id = $2 and l.code = 'LEMBUR'`, [r.id, pe.id])).rows[0];
+  eq(Number(l.qty), 5.5); eq(Number(l.amount), 286127);
+  // hadir 0 hari karena tanpa absen: uang makan tidak dibayar, hari D tanpa absen = alpa dipotong 1/25
+  const pot = (await db.query(`select l.amount from public.payroll_lines l join public.payroll_slips s on s.id = l.slip_id where s.run_id = $1 and s.employee_id = $2 and l.code = 'POTABS'`, [r.id, pe.id])).rows[0];
+  eq(Number(pot.amount), -360000);
+});
+await test('uji paralel: hasil sistem lama dibandingkan per karyawan dan tidak diterbitkan', async () => {
+  const p = (await as(db, payOff, RUN, ['2027-04', 'regular', '2027-04-25', true])).rows[0];
+  await as(db, payOff, `select public.payroll_calculate($1)`, [p.id]);
+  const rows = JSON.stringify([{ periode: '2027-04', nrp: 'BSB-200', gaji_bersih: '8.500.000', pph21: '170000' }]);
+  eq((await as(db, payOff, `select public.import_rows('gaji_lama', $1::jsonb, true) r`, [rows])).rows[0].r.ok, 1);
+  const s = await slipOf(p.id);
+  eq(Number(s.diff_net), Number(s.net) - 8500000); eq(Number(s.net), 8473728);
+  await as(db, payApp, `select public.payroll_approve($1)`, [p.id]);
+  await expectError('22023', async () => as(db, payOff, `select public.payroll_publish($1)`, [p.id]));
+});
+await test('impor struktur gaji: nominal berformat titik, komponen input per proses ditolak', async () => {
+  const rows = JSON.stringify([{ nrp: 'BSB-200', komponen: 'tsite', nilai: '1.500.000', berlaku_mulai: '2027-05-01' },
+    { nrp: 'BSB-200', komponen: 'KASBON', nilai: '1', berlaku_mulai: '2027-05-01' }]);
+  const r = (await as(db, payOff, `select public.import_rows('gaji', $1::jsonb, true) r`, [rows])).rows[0].r;
+  eq(r.ok, 1); eq(r.errors.length, 1);
+  eq((await as(db, hrStaff, `select public.import_rows('gaji', $1::jsonb, true) r`, [rows])).rows[0].r.ok, 0);
+});
+await test('pengaturan payroll: hanya kunci yang diizinkan, tanggal tutup <= 28, butuh payroll.manage', async () => {
+  await as(db, payOff, `select public.payroll_setting_set('bpjs_jkk_er', 0.54)`);
+  eq(Number((await db.query(`select value from public.app_settings where key = 'bpjs_jkk_er'`)).rows[0].value), 0.54);
+  await as(db, payOff, `select public.payroll_setting_set('bpjs_jkk_er', 1.27)`);
+  await expectError('22023', async () => as(db, payOff, `select public.payroll_setting_set('mr_high_value_limit', 1)`));
+  await expectError('22023', async () => as(db, payOff, `select public.payroll_setting_set('payroll_cutoff_day', 30)`));
+  await expectError('42501', async () => as(db, payApp, `select public.payroll_setting_set('bpjs_jkk_er', 1)`));
+});
+
 console.log('audit trail');
 await test('setiap penerbitan nomor tercatat', async () => {
   const r = await db.query(`select count(*)::int c from public.audit_logs where action = 'numbering.issue'`);

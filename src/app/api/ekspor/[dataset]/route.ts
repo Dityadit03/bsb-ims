@@ -11,8 +11,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ data
   const rows: Record<string, unknown>[] = [];
   // API membatasi 1000 baris per permintaan
   for (let from = 0; from < 20000; from += 1000) {
-    const { data, error } = await supabase.from(d.view).select(d.columns.map(c => c[0]).join(','))
-      .order(d.order, { ascending: !d.desc }).range(from, from + 999);
+    let query = supabase.from(d.view).select(d.columns.map(c => c[0]).join(','));
+    // saring opsional, mis. ?run=<id> untuk slip satu proses gaji
+    const f = d.filter && req.nextUrl.searchParams.get(d.filter[0]);
+    if (f) query = query.eq(d.filter![1], f);
+    const { data, error } = await query.order(d.order, { ascending: !d.desc }).range(from, from + 999);
     if (error) return new NextResponse(error.message, { status: 400 });
     rows.push(...(data as unknown as Record<string, unknown>[]));
     if (!data || data.length < 1000) break;

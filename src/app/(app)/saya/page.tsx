@@ -6,21 +6,21 @@ import { PageHeader, Panel, Pill, Stat, Table, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { fmtDate } from '@/lib/documents';
-import { ATT_STATUS, EMPLOYMENT, PRIVATE_FIELDS, ROSTER, SELF_EDITABLE, VALIDITY, fmtTime, siteToday } from '@/lib/hrga';
+import { ATT_STATUS, EMPLOYMENT, PRIVATE_FIELDS, ROSTER, RUN_KIND, SELF_EDITABLE, VALIDITY, fmtTime, rp, siteToday } from '@/lib/hrga';
 import { saveMyPrivate } from '../hrga/actions';
 import { LeaveForm, OvertimeForm } from '../hrga/time-forms';
 import { LeaveTable, OvertimeTable, type LeaveRow, type OtRow } from '../hrga/time-tables';
 
 export const metadata = { title: 'Saya' };
 
-const TABS = [['/saya', 'Profil'], ['/saya?tab=absen', 'Kehadiran'], ['/saya?tab=cuti', 'Cuti'], ['/saya?tab=lembur', 'Lembur']] as const;
+const TABS = [['/saya', 'Profil'], ['/saya?tab=absen', 'Kehadiran'], ['/saya?tab=cuti', 'Cuti'], ['/saya?tab=lembur', 'Lembur'], ['/saya?tab=gaji', 'Slip gaji']] as const;
 
 // Employee self service: profil & data kontak, rekap kehadiran, pengajuan cuti dan SPL milik sendiri.
 export default async function SayaPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
   const { profile } = await getSession();
   const supabase = await createClient();
-  const tab = ['absen', 'cuti', 'lembur'].includes(sp.tab ?? '') ? sp.tab! : 'profil';
+  const tab = ['absen', 'cuti', 'lembur', 'gaji'].includes(sp.tab ?? '') ? sp.tab! : 'profil';
   const { data: me } = await supabase.from('employee_register').select('*').eq('profile_id', profile.id).eq('status', 'active').maybeSingle();
 
   return (
@@ -35,6 +35,7 @@ export default async function SayaPage({ searchParams }: { searchParams: Promise
           {tab === 'absen' && <Kehadiran id={me.id} month={sp.bln} supabase={supabase} />}
           {tab === 'cuti' && <Cuti id={me.id} supabase={supabase} />}
           {tab === 'lembur' && <Lembur id={me.id} supabase={supabase} />}
+          {tab === 'gaji' && <Gaji id={me.id} supabase={supabase} />}
         </>
       )}
     </>
@@ -173,5 +174,30 @@ async function Lembur({ id, supabase }: { id: string; supabase: Client }) {
         {data?.length ? <OvertimeTable rows={data} canCancel /> : <p className="text-sm text-muted">Belum ada SPL.</p>}
       </Panel>
     </>
+  );
+}
+
+// Hanya slip yang sudah diterbitkan (RLS); uji paralel tidak pernah tampil di sini.
+async function Gaji({ id, supabase }: { id: string; supabase: Client }) {
+  const { data } = await supabase.from('payroll_slip_register').select('id, run_no, period, kind, pay_date, earnings, pph21, net')
+    .eq('employee_id', id).eq('run_status', 'published').eq('parallel', false).order('period', { ascending: false }).limit(36);
+  return (
+    <Panel title="Slip gaji" sub="Slip terbit setelah gaji disetujui. Buka untuk melihat rincian atau mencetak / menyimpan PDF.">
+      {data?.length ? (
+        <Table head={['Periode', 'Jenis', 'Tanggal bayar', 'Bruto', 'PPh 21', 'Diterima', '']}>
+          {data.map(s => (
+            <tr key={s.id}>
+              <td className="text-sm font-medium">{s.period}</td>
+              <td className="text-sm">{RUN_KIND[s.kind]}</td>
+              <td className="text-sm">{fmtDate(s.pay_date)}</td>
+              <td className="tabular text-sm">{rp(s.earnings)}</td>
+              <td className="tabular text-sm">{rp(s.pph21)}</td>
+              <td className="tabular text-sm font-semibold">{rp(s.net)}</td>
+              <td><Link href={`/slip/${s.id}`} className="text-sm text-accent hover:underline">Buka</Link></td>
+            </tr>
+          ))}
+        </Table>
+      ) : <p className="text-sm text-muted">Belum ada slip gaji yang diterbitkan.</p>}
+    </Panel>
   );
 }

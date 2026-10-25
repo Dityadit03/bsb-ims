@@ -71,3 +71,16 @@ export const fmtTime = (d: string | null | undefined) =>
   d ? new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Makassar' }) : '–';
 // Tanggal hari ini di zona site (YYYY-MM-DD)
 export const siteToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
+
+// ---------------------------------------------------------------- payroll
+export const RUN_STATUS: Record<string, [Tone, string]> = {
+  draft: ['muted', 'Draf'], calculated: ['warn', 'Dihitung, menunggu persetujuan'], approved: ['accent', 'Disetujui'], published: ['ok', 'Terbit'], cancelled: ['muted', 'Batal'],
+};
+export const RUN_KIND: Record<string, string> = { regular: 'Gaji bulanan', thr: 'THR' };
+export const PAY_CATEGORY: Record<string, string> = {
+  basic: 'Gaji pokok', fixed_allowance: 'Tunjangan tetap', variable_allowance: 'Tunjangan tidak tetap', bonus: 'Insentif / bonus', deduction: 'Potongan',
+};
+export const PAY_CALC: Record<string, string> = {
+  fixed: 'Tetap per bulan', per_present_day: 'Per hari hadir', per_night_shift: 'Per shift malam', manual: 'Diisi per proses gaji',
+};
+export const rp = (n: number | string | null | undefined) => (n == null ? '–' : Math.round(Number(n)).toLocaleString('id-ID'));

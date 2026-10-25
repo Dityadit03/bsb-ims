@@ -2,14 +2,14 @@
 import { HAZARD_TYPE, INCIDENT_CLASS, OPEN_CLOSED, VALIDITY } from '@/lib/she';
 import { UNIT_STATUS, WO_STATUS, WO_TYPE } from '@/lib/plant';
 import { CATEGORY, MOVE, MR_STATUS, PO_STATUS, PR_STATUS, STAGE } from '@/lib/logistics';
-import { ATT_STATUS, CARD_STATUS, CONTRACT, CONTRACT_STATUS, DAY_TYPE, EMPLOYMENT, LEAVE_STATUS, MOVE as MOVEMENT, OT_STATUS } from '@/lib/hrga';
+import { ATT_STATUS, CARD_STATUS, CONTRACT, CONTRACT_STATUS, DAY_TYPE, EMPLOYMENT, LEAVE_STATUS, MOVE as MOVEMENT, OT_STATUS, RUN_KIND, RUN_STATUS } from '@/lib/hrga';
 
 type Label = Record<string, string | [string, string]>;
 const lbl = (m: Label) => (v: unknown) => { const x = m[String(v)]; return x == null ? v : Array.isArray(x) ? x[1] : x; };
 const yn = (v: unknown) => (v == null ? '' : v ? 'Ya' : 'Tidak');
 
 export type Column = [key: string, header: string, fmt?: (v: unknown) => unknown];
-export type Dataset = { key: string; label: string; group: string; view: string; order: string; desc?: boolean; feed: boolean; columns: Column[] };
+export type Dataset = { key: string; label: string; group: string; view: string; order: string; desc?: boolean; feed: boolean; filter?: [param: string, column: string]; columns: Column[] };
 
 // feed: true hanya untuk register yang terbaca semua pengguna aktif (sama dengan daftar di fungsi feed_rows)
 export const DATASETS: Dataset[] = [
@@ -124,6 +124,19 @@ export const DATASETS: Dataset[] = [
     ['request_no', 'No. SPL'], ['work_date', 'Tanggal'], ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['start_at', 'Mulai'],
     ['end_at', 'Selesai'], ['hours', 'Jam SPL'], ['actual_hours', 'Jam aktual'], ['day_type', 'Jenis hari', lbl(DAY_TYPE)], ['reason', 'Pekerjaan'],
     ['status', 'Status', lbl(OT_STATUS)], ['approver_name', 'Disetujui oleh']] },
+  // payroll: hanya terbaca pemegang peran payroll (RLS); tidak pernah jadi feed
+  { key: 'slip_gaji', label: 'Rincian gaji per karyawan', group: 'HRGA', view: 'payroll_slip_register', order: 'period', desc: true, feed: false, filter: ['run', 'run_id'], columns: [
+    ['run_no', 'No. proses'], ['period', 'Periode'], ['kind', 'Jenis', lbl(RUN_KIND)], ['run_status', 'Status', lbl(RUN_STATUS)], ['parallel', 'Uji paralel', yn],
+    ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['position_name', 'Jabatan'], ['ptkp_status', 'PTKP'], ['ter_category', 'TER'],
+    ['days_present', 'Hadir'], ['days_absent', 'Alpa'], ['days_unpaid', 'Izin tdk dibayar'], ['nights', 'Shift malam'], ['overtime_hours', 'Jam lembur'],
+    ['fixed_wage', 'Upah tetap'], ['earnings', 'Bruto'], ['deductions', 'Potongan'], ['bpjs_ee', 'BPJS karyawan'], ['bpjs_er', 'BPJS perusahaan'],
+    ['gross_tax', 'Bruto pajak'], ['ter_rate', 'Tarif TER %'], ['pph21', 'PPh 21'], ['annualized', 'Hitung setahun', yn], ['net', 'Gaji bersih'],
+    ['employer_cost', 'Biaya perusahaan'], ['bank_name', 'Bank'], ['bank_account', 'No. rekening'], ['bank_holder', 'Atas nama'],
+    ['legacy_net', 'Bersih sistem lama'], ['diff_net', 'Selisih bersih'], ['diff_pph21', 'Selisih PPh']] },
+  { key: 'biaya_gaji', label: 'Rekap biaya gaji per departemen', group: 'HRGA', view: 'payroll_cost_recap', order: 'period', desc: true, feed: false, columns: [
+    ['run_no', 'No. proses'], ['period', 'Periode'], ['kind', 'Jenis', lbl(RUN_KIND)], ['department_code', 'Dept'], ['department_name', 'Departemen'],
+    ['headcount', 'Karyawan'], ['earnings', 'Bruto'], ['bpjs_er', 'BPJS perusahaan'], ['employer_cost', 'Biaya perusahaan'], ['bpjs_ee', 'BPJS karyawan'],
+    ['pph21', 'PPh 21'], ['net', 'Gaji bersih'], ['overtime_hours', 'Jam lembur']] },
 ];
 
 export const dataset = (key: string) => DATASETS.find(d => d.key === key);
@@ -221,6 +234,33 @@ export const IMPORTS: ImportKind[] = [
     f('tahun', 'Tahun', ['tahun', 'year', 'periode'], '2026'),
     f('jenis', 'Jenis', ['jenis', 'jenis cuti', 'kode'], 'CT'),
     f('keterangan', 'Keterangan', ['keterangan', 'alasan', 'catatan'], 'Cuti terpakai Jan–Okt')] },
+  { key: 'gaji', label: 'Struktur gaji', perm: 'payroll.manage', note: 'Satu baris = satu komponen per karyawan (GP, TJAB, TSITE, TMAKAN, TTRANS, TSHIFT, atau kode lain di Payroll → Komponen). Nilai berlaku mulai tanggal yang diisi; riwayat lama tetap tersimpan.', fields: [
+    f('nrp', 'NRP', ['nrp', 'no karyawan'], 'BSB-0123', { required: true }),
+    f('komponen', 'Komponen', ['komponen', 'kode', 'kode komponen'], 'GP', { required: true }),
+    f('nilai', 'Nilai', ['nilai', 'jumlah', 'nominal', 'amount'], '8000000', { required: true }),
+    f('berlaku_mulai', 'Berlaku mulai', ['berlaku mulai', 'mulai', 'tmt', 'efektif'], '2026-01-01', { required: true, date: true }),
+    f('keterangan', 'Keterangan', ['keterangan', 'catatan'], '')] },
+  { key: 'input_gaji', label: 'Input gaji per periode', perm: 'payroll.manage', note: 'Insentif, rapel, kasbon, potongan lain untuk proses gaji bulanan periode itu yang belum disetujui (buat prosesnya dulu di Payroll).', fields: [
+    f('periode', 'Periode', ['periode', 'bulan', 'period'], '2026-11', { required: true }),
+    f('nrp', 'NRP', ['nrp', 'no karyawan'], 'BSB-0123', { required: true }),
+    f('komponen', 'Komponen', ['komponen', 'kode'], 'INSENTIF', { required: true }),
+    f('nilai', 'Nilai', ['nilai', 'jumlah', 'nominal'], '750000', { required: true }),
+    f('keterangan', 'Keterangan', ['keterangan', 'catatan'], 'Premi ritase')] },
+  { key: 'saldo_pajak', label: 'Saldo PPh 21 awal tahun', perm: 'payroll.manage', note: 'Akumulasi bruto, PPh 21 dan iuran JHT+JP karyawan dari Januari sampai bulan terakhir sebelum aplikasi dipakai; dipakai di perhitungan setahun (Desember / bulan keluar).', fields: [
+    f('tahun', 'Tahun', ['tahun', 'year'], '2026', { required: true }),
+    f('nrp', 'NRP', ['nrp', 'no karyawan'], 'BSB-0123', { required: true }),
+    f('bruto', 'Bruto', ['bruto', 'penghasilan bruto', 'gross'], '85000000', { required: true }),
+    f('pph21', 'PPh 21', ['pph21', 'pph 21', 'pajak'], '1500000', { required: true }),
+    f('iuran_pensiun', 'Iuran JHT+JP', ['iuran pensiun', 'iuran jht jp', 'jht jp'], '2700000'),
+    f('bulan', 'Jumlah bulan', ['bulan', 'jumlah bulan', 'masa kerja'], '10'),
+    f('keterangan', 'Keterangan', ['keterangan', 'catatan'], 'Dari sistem lama')] },
+  { key: 'gaji_lama', label: 'Hasil gaji sistem lama (uji paralel)', perm: 'payroll.manage', note: 'Untuk membandingkan proses uji paralel periode itu dengan hasil sistem lama per karyawan.', fields: [
+    f('periode', 'Periode', ['periode', 'bulan', 'period'], '2026-11', { required: true }),
+    f('nrp', 'NRP', ['nrp', 'no karyawan'], 'BSB-0123', { required: true }),
+    f('bruto', 'Bruto', ['bruto', 'gross', 'total pendapatan'], '9500000'),
+    f('pph21', 'PPh 21', ['pph21', 'pph 21', 'pajak'], '166272'),
+    f('gaji_bersih', 'Gaji bersih', ['gaji bersih', 'take home pay', 'thp', 'net'], '8273728', { required: true }),
+    f('keterangan', 'Keterangan', ['keterangan', 'catatan'], '')] },
   { key: 'unit', label: 'Unit / sarana', perm: 'plant.manage', note: 'No. unit yang sudah ada diperbarui. Jenis: DT, LV, ST, FT, WT, BUS, EXC, OTHER.', fields: [
     f('no_unit', 'No. unit', ['no unit', 'no lambung', 'unit', 'kode unit'], 'DT-21', { required: true }),
     f('jenis', 'Jenis', ['jenis', 'tipe unit', 'type'], 'DT', { required: true }),
