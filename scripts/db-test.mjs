@@ -1601,6 +1601,80 @@ console.log('HRIS: Klaim & kasbon');
   });
 }
 
+console.log('HRIS: Rekrutmen');
+{
+  const REQ = `select (q).* from public.requisition_create($1, $2, $3, $4, $5, $6, $7::date, $8) q`;
+  const CAND = `select (c).* from public.candidate_save(null, $1::jsonb) c`;
+  const RES = `select (a).* from public.application_result($1, $2, $3, $4, $5) a`;
+  let req, apps = [];
+  await test('FPTK: atasan departemen mengajukan, HRGA verifikasi, PJO menyetujui (orang berbeda)', async () => {
+    await expectError('42501', async () => as(db, absUser, REQ, [PRD, OPRDT, 2, 'contract', 'additional', null, '2026-12-01', 'SIM B2 umum']));
+    await expectError('22023', async () => as(db, dhPrd, REQ, [PRD, OPRDT, 1, 'contract', 'replacement', null, '2026-12-01', 'SIM B2 umum']));
+    req = (await as(db, dhPrd, REQ, [PRD, OPRDT, 2, 'contract', 'additional', null, '2026-12-01', 'SIM B2 umum, pengalaman DT 1 tahun'])).rows[0];
+    eq(req.req_no.startsWith('FPTK-BSB-'), true);
+    await expectError('42501', async () => as(db, dhPrd, `select public.requisition_decide($1, true)`, [req.id]));
+    await expectError('42501', async () => as(db, pjoId, `select public.requisition_decide($1, true)`, [req.id]));
+    await as(db, hrStaff, `select public.requisition_decide($1, true, 'Sesuai MPP')`, [req.id]);
+    await expectError('42501', async () => as(db, hrStaff, `select public.requisition_decide($1, true)`, [req.id]));
+    await as(db, pjoId, `select public.requisition_decide($1, true)`, [req.id]);
+    eq((await db.query(`select status from public.job_requisitions where id = $1`, [req.id])).rows[0].status, 'open');
+    eq((await as(db, dhHse, `select 1 from public.requisition_register where id = $1`, [req.id])).rowCount, 0);
+  });
+  await test('kandidat: hanya HRGA, NIK unik; pelamar hanya ke FPTK yang dibuka', async () => {
+    await expectError('42501', async () => as(db, dhPrd, CAND, ['{"full_name":"Budi"}']));
+    const c1 = (await as(db, hrStaff, CAND, ['{"full_name":"Budi Santoso","nik":"6403011201950001","phone":"0812","gender":"L","education_level":"sma","is_local":true}'])).rows[0];
+    await expectError('23505', async () => as(db, hrStaff, CAND, ['{"full_name":"Budi lain","nik":"6403011201950001"}']));
+    const c2 = (await as(db, hrStaff, CAND, ['{"full_name":"Joko Prasetyo"}'])).rows[0];
+    for (const c of [c1, c2]) apps.push((await as(db, hrStaff, `select (a).* from public.application_add($1, $2) a`, [req.id, c.id])).rows[0]);
+    await expectError('23505', async () => as(db, hrStaff, `select public.application_add($1, $2)`, [req.id, c1.id]));
+    eq((await as(db, dhPrd, `select full_name from public.application_register where requisition_id = $1`, [req.id])).rowCount, 2);
+    eq((await as(db, absUser, `select 1 from public.candidates`)).rowCount, 0);
+  });
+  await test('seleksi: wawancara oleh atasan departemen, gagal wajib alasan, penawaran setelah wawancara lulus', async () => {
+    const [a1, a2] = apps;
+    await expectError('42501', async () => as(db, dhPrd, RES, [a1.id, 'pass', null, null, null]));
+    await as(db, hrStaff, RES, [a1.id, 'pass', null, 'CV sesuai', 'interview']);
+    await as(db, hrStaff, RES, [a2.id, 'pass', 70, null, null]);
+    await expectError('22023', async () => as(db, hrStaff, RES, [a2.id, 'fail', 40, null, null]));
+    await as(db, hrStaff, RES, [a2.id, 'fail', 40, 'Nilai psikotes di bawah standar', null]);
+    await expectError('22023', async () => as(db, hrStaff, RES, [a1.id, 'pass', null, null, 'screening']));
+    await as(db, dhPrd, RES, [a1.id, 'pass', 85, 'Paham P2H', null]);
+    eq((await db.query(`select stage from public.applications where id = $1`, [a1.id])).rows[0].stage, 'mcu');
+    await expectError('42501', async () => as(db, dhPrd, RES, [a1.id, 'pass', null, 'MCU fit', null]));
+    await as(db, hrStaff, RES, [a1.id, 'pass', null, 'MCU fit', null]);
+    const r = (await as(db, dhPrd, `select stage, interview_score from public.application_register where id = $1`, [a1.id])).rows[0];
+    eq(r.stage, 'offering'); eq(Number(r.interview_score), 85);
+    eq((await db.query(`select stage from public.applications where id = $1`, [a2.id])).rows[0].stage, 'rejected');
+  });
+  await test('diterima: jadi karyawan + data pribadi + kontrak PKWT + mobilisasi; gaji tidak terlihat atasan; payroll diberi tahu', async () => {
+    const a1 = apps[0];
+    await expectError('22023', async () => as(db, hrStaff, `select public.application_hire($1, 'BSB-300')`, [a1.id]));
+    await as(db, hrStaff, `select public.offer_save($1, 6500000, 'Tunjangan site 750rb', '2026-12-01')`, [a1.id]);
+    eq((await as(db, dhPrd, `select 1 from public.job_offers`)).rowCount, 0);
+    eq((await as(db, payOff, `select basic_wage from public.job_offers where application_id = $1`, [a1.id])).rows.length, 1);
+    await as(db, hrStaff, `select public.offer_decide($1, true)`, [a1.id]);
+    const e = (await as(db, hrStaff, `select (e).* from public.application_hire($1, 'BSB-300') e`, [a1.id])).rows[0];
+    eq(e.employment_type, 'contract'); eq(e.position_id, OPRDT);
+    eq((await db.query(`select nik from public.employee_private where employee_id = $1`, [e.id])).rows[0].nik, '6403011201950001');
+    const k = (await db.query(`select contract_type, end_date::text from public.employee_contracts where employee_id = $1`, [e.id])).rows[0];
+    eq(k.contract_type, 'pkwt'); eq(k.end_date, '2027-11-30');
+    eq((await db.query(`select count(*)::int c from public.mobilizations where employee_id = $1 and kind = 'mob' and status = 'open'`, [e.id])).rows[0].c, 1);
+    eq((await db.query(`select count(*)::int c from public.notifications where user_id = $1 and title like 'Karyawan baru%'`, [payOff])).rows[0].c, 1);
+    const q = (await as(db, hrStaff, `select status, hired from public.requisition_register where id = $1`, [req.id])).rows[0];
+    eq(q.status, 'open'); eq(q.hired, 1);
+  });
+  await test('impor bank kandidat dan penutupan FPTK menolak pelamar yang tersisa', async () => {
+    const rows = JSON.stringify([{ nama: 'Slamet', nik: '6403011201950002', no_hp: '0813', pendidikan: 'SMA', lokal: 'ya' }]);
+    eq((await as(db, hrStaff, `select public.import_rows('kandidat', $1::jsonb, true) r`, [rows])).rows[0].r.ok, 1);
+    const c = (await db.query(`select id, is_local from public.candidates where nik = '6403011201950002'`)).rows[0];
+    eq(c.is_local, true);
+    const a = (await as(db, hrStaff, `select (a).* from public.application_add($1, $2) a`, [req.id, c.id])).rows[0];
+    await expectError('22023', async () => as(db, hrStaff, `select public.requisition_close($1, false, null)`, [req.id]));
+    await as(db, hrStaff, `select public.requisition_close($1, false, 'Kebutuhan dipenuhi dari mutasi')`, [req.id]);
+    eq((await db.query(`select stage from public.applications where id = $1`, [a.id])).rows[0].stage, 'rejected');
+  });
+}
+
 console.log('audit trail');
 await test('setiap penerbitan nomor tercatat', async () => {
   const r = await db.query(`select count(*)::int c from public.audit_logs where action = 'numbering.issue'`);

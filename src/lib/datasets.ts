@@ -2,7 +2,7 @@
 import { HAZARD_TYPE, INCIDENT_CLASS, OPEN_CLOSED, VALIDITY } from '@/lib/she';
 import { UNIT_STATUS, WO_STATUS, WO_TYPE } from '@/lib/plant';
 import { CATEGORY, MOVE, MR_STATUS, PO_STATUS, PR_STATUS, STAGE } from '@/lib/logistics';
-import { ATT_STATUS, CARD_STATUS, CONTRACT, CONTRACT_STATUS, DAY_TYPE, EMPLOYMENT, LEAVE_STATUS, MOVE as MOVEMENT, OT_STATUS, RUN_KIND, RUN_STATUS, CLAIM_STATUS, ADV_STATUS, ADV_KIND, PAY_METHOD } from '@/lib/hrga';
+import { ATT_STATUS, CARD_STATUS, CONTRACT, CONTRACT_STATUS, DAY_TYPE, EMPLOYMENT, LEAVE_STATUS, MOVE as MOVEMENT, OT_STATUS, RUN_KIND, RUN_STATUS, CLAIM_STATUS, ADV_STATUS, ADV_KIND, PAY_METHOD, REQ_STATUS, REQ_REASON, APP_STAGE, CAND_SOURCE } from '@/lib/hrga';
 
 type Label = Record<string, string | [string, string]>;
 const lbl = (m: Label) => (v: unknown) => { const x = m[String(v)]; return x == null ? v : Array.isArray(x) ? x[1] : x; };
@@ -134,6 +134,16 @@ export const DATASETS: Dataset[] = [
     ['amount', 'Nominal'], ['installments', 'Cicilan (bln)'], ['installment_amount', 'Potongan/bulan'], ['disbursed_on', 'Tgl cair'],
     ['actual_amount', 'Biaya sebenarnya'], ['repaid', 'Sudah kembali'], ['balance', 'Sisa'], ['status', 'Status', lbl(ADV_STATUS)],
     ['approver1_name', 'Atasan'], ['approver2_name', 'Payroll']] },
+  { key: 'fptk', label: 'Permintaan tenaga kerja (FPTK)', group: 'HRGA', view: 'requisition_register', order: 'created_at', desc: true, feed: false, columns: [
+    ['req_no', 'No. FPTK'], ['department_code', 'Dept'], ['position_name', 'Jabatan'], ['headcount', 'Jumlah'], ['employment_type', 'Status kerja', lbl(EMPLOYMENT)],
+    ['reason', 'Alasan', lbl(REQ_REASON)], ['replaced_name', 'Menggantikan'], ['needed_by', 'Dibutuhkan'], ['mpp_planned', 'MPP'], ['mpp_actual', 'Aktual'],
+    ['status', 'Status', lbl(REQ_STATUS)], ['applicants', 'Pelamar'], ['in_process', 'Dalam proses'], ['hired', 'Diterima'],
+    ['requester_name', 'Pemohon'], ['verifier_name', 'Verifikasi HR'], ['approver_name', 'Disetujui'], ['decision_note', 'Catatan']] },
+  { key: 'pelamar', label: 'Pelamar per FPTK', group: 'HRGA', view: 'application_register', order: 'stage_at', desc: true, feed: false, columns: [
+    ['req_no', 'No. FPTK'], ['department_code', 'Dept'], ['position_name', 'Jabatan'], ['full_name', 'Nama'], ['phone', 'No. HP'],
+    ['education_level', 'Pendidikan'], ['experience_years', 'Pengalaman (th)'], ['domicile', 'Domisili'], ['is_local', 'Lokal', yn],
+    ['source', 'Sumber', lbl(CAND_SOURCE)], ['stage', 'Tahap', lbl(APP_STAGE)], ['stage_at', 'Sejak'], ['psikotes_score', 'Nilai psikotes'],
+    ['interview_score', 'Nilai interview'], ['close_reason', 'Alasan gugur']] },
   // payroll: hanya terbaca pemegang peran payroll (RLS); tidak pernah jadi feed
   { key: 'slip_gaji', label: 'Rincian gaji per karyawan', group: 'HRGA', view: 'payroll_slip_register', order: 'period', desc: true, feed: false, filter: ['run', 'run_id'], columns: [
     ['run_no', 'No. proses'], ['period', 'Periode'], ['kind', 'Jenis', lbl(RUN_KIND)], ['run_status', 'Status', lbl(RUN_STATUS)], ['parallel', 'Uji paralel', yn],
@@ -276,6 +286,16 @@ export const IMPORTS: ImportKind[] = [
     f('sisa', 'Sisa kasbon', ['sisa', 'sisa kasbon', 'saldo', 'outstanding'], '1200000', { required: true }),
     f('cicilan', 'Cicilan per bulan', ['cicilan', 'potongan', 'angsuran', 'cicilan per bulan'], '400000'),
     f('keterangan', 'Keterangan', ['keterangan', 'catatan', 'keperluan'], 'Kasbon Agustus')] },
+  { key: 'kandidat', label: 'Bank kandidat', perm: 'hr.manage', note: 'Pelamar walk-in / job fair. NIK yang sudah ada diperbarui. Pendidikan: SD, SMP, SMA (SMK/STM ikut SMA), D3, S1, S2.', fields: [
+    f('nama', 'Nama', ['nama', 'nama lengkap', 'nama kandidat'], 'Budi Santoso', { required: true }),
+    f('nik', 'NIK KTP', ['nik', 'no ktp', 'ktp'], '6371010101900001'),
+    f('no_hp', 'No. HP', ['no hp', 'hp', 'telepon', 'no telp', 'wa'], '081234567890'),
+    f('email', 'Email', ['email', 'e-mail'], ''), f('tgl_lahir', 'Tanggal lahir', ['tgl lahir', 'tanggal lahir'], '1990-01-01'),
+    f('jenis_kelamin', 'Jenis kelamin', ['jenis kelamin', 'jk', 'l/p'], 'L'), f('domisili', 'Domisili', ['domisili', 'alamat', 'kota'], 'Tanjung'),
+    f('pendidikan', 'Pendidikan', ['pendidikan', 'pendidikan terakhir'], 'SMA'), f('jurusan', 'Jurusan', ['jurusan'], ''),
+    f('pengalaman', 'Pengalaman (tahun)', ['pengalaman', 'pengalaman kerja', 'lama kerja'], '3'),
+    f('perusahaan_terakhir', 'Perusahaan terakhir', ['perusahaan terakhir', 'tempat kerja terakhir'], ''),
+    f('lokal', 'Warga lokal', ['lokal', 'warga lokal', 'putra daerah'], 'Ya'), f('keterangan', 'Keterangan', ['keterangan', 'catatan', 'posisi dilamar'], 'Operator DT')] },
   { key: 'unit', label: 'Unit / sarana', perm: 'plant.manage', note: 'No. unit yang sudah ada diperbarui. Jenis: DT, LV, ST, FT, WT, BUS, EXC, OTHER.', fields: [
     f('no_unit', 'No. unit', ['no unit', 'no lambung', 'unit', 'kode unit'], 'DT-21', { required: true }),
     f('jenis', 'Jenis', ['jenis', 'tipe unit', 'type'], 'DT', { required: true }),

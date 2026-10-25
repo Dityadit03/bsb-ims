@@ -96,3 +96,17 @@ export const ADV_STATUS: Record<string, [Tone, string]> = {
 };
 export const ADV_KIND: Record<string, string> = { loan: 'Kasbon pribadi', advance: 'Uang muka dinas' };
 export const PAY_METHOD: Record<string, string> = { payroll: 'Bersama gaji', transfer: 'Transfer' };
+
+// Rekrutmen
+export const REQ_STATUS: Record<string, [Tone, string]> = {
+  submitted: ['warn', 'Menunggu verifikasi HRGA'], verified: ['accent', 'Menunggu persetujuan PJO'], open: ['ok', 'Dibuka'],
+  filled: ['muted', 'Terisi'], closed: ['muted', 'Ditutup'], rejected: ['crit', 'Ditolak'], cancelled: ['muted', 'Batal'],
+};
+export const REQ_REASON: Record<string, string> = { replacement: 'Pengganti', additional: 'Penambahan', new_position: 'Jabatan baru' };
+export const APP_STAGE: Record<string, [Tone, string]> = {
+  screening: ['muted', 'Seleksi berkas'], psikotes: ['accent', 'Psikotes'], interview: ['accent', 'Wawancara user'], mcu: ['warn', 'MCU'],
+  offering: ['warn', 'Penawaran'], hired: ['ok', 'Diterima'], rejected: ['crit', 'Tidak lolos'], withdrawn: ['muted', 'Mundur'],
+};
+export const CAND_SOURCE: Record<string, string> = {
+  walk_in: 'Walk-in', referral: 'Referensi karyawan', job_portal: 'Job portal', disnaker: 'Disnaker', internal: 'Internal', social_media: 'Media sosial', other: 'Lainnya',
+};

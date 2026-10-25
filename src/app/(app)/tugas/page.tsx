@@ -6,6 +6,8 @@ import { fmtDateTime, rev } from '@/lib/documents';
 import { TaskActions } from './task-actions';
 import { LeaveTable, OvertimeTable, type LeaveRow, type OtRow } from '../hrga/time-tables';
 import { AdvanceTable, ClaimTable, type AdvanceRow, type ClaimRow } from '../hrga/claims';
+import type { ReqRow } from '../hrga/rekrutmen/parts';
+import { REQ_REASON, REQ_STATUS } from '@/lib/hrga';
 
 export const metadata = { title: 'Kotak tugas' };
 
@@ -24,11 +26,12 @@ export default async function TugasPage() {
         .select('id, revision, change_summary, draft_sha256, draft:draft_attachment_id(file_name), documents(id, title, registration_no, type_code, departments(code))')
         .in('id', verIds).returns<Ver[]>()
     : { data: [] as Ver[] };
-  const [{ data: leaves }, { data: ots }, { data: claims }, { data: advs }] = await Promise.all([
+  const [{ data: leaves }, { data: ots }, { data: claims }, { data: advs }, { data: reqs }] = await Promise.all([
     supabase.from('leave_register').select('*').eq('can_decide', true).order('start_date').limit(100).returns<LeaveRow[]>(),
     supabase.from('overtime_register').select('*').eq('can_decide', true).order('work_date').limit(100).returns<OtRow[]>(),
     supabase.from('expense_claim_register').select('*').eq('can_decide', true).order('created_at').limit(100).returns<ClaimRow[]>(),
     supabase.from('cash_advance_register').select('*').eq('can_decide', true).order('created_at').limit(100).returns<AdvanceRow[]>(),
+    supabase.from('requisition_register').select('*').eq('can_decide', true).order('created_at').limit(100).returns<ReqRow[]>(),
   ]);
   const { data: notes } = await supabase.from('notifications').select('id, title, body, link, created_at, read_at')
     .order('created_at', { ascending: false }).limit(10);
@@ -41,6 +44,21 @@ export default async function TugasPage() {
       {!!ots?.length && <Panel title={`Persetujuan lembur / SPL (${ots.length})`}><OvertimeTable rows={ots} /></Panel>}
       {!!claims?.length && <Panel title={`Persetujuan klaim (${claims.length})`}><ClaimTable rows={claims} mode="manage" /></Panel>}
       {!!advs?.length && <Panel title={`Persetujuan kasbon / uang muka (${advs.length})`}><AdvanceTable rows={advs} mode="manage" /></Panel>}
+      {!!reqs?.length && (
+        <Panel title={`Persetujuan FPTK (${reqs.length})`}>
+          <ul className="grid gap-2">
+            {reqs.map(r => (
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line px-3 py-2">
+                <Link href={`/hrga/rekrutmen/${r.id}`} className="grid hover:text-accent">
+                  <span className="font-mono text-xs text-muted">{r.req_no} · {r.department_code}</span>
+                  <span className="text-sm font-semibold">{r.position_name} × {r.headcount} · {REQ_REASON[r.reason] ?? r.reason}</span>
+                </Link>
+                <Pill tone={REQ_STATUS[r.status]?.[0]}>{r.status === 'submitted' ? 'Perlu verifikasi HR' : 'Perlu persetujuan'}</Pill>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
       {tasks.length ? (
         <div className="grid gap-4">
           {tasks.map(t => {
