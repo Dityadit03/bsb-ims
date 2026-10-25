@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { ClearOfflineCache } from './clear-offline-cache';
 import { LoginButton } from './login-button';
 
 export const metadata = { title: 'Masuk' };
@@ -7,6 +8,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const { next, error } = await searchParams;
   return (
     <main className="relative grid min-h-dvh place-items-center overflow-hidden bg-coal bg-[radial-gradient(60%_45%_at_15%_10%,rgb(234_11_96/0.30),transparent_70%),radial-gradient(55%_45%_at_90%_95%,rgb(249_90_17/0.22),transparent_70%),radial-gradient(50%_40%_at_85%_15%,rgb(106_31_192/0.35),transparent_70%)] px-4 py-10 text-coal-ink">
+      <ClearOfflineCache />
       <div className="grid w-full max-w-sm gap-8 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur sm:p-8">
         <div className="grid gap-2">
           <span className="mb-2 grid size-20 place-items-center rounded-2xl bg-white p-2 shadow-lg">

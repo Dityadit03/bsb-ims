@@ -1360,6 +1360,23 @@ await test('absen aplikasi: selfie wajib, di luar radius ditandai (mode flag) at
   eq((await as(db, spvHse, `select 1 from public.attendance_logs where employee_id = $1`, [wk.id])).rowCount, 0);
   eq((await as(db, spvPrd, `select 1 from public.attendance_logs where employee_id = $1`, [wk.id])).rowCount, 2);
 });
+await test('absen tanpa GPS wajib alasan & ditandai; waktu dari antrean offline dibatasi; kiriman ganda ditolak lewat client_requests', async () => {
+  const NOGPS = `select (a).* from public.attendance_clock($1, null, null, null, $2, 'test', $3::timestamptz, $4) a`;
+  await expectError('22023', async () => as(db, absUser, NOGPS, ['in', (await upload(absUser)).id, new Date(Date.now() - 36e5 * 30).toISOString(), null]));
+  await expectError('22023', async () => as(db, absUser, NOGPS, ['in', (await upload(absUser)).id, new Date(Date.now() - 36e5 * 24 * 5).toISOString(), 'GPS mati']));
+  await expectError('22023', async () => as(db, absUser, NOGPS, ['in', (await upload(absUser)).id, new Date(Date.now() + 36e5).toISOString(), 'GPS mati']));
+  const r = (await as(db, absUser, NOGPS, ['in', (await upload(absUser)).id, new Date(Date.now() - 36e5 * 30).toISOString(), 'GPS mati di pit'])).rows[0];
+  eq(r.note, 'TANPA GPS: GPS mati di pit'); eq(r.lat, null); eq(r.in_geofence, null);
+  const id = '11111111-2222-4333-8444-555555555555';
+  eq((await as(db, absUser, `select public.client_request_claim($1) c`, [id])).rows[0].c, true);
+  eq((await as(db, absUser, `select public.client_request_claim($1) c`, [id])).rows[0].c, false);
+  await as(db, absUser, `select public.client_request_release($1)`, [id]);
+  eq((await as(db, absUser, `select public.client_request_claim($1) c`, [id])).rows[0].c, true);
+  // pengguna lain tidak bisa melepas kiriman milik orang lain
+  await as(db, spvPrd, `select public.client_request_release($1)`, [id]);
+  eq((await as(db, absUser, `select public.client_request_claim($1) c`, [id])).rows[0].c, false);
+  await expectError('42501', () => as(db, absUser, `select * from public.client_requests`));
+});
 await test('impor mesin fingerprint: masuk/pulang ditentukan otomatis, terlambat dihitung, impor ulang tidak dobel', async () => {
   const d = await due(-3);
   await as(db, spvPrd, ROSTER, [boss.id, d, d, 'D']);

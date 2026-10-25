@@ -1,4 +1,4 @@
-import { ActionForm } from '@/components/action-form';
+import { OfflineForm } from '@/components/offline-form';
 import { PageHeader, Panel, Pill, Table, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
@@ -40,7 +40,7 @@ export default async function P2hPage({ searchParams }: { searchParams: Promise<
       <SheTabs active="/she/p2h" />
       {s.can('she.report') && (
         <Panel title="Isi P2H">
-          <ActionForm action={submitP2h} label="Simpan P2H" primary className="max-w-3xl">
+          <OfflineForm action={submitP2h} kind="p2h" queueTitle="P2H" queueField="unit" draftKey="p2h" label="Simpan P2H" className="max-w-3xl">
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="grid gap-1 text-sm">Tanggal<input type="date" name="date" required defaultValue={today()} max={today()} className={input} /></label>
               <label className="grid gap-1 text-sm">Shift<select name="shift" className={input}><option value="1">Shift 1</option><option value="2">Shift 2</option></select></label>
@@ -74,7 +74,7 @@ export default async function P2hPage({ searchParams }: { searchParams: Promise<
             </label>
             <Files label="Foto temuan" />
             <p className="text-xs text-muted">Item kritis yang tidak OK otomatis membuat unit tidak layak, dan pengawas serta Plant diberi tahu.</p>
-          </ActionForm>
+          </OfflineForm>
         </Panel>
       )}
       <Panel title={`P2H ${fmtDate(date)}`} action={

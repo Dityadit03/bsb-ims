@@ -1,3 +1,4 @@
+import { OfflineSync } from '@/components/offline-sync';
 import { Sidebar } from '@/components/sidebar';
 import { getAlerts } from '@/lib/alerts';
 import { getSession } from '@/lib/session';
@@ -21,6 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <>
       <Sidebar permissions={[...s.permissions]} name={s.profile.full_name ?? s.profile.email} email={s.profile.email}
         role={role} unit={dept?.name ?? 'Semua departemen'} alerts={items} alertTotal={total} />
+      <OfflineSync userId={s.profile.id} />
       <main className="min-w-0 px-4 pb-24 pt-6 sm:px-8 lg:pb-12 lg:pt-10">
         <div className="mx-auto grid max-w-7xl gap-6">{children}</div>
       </main>

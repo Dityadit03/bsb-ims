@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ExportLinks } from '@/components/export-links';
 import { randomUUID } from 'node:crypto';
-import { ActionForm } from '@/components/action-form';
+import { OfflineForm } from '@/components/offline-form';
 import { PageHeader, Panel, Pill, Table, btnGhost, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
@@ -33,7 +33,7 @@ export default async function HazardPage({ searchParams }: { searchParams: Promi
       <SheTabs active="/she/hazard" />
       {s.can('she.report') && (
         <Panel title="Laporkan bahaya">
-          <ActionForm action={reportHazard} label="Kirim hazard report" primary hidden={{ idem: randomUUID() }} className="max-w-3xl">
+          <OfflineForm action={reportHazard} kind="hazard" queueTitle="Hazard" queueField="type" draftKey="hazard" label="Kirim hazard report" hidden={{ idem: randomUUID() }} className="max-w-3xl">
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="grid gap-1 text-sm">Tanggal<input type="date" name="date" required defaultValue={today()} max={today()} className={input} /></label>
               <DeptSelect label="Departemen pelapor" depts={depts} value={s.profile.department_id} />
@@ -55,7 +55,7 @@ export default async function HazardPage({ searchParams }: { searchParams: Promi
               <Files label="Foto temuan" />
             </div>
             <EmployeeDatalist />
-          </ActionForm>
+          </OfflineForm>
         </Panel>
       )}
       <form className="flex flex-wrap gap-2">

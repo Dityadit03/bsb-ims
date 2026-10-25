@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { env } from '@/lib/env';
 
-const PUBLIC_PATHS = ['/login', '/auth/callback', '/verifikasi/', '/api/feed/'];
+const PUBLIC_PATHS = ['/login', '/offline', '/auth/callback', '/verifikasi/', '/api/feed/'];
 
 // Memperbarui sesi Supabase di setiap request dan mengarahkan pengguna tanpa sesi ke /login.
 export async function proxy(request: NextRequest) {
@@ -30,5 +30,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|webp|ico)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|webp|ico)$).*)'],
 };

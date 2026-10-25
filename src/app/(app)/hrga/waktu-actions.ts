@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getSession } from '@/lib/session';
 import { uploadAttachment, uploadFormFiles } from '@/lib/attachments';
 import { employeeIdFrom } from '@/lib/employee-ref';
+import { once } from '@/lib/client-request';
 
 export type ActionState = { error?: string; ok?: string };
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim() || null;
@@ -33,18 +34,28 @@ async function run(paths: string[], ok: string, fn: () => Promise<unknown>): Pro
 // Absen dari ponsel: selfie (sudah diperkecil di browser) diunggah dulu, lalu dicatat beserta lokasi GPS.
 export async function clock(_: ActionState, f: FormData): Promise<ActionState> {
   const kind = str(f, 'kind');
-  return run(['/absen', '/saya'], kind === 'in' ? 'Absen masuk tercatat' : 'Absen pulang tercatat', async () => {
-    const { profile } = await getSession();
-    const supabase = await createClient();
-    let photo: string | null = null;
-    const file = f.get('photo');
-    if (file instanceof File && file.size > 0) {
-      if (file.size > 2 * 1024 * 1024) throw new Error('Foto terlalu besar');
-      photo = (await uploadAttachment(supabase, `drafts/${profile.id}/absen/${crypto.randomUUID()}.jpg`,
-        new Uint8Array(await file.arrayBuffer()), 'selfie.jpg', 'image/jpeg')).id;
-    }
-    await rpc('attendance_clock', { p_kind: kind, p_lat: num(f, 'lat'), p_lng: num(f, 'lng'), p_accuracy: num(f, 'accuracy'), p_photo: photo, p_device: str(f, 'device') });
+  const label = kind === 'in' ? 'Absen masuk tercatat' : 'Absen pulang tercatat';
+  const at = num(f, 'at'); // ms epoch saat tombol ditekan di perangkat (penting untuk antrean offline)
+  let dup = false;
+  const r = await run(['/absen', '/saya'], label, async () => {
+    const res = await once(str(f, 'cid'), async () => {
+      const { profile } = await getSession();
+      const supabase = await createClient();
+      let photo: string | null = null;
+      const file = f.get('photo');
+      if (file instanceof File && file.size > 0) {
+        if (file.size > 2 * 1024 * 1024) throw new Error('Foto terlalu besar');
+        photo = (await uploadAttachment(supabase, `drafts/${profile.id}/absen/${crypto.randomUUID()}.jpg`,
+          new Uint8Array(await file.arrayBuffer()), 'selfie.jpg', 'image/jpeg')).id;
+      }
+      await rpc('attendance_clock', {
+        p_kind: kind, p_lat: num(f, 'lat'), p_lng: num(f, 'lng'), p_accuracy: num(f, 'accuracy'), p_photo: photo, p_device: str(f, 'device'),
+        p_at: at ? new Date(at).toISOString() : null, p_note: str(f, 'note'),
+      });
+    });
+    dup = res === 'duplicate';
   });
+  return dup ? { ok: 'Absen ini sudah terkirim sebelumnya' } : r;
 }
 
 export async function manualAttendance(_: ActionState, f: FormData) {

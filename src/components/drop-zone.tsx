@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { shrinkImage } from '@/lib/image';
 
 // Kotak unggah: seret & lepas berkas atau ketuk untuk memilih/memotret. Daftar berkas terpilih bisa dihapus satu per satu.
 export function DropZone({ name = 'files', label = 'Foto / lampiran', hint = 'Seret berkas ke sini atau ketuk untuk memilih', multiple = true,
@@ -9,6 +10,7 @@ export function DropZone({ name = 'files', label = 'Foto / lampiran', hint = 'Se
   const ref = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [over, setOver] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     const form = ref.current?.form;
@@ -23,6 +25,11 @@ export function DropZone({ name = 'files', label = 'Foto / lampiran', hint = 'Se
     if (ref.current) ref.current.files = dt.files;
     setFiles([...dt.files]);
   };
+  // foto dikecilkan dulu; berkas lain dibiarkan
+  const add = async (incoming: File[], keep = true) => {
+    setBusy(true);
+    try { apply([...(keep ? files : []), ...(await Promise.all(incoming.map(f => shrinkImage(f))))]); } finally { setBusy(false); }
+  };
   const size = (n: number) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
   return (
@@ -30,15 +37,15 @@ export function DropZone({ name = 'files', label = 'Foto / lampiran', hint = 'Se
       <span>{label}</span>
       <label
         onDragOver={e => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
-        onDrop={e => { e.preventDefault(); setOver(false); apply([...files, ...e.dataTransfer.files]); }}
+        onDrop={e => { e.preventDefault(); setOver(false); add([...e.dataTransfer.files]); }}
         className={`relative flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-4 py-5 text-center transition-colors ${
           over ? 'border-accent bg-accent-soft' : 'border-line bg-panel hover:border-accent'}`}>
         <svg aria-hidden viewBox="0 0 24 24" className="h-6 w-6 text-accent" fill="none" stroke="currentColor" strokeWidth="1.8">
           <path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <span className="text-muted">{hint}</span>
+        <span className="text-muted">{busy ? 'Memperkecil foto…' : hint}</span>
         <input ref={ref} type="file" name={name} multiple={multiple} accept={accept} required={required && !files.length} capture={capture}
-          onChange={e => setFiles([...(e.target.files ?? [])])} className="absolute inset-0 cursor-pointer opacity-0" />
+          onChange={e => add([...(e.target.files ?? [])], false)} className="absolute inset-0 cursor-pointer opacity-0" />
       </label>
       {files.length > 0 && (
         <ul className="grid gap-1">

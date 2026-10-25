@@ -13,7 +13,10 @@ const config: NextConfig = {
   poweredByHeader: false,
   experimental: { serverActions: { bodySizeLimit: '26mb' } },
   async headers() {
-    return [{ source: '/(.*)', headers: securityHeaders }];
+    return [
+      { source: '/(.*)', headers: securityHeaders },
+      { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' }, { key: 'Content-Type', value: 'application/javascript; charset=utf-8' }] },
+    ];
   },
 };
 

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { uploadFormFiles } from '@/lib/attachments';
 import { employeeIdFrom } from '@/lib/employee-ref';
+import { once } from '@/lib/client-request';
 
 export type ActionState = { error?: string; ok?: string };
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim() || null;
@@ -47,6 +48,8 @@ export async function reportHazard(_: ActionState, f: FormData): Promise<ActionS
     }, f, 'hazard')).id;
     await credit('hazard_reports', id, f);
   } catch (e) { return { error: (e as Error).message }; }
+  // dikirim ulang dari antrean offline di latar belakang: jangan pindahkan halaman pengguna
+  if (str(f, 'queued')) return { ok: 'Hazard dari antrean terkirim' };
   redirect(`/she/hazard/${id}`);
 }
 
@@ -98,13 +101,14 @@ export async function closeFinding(_: ActionState, f: FormData) {
 export async function submitP2h(_: ActionState, f: FormData) {
   const items: Record<string, string> = {};
   for (const [k, v] of f.entries()) if (k.startsWith('item_')) items[k.slice(5)] = String(v);
-  let r: Record<string, unknown>;
+  let r: Record<string, unknown> | 'duplicate';
   try {
-    r = await call('p2h_submit', {
+    r = await once(str(f, 'cid'), () => call('p2h_submit', {
       p_check_date: str(f, 'date'), p_shift: num(f, 'shift'), p_department: str(f, 'department'), p_unit_no: str(f, 'unit'),
       p_unit_type: str(f, 'unit_type'), p_items: items, p_conclusion: str(f, 'conclusion'), p_hour_meter: num(f, 'hm'), p_notes: str(f, 'notes'),
-    }, f, 'p2h');
+    }, f, 'p2h'));
   } catch (e) { return { error: (e as Error).message }; }
+  if (r === 'duplicate') return { ok: 'P2H ini sudah terkirim sebelumnya' };
   revalidatePath('/she/p2h');
   // peringatan tampil merah: unit tidak boleh dioperasikan
   if (r.conclusion === 'unfit') return { error: `${r.p2h_no} tersimpan: UNIT TIDAK LAYAK, jangan dioperasikan. Pengawas dan Plant sudah diberi tahu.` };
