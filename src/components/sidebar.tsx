@@ -189,12 +189,13 @@ export function Sidebar({ permissions, name, email, role, unit, alerts, alertTot
             {pop === 'profile' && (
               <div className={`${popBox} w-64`} role="menu">
                 <div className="truncate font-semibold">{name}</div>
-                <div className="truncate text-xs text-muted">{email}</div>
+                <div className="truncate text-xs text-muted">{email.endsWith('@nrp.bsb.local') ? `NIK ${email.split('@')[0].toUpperCase()}` : email}</div>
                 <div className="truncate text-xs text-muted">{role} · {unit}</div>
                 <div className="my-2 border-t border-line" />
                 <Link href="/saya" className="block rounded-lg px-2 py-1.5 text-sm hover:bg-ground">Profil & pengajuan saya</Link>
                 <Link href="/absen" className="block rounded-lg px-2 py-1.5 text-sm hover:bg-ground">Absen</Link>
                 <Link href="/tugas" className="block rounded-lg px-2 py-1.5 text-sm hover:bg-ground">Kotak tugas</Link>
+                {email.endsWith('@nrp.bsb.local') && <Link href="/ganti-sandi" className="block rounded-lg px-2 py-1.5 text-sm hover:bg-ground">Ganti sandi</Link>}
                 <button onClick={() => setPop('settings')} className="block w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-ground">Pengaturan</button>
                 <form action="/auth/keluar" method="post"><button className="w-full rounded-lg px-2 py-1.5 text-left text-sm text-crit hover:bg-ground">Keluar</button></form>
               </div>

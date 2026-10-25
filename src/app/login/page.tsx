@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { ClearOfflineCache } from './clear-offline-cache';
 import { LoginButton } from './login-button';
+import { NikForm } from './nik-form';
 
 export const metadata = { title: 'Masuk' };
 
@@ -20,11 +21,13 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </div>
         {error && (
           <p role="alert" className="rounded-md border border-crit/40 bg-crit/10 px-3 py-2 text-sm">
-            Login gagal. Gunakan akun Google Workspace BSB, lalu coba lagi.
+            Login Google gagal. Gunakan akun Google Workspace BSB, lalu coba lagi.
           </p>
         )}
+        <NikForm next={next} />
+        <div className="flex items-center gap-3 text-xs text-coal-ink/50"><span className="h-px flex-1 bg-white/15" />atau<span className="h-px flex-1 bg-white/15" /></div>
         <LoginButton next={next} />
-        <p className="text-xs text-coal-ink/50">Akun di luar domain perusahaan perlu disetujui administrator sebelum bisa dipakai.</p>
+        <p className="text-xs text-coal-ink/50">Login Google untuk akun email perusahaan. Akun baru perlu disetujui administrator sebelum bisa dipakai.</p>
       </div>
     </main>
   );

@@ -1377,6 +1377,51 @@ await test('absen tanpa GPS wajib alasan & ditandai; waktu dari antrean offline 
   eq((await as(db, absUser, `select public.client_request_claim($1) c`, [id])).rows[0].c, false);
   await expectError('42501', () => as(db, absUser, `select * from public.client_requests`));
 });
+await test('login NIK: pendaftar pending, admin lihat kecocokan tanggal lahir, aktivasi menautkan karyawan, tanggal lahir dihapus', async () => {
+  const emp = (await as(db, hrStaff, EMP_SQL, ['BSB-777', 'Budi NIK', PRD, OPRDT, 'permanent', null, null])).rows[0];
+  const reg = async (nrp, birth, tag = '') => {
+    const id = randomUUID();
+    await db.query(`insert into auth.users(id, email, raw_user_meta_data) values ($1, $2, $3)`,
+      [id, `${nrp.toLowerCase()}${tag}@nrp.bsb.local`, { full_name: 'Pendaftar', nrp, birth_date: birth }]);
+    return id;
+  };
+  const u1 = await reg('BSB-777', '1990-05-17');
+  eq((await db.query(`select status from public.profiles where id = $1`, [u1])).rows[0].status, 'pending');
+  eq((await db.query(`select raw_user_meta_data ? 'birth_date' b from auth.users where id = $1`, [u1])).rows[0].b, false);
+  // palsu: bukan email NIK tidak membuat klaim
+  const fake = randomUUID();
+  await db.query(`insert into auth.users(id, email, raw_user_meta_data) values ($1, 'x@gmail.com', $2)`, [fake, { nrp: 'BSB-777', birth_date: '1990-05-17' }]);
+  eq((await db.query(`select count(*)::int c from public.nik_registrations where user_id = $1`, [fake])).rows[0].c, 0);
+  await expectError('42501', () => as(db, staffId, `select * from public.nik_pending()`));
+  await expectError('42501', () => as(db, u1, `select public.activate_nik_user($1, 'STAFF', null, null)`, [u1]));
+  // tanggal lahir karyawan belum diisi
+  await expectError('22023', () => as(db, adminId, `select public.activate_nik_user($1, 'STAFF', $2, 'SK')`, [u1, PRD]));
+  await db.query(`insert into public.employee_private(employee_id, birth_date) values ($1, '1990-05-17') on conflict (employee_id) do update set birth_date = '1990-05-17'`, [emp.id]);
+  await expectError('22023', () => as(db, adminId, `select public.activate_user($1, 'STAFF', $2, 'SK')`, [u1, PRD]));
+  const pend = (await as(db, adminId, `select * from public.nik_pending() where user_id = $1`, [u1])).rows[0];
+  eq(pend.employee_name, 'Budi NIK'); eq(pend.birth_match, true); eq(pend.already_linked, false);
+  eq(Object.keys(pend).includes('birth_date'), false);
+  // tanggal lahir salah ditolak
+  const u2 = await reg('BSB-777', '1991-01-01', 'b');
+  eq((await as(db, adminId, `select birth_match from public.nik_pending() where user_id = $1`, [u2])).rows[0].birth_match, false);
+  await expectError('22023', () => as(db, adminId, `select public.activate_nik_user($1, 'STAFF', $2, 'SK')`, [u2, PRD]));
+  await as(db, adminId, `select public.activate_nik_user($1, 'STAFF', $2, 'SK 1')`, [u1, PRD]);
+  const p1 = (await db.query(`select status, full_name from public.profiles where id = $1`, [u1])).rows[0];
+  eq(p1.status, 'active'); eq(p1.full_name, 'Budi NIK');
+  eq((await db.query(`select profile_id from public.employees where id = $1`, [emp.id])).rows[0].profile_id, u1);
+  eq((await db.query(`select count(*)::int c from public.nik_registrations where user_id = $1`, [u1])).rows[0].c, 0);
+  // NRP yang sudah tertaut tidak bisa dipakai akun kedua
+  const u3 = await reg('BSB-777', '1990-05-17', 'c');
+  await expectError('23505', () => as(db, adminId, `select public.activate_nik_user($1, 'STAFF', $2, 'SK')`, [u3, PRD]));
+  await expectError('22023', () => as(db, adminId, `select public.reject_nik_user($1, '')`, [u3]));
+  await as(db, adminId, `select public.reject_nik_user($1, 'Bukan karyawan')`, [u3]);
+  eq((await db.query(`select status from public.profiles where id = $1`, [u3])).rows[0].status, 'suspended');
+  // reset sandi: hanya akun NIK aktif, bukan diri sendiri, hanya yang berwenang
+  eq((await as(db, adminId, `select public.password_reset_authorize($1) e`, [u1])).rows[0].e, 'bsb-777@nrp.bsb.local');
+  await expectError('22023', () => as(db, adminId, `select public.password_reset_authorize($1)`, [staffId]));
+  await expectError('42501', () => as(db, staffId, `select public.password_reset_authorize($1)`, [u1]));
+  await expectError('42501', () => as(db, adminId, `select public.password_reset_authorize($1)`, [adminId]));
+});
 await test('impor mesin fingerprint: masuk/pulang ditentukan otomatis, terlambat dihitung, impor ulang tidak dobel', async () => {
   const d = await due(-3);
   await as(db, spvPrd, ROSTER, [boss.id, d, d, 'D']);

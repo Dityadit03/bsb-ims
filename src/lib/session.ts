@@ -25,6 +25,8 @@ export const getSession = cache(async (): Promise<Session> => {
   const { data: auth } = await supabase.auth.getClaims();
   const userId = auth?.claims?.sub;
   if (!userId) redirect('/login');
+  // sandi sementara hasil reset administrator wajib diganti sebelum memakai aplikasi
+  if ((auth?.claims?.user_metadata as { must_change_password?: boolean } | undefined)?.must_change_password) redirect('/ganti-sandi');
 
   const { data: profile } = await supabase
     .from('profiles')

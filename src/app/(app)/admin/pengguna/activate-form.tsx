@@ -1,12 +1,13 @@
 'use client';
 import { useActionState } from 'react';
 import { btnPrimary, input } from '@/components/ui';
-import { activateUser } from './actions';
+import { activateNikUser, activateUser } from './actions';
 
-export function ActivateForm({ userId, roles, departments, label = 'Aktifkan' }: {
+export function ActivateForm({ userId, roles, departments, label = 'Aktifkan', nik = false }: {
+  nik?: boolean;
   userId: string; label?: string; roles: { code: string; name: string }[]; departments: { id: string; code: string; name: string }[];
 }) {
-  const [state, action, pending] = useActionState(activateUser, {});
+  const [state, action, pending] = useActionState(nik ? activateNikUser : activateUser, {});
   return (
     <form action={action} className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
       <input type="hidden" name="user" value={userId} />
