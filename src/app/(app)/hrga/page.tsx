@@ -43,7 +43,7 @@ export default async function HrgaPage({ searchParams }: { searchParams: Promise
       </div>
       <form className="flex flex-wrap gap-2">
         <input name="cari" defaultValue={sp.cari ?? ''} className={`${input} w-48`} placeholder="Nama / NRP" />
-        <select name="dept" defaultValue={sp.dept ?? ''} className={`${input} w-auto`} aria-label="Departemen">
+        <select name="dept" defaultValue={sp.dept ?? ''} className={`${input} !w-auto`} aria-label="Departemen">
           <option value="">Semua departemen</option>{depts.map(d => <option key={d.id} value={d.code}>{d.code}</option>)}
         </select>
         <label className="flex items-center gap-1 text-sm"><input type="checkbox" name="keluar" value="1" defaultChecked={!!sp.keluar} /> Karyawan keluar</label>

@@ -34,8 +34,8 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
       <PageHeader eyebrow="HRGA" title="Roster" />
       <HrTabs active="/hrga/roster" />
       <form className="flex flex-wrap gap-2">
-        <select name="dept" defaultValue={dept} className={`${input} w-auto`} aria-label="Departemen">{depts.map(d => <option key={d.id} value={d.code}>{d.code}</option>)}</select>
-        <input type="date" name="dari" defaultValue={from} className={`${input} w-auto`} aria-label="Mulai" />
+        <select name="dept" defaultValue={dept} className={`${input} !w-auto`} aria-label="Departemen">{depts.map(d => <option key={d.id} value={d.code}>{d.code}</option>)}</select>
+        <input type="date" name="dari" defaultValue={from} className={`${input} !w-auto`} aria-label="Mulai" />
         <button className="text-sm text-accent">Tampilkan</button>
       </form>
       {emps?.length ? (

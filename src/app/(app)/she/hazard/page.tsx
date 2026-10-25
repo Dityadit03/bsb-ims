@@ -59,7 +59,7 @@ export default async function HazardPage({ searchParams }: { searchParams: Promi
         </Panel>
       )}
       <form className="flex flex-wrap gap-2">
-        <select name="status" defaultValue={sp.status ?? ''} className={`${input} w-auto`} aria-label="Status">
+        <select name="status" defaultValue={sp.status ?? ''} className={`${input} !w-auto`} aria-label="Status">
           <option value="">Open</option><option value="closed">Closed</option><option value="cancelled">Dibatalkan</option>
         </select>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="terlambat" value="1" defaultChecked={!!sp.terlambat} /> Lewat due date</label>

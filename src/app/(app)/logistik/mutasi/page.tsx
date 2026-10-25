@@ -24,7 +24,7 @@ export default async function MutasiPage({ searchParams }: { searchParams: Promi
       <PageHeader eyebrow="Logistik" title="Mutasi stok" />
       <LogTabs active="/logistik/mutasi" />
       <form className="flex flex-wrap gap-2">
-        <select name="jenis" defaultValue={sp.jenis ?? ''} className={`${input} w-auto`} aria-label="Jenis">
+        <select name="jenis" defaultValue={sp.jenis ?? ''} className={`${input} !w-auto`} aria-label="Jenis">
           <option value="">Semua mutasi</option>{Object.entries(MOVE).map(([k, [, l]]) => <option key={k} value={k}>{l}</option>)}
         </select>
         <input name="unit" defaultValue={sp.unit ?? ''} className={`${input} w-32 uppercase`} placeholder="No. unit" />

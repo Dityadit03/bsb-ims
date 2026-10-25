@@ -33,7 +33,7 @@ export default async function DataCenterPage({ searchParams }: { searchParams: P
       <PageHeader eyebrow="Folder & database Google Drive per elemen SMKP" title="Pusat Data SHE" />
       <form className="flex flex-wrap gap-2">
         <input name="q" defaultValue={sp.q ?? ''} placeholder="Cari folder atau database…" className={`${input} w-64`} aria-label="Cari" />
-        <select name="hal" defaultValue={sp.hal ?? ''} className={`${input} w-auto`} aria-label="Halaman">
+        <select name="hal" defaultValue={sp.hal ?? ''} className={`${input} !w-auto`} aria-label="Halaman">
           <option value="">Semua kelompok</option>{pages.map(p => <option key={p}>{p}</option>)}
         </select>
         <button className={btnGhost}>Cari</button>

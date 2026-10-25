@@ -33,7 +33,7 @@ export default async function MrPage({ searchParams }: { searchParams: Promise<R
       <PageHeader eyebrow="Logistik" title="Material request"><ExportLinks dataset="mr" /></PageHeader>
       <LogTabs active="/logistik/mr" />
       <form className="flex flex-wrap gap-2">
-        <select name="status" defaultValue={sp.status ?? ''} className={`${input} w-auto`} aria-label="Status">
+        <select name="status" defaultValue={sp.status ?? ''} className={`${input} !w-auto`} aria-label="Status">
           <option value="">Masih berjalan</option>{Object.entries(MR_STATUS).map(([k, [, l]]) => <option key={k} value={k}>{l}</option>)}
         </select>
         <button className="text-sm text-accent">Saring</button>

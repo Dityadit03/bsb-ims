@@ -46,10 +46,10 @@ export default async function WoPage({ searchParams }: { searchParams: Promise<R
         </Panel>
       ) : null}
       <form className="flex flex-wrap gap-2">
-        <select name="status" defaultValue={sp.status ?? ''} className={`${input} w-auto`} aria-label="Status">
+        <select name="status" defaultValue={sp.status ?? ''} className={`${input} !w-auto`} aria-label="Status">
           <option value="">Terbuka</option>{Object.entries(WO_STATUS).map(([k, [, l]]) => <option key={k} value={k}>{l}</option>)}
         </select>
-        <select name="jenis" defaultValue={sp.jenis ?? ''} className={`${input} w-auto`} aria-label="Jenis">
+        <select name="jenis" defaultValue={sp.jenis ?? ''} className={`${input} !w-auto`} aria-label="Jenis">
           <option value="">Semua jenis</option>{Object.entries(WO_TYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
         <button className="text-sm text-accent">Saring</button>

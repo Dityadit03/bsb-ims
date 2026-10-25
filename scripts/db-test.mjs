@@ -2096,6 +2096,53 @@ await test('whatsapp: nomor dari data HRGA, wajib opt-in, saklar utama, jenis te
     eq(await cnt(), 1, 'setelah opt-out tidak ada antrean baru');
   }
 });
+await test('ban: daftar unik, pasang butuh posisi bebas dan HM tidak mundur, ukur alur tidak naik, lepas menambah umur, vulkanisir tambah biaya', async () => {
+  await expectError('42501', async () => as(db, spvPlt, `select public.tyre_register('B-1001', '11.00-20', 'Bridgestone', 'L317', 4500000)`));
+  await expectError('22023', async () => as(db, dhPlt, `select public.tyre_register('B-X', '11.00-20', 'GT', null, 100, 10, 12)`));
+  const ty = (await as(db, dhPlt, `select (t).* from public.tyre_register('b-1001', '11.00-20', 'Bridgestone', 'L317', 4500000, 20, 3) t`)).rows[0];
+  eq(/^TYR-BSB-\d{5}$/.test(ty.tyre_no), true); eq(ty.serial_no, 'B-1001');
+  await expectError('23505', async () => as(db, dhPlt, `select public.tyre_register('B-1001', null, 'bridgestone', null, 1)`));
+  const hm0 = Number((await db.query(`select current_hm from public.units where id = $1`, [unit.id])).rows[0].current_hm);
+  await expectError('22023', async () => as(db, spvPlt, `select public.tyre_install($1, $2, $3, '')`, [ty.id, unit.id, hm0 + 1]));
+  await expectError('22023', async () => as(db, spvPlt, `select public.tyre_install($1, $2, $3, '1L')`, [ty.id, unit.id, hm0 - 5]));
+  await expectError('42501', async () => as(db, spvHse, `select public.tyre_install($1, $2, $3, '1L')`, [ty.id, unit.id, hm0 + 1]));
+  await as(db, spvPlt, `select public.tyre_install($1, $2, $3, '1l')`, [ty.id, unit.id, hm0 + 10]);
+  const ty2 = (await as(db, dhPlt, `select (t).* from public.tyre_register('B-1002', '11.00-20', 'Bridgestone', 'L317', 4500000, 20, 3) t`)).rows[0];
+  await expectError('23505', async () => as(db, spvPlt, `select public.tyre_install($1, $2, $3, '1L')`, [ty2.id, unit.id, hm0 + 10]));
+  await expectError('22023', async () => as(db, spvPlt, `select public.tyre_measure($1, 25)`, [ty.id]));
+  await as(db, spvPlt, `select public.tyre_measure($1, 12, 110)`, [ty.id]);
+  await expectError('22023', async () => as(db, spvPlt, `select public.tyre_measure($1, 16)`, [ty.id]));
+  await db.query(`update public.units set current_hm = $2 where id = $1`, [unit.id, hm0 + 510]);
+  const st = (await as(db, spvPlt, `select run_hm::int r, usable_pct::int p, alert from public.tyre_status where tyre_id = $1`, [ty.id])).rows[0];
+  eq(st.r, 500); eq(st.p, 53); eq(st.alert, 'ok');
+  await as(db, spvPlt, `select public.tyre_measure($1, 4.5)`, [ty.id]);
+  eq((await as(db, spvPlt, `select alert from public.tyre_status where tyre_id = $1`, [ty.id])).rows[0].alert, 'soon');
+  await expectError('22023', async () => as(db, spvPlt, `select public.tyre_remove($1, $2, 4, null)`, [ty.id, hm0 + 520]));
+  await expectError('22023', async () => as(db, spvPlt, `select public.tyre_remove($1, $2, 4, 'worn')`, [ty.id, hm0 + 5]));
+  await as(db, spvPlt, `select public.tyre_remove($1, $2, 3.5, 'worn', 'repair')`, [ty.id, hm0 + 520]);
+  const r = (await db.query(`select status, accumulated_hm::int a, installed_unit_id from public.tyres where id = $1`, [ty.id])).rows[0];
+  eq(r.status, 'repair'); eq(r.a, 510); eq(r.installed_unit_id, null);
+  await expectError('42501', async () => as(db, spvPlt, `select public.tyre_retread_done($1, 1800000)`, [ty.id]));
+  await as(db, dhPlt, `select public.tyre_retread_done($1, 1800000)`, [ty.id]);
+  const rt = (await db.query(`select status, retread_count, total_cost::int c from public.tyres where id = $1`, [ty.id])).rows[0];
+  eq(rt.status, 'in_stock'); eq(rt.retread_count, 1); eq(rt.c, 6300000);
+  eq((await db.query(`select count(*)::int c from public.tyre_events where tyre_id = $1`, [ty.id])).rows[0].c, 6);
+});
+await test('perencanaan stok: ROP dari pemakaian 90 hari, usulan pesan, ABC, suku cadang kritis; produktivitas unit', async () => {
+  const m = (await db.query(`select id from public.materials where category = 'spare_part' limit 1`)).rows[0];
+  await expectError('42501', async () => as(db, spvPlt, `select public.material_planning_set($1, 10, true)`, [m.id]));
+  await expectError('22023', async () => as(db, logStaff, `select public.material_planning_set($1, -1, true)`, [m.id]));
+  await as(db, logStaff, `select public.material_planning_set($1, 10, true)`, [m.id]);
+  await db.query(`update public.materials set stock_qty = 100, min_stock = 5, avg_cost = 1000 where id = $1`, [m.id]);
+  await db.query(`delete from public.stock_movements where material_id = $1 and movement_type = 'issue'`, [m.id]).catch(() => {});
+  await db.query(`insert into public.stock_movements(movement_type, material_id, qty, unit_cost, unit_id, moved_by, moved_at) values ('issue', $1, -90, 1000, $2, $3, now() - interval '10 days')`, [m.id, unit.id, ownerId]);
+  const p = (await as(db, logStaff, `select critical, lead_time_days l, daily_use::float d, reorder_point::int rop, suggested_qty::int sq, reorder_now, abc from public.stock_planning where material_id = $1`, [m.id])).rows[0];
+  eq(p.critical, true); eq(p.l, 10); eq(p.d, 1); eq(p.rop, 15); eq(p.sq, 0); eq(p.reorder_now, false); eq(/^[ABC]$/.test(p.abc), true);
+  await db.query(`update public.materials set stock_qty = 10 where id = $1`, [m.id]);
+  const q = (await as(db, logStaff, `select suggested_qty::int sq, reorder_now from public.stock_planning where material_id = $1`, [m.id])).rows[0];
+  eq(q.sq, 19); eq(q.reorder_now, true);
+  eq((await as(db, logStaff, `select count(*)::int c from public.unit_productivity`)).rows[0].c >= 1, true);
+});
 await test('pengguna tanpa audit.read tidak melihat audit log', async () => {
   eq((await as(db, staffId, `select 1 from public.audit_logs`)).rowCount, 0);
 });

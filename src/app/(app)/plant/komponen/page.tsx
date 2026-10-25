@@ -48,10 +48,10 @@ export default async function ComponentsPage({ searchParams }: { searchParams: P
         <Stat label="Di stok" value={count('in_stock')} href="/plant/komponen?status=in_stock" />
       </div>
       <form className="flex flex-wrap gap-2">
-        <select name="status" defaultValue={sp.status ?? ''} className={`${input} w-auto`} aria-label="Status">
+        <select name="status" defaultValue={sp.status ?? ''} className={`${input} !w-auto`} aria-label="Status">
           <option value="">Aktif (tanpa yang dibuang)</option>{Object.entries(COMP_STATUS).map(([k, [, l]]) => <option key={k} value={k}>{l}</option>)}
         </select>
-        <select name="jenis" defaultValue={sp.jenis ?? ''} className={`${input} w-auto`} aria-label="Jenis">
+        <select name="jenis" defaultValue={sp.jenis ?? ''} className={`${input} !w-auto`} aria-label="Jenis">
           <option value="">Semua jenis</option>{Object.entries(COMP_TYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
         <button className="text-sm text-accent">Saring</button>

@@ -67,10 +67,10 @@ export default async function SpipPage({ searchParams }: { searchParams: Promise
       )}
       <form className="flex flex-wrap gap-2">
         <input name="q" defaultValue={sp.q ?? ''} placeholder="Kode / nama" className={`${input} w-44`} aria-label="Cari" />
-        <select name="jenis" defaultValue={sp.jenis ?? ''} className={`${input} w-auto`} aria-label="Jenis">
+        <select name="jenis" defaultValue={sp.jenis ?? ''} className={`${input} !w-auto`} aria-label="Jenis">
           <option value="">Semua jenis</option>{Object.entries(OBJECT_TYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
-        <select name="status" defaultValue={sp.status ?? ''} className={`${input} w-auto`} aria-label="Status">
+        <select name="status" defaultValue={sp.status ?? ''} className={`${input} !w-auto`} aria-label="Status">
           <option value="">Semua status</option>{Object.entries(VALIDITY).map(([k, [, l]]) => <option key={k} value={k}>{l}</option>)}
         </select>
         <button className={btnGhost}>Saring</button>

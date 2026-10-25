@@ -27,6 +27,12 @@ export async function saveMaterial(_: ActionState, f: FormData) {
   }));
 }
 
+export async function savePlanning(_: ActionState, f: FormData) {
+  return run('/logistik', 'Perencanaan barang disimpan', () => rpc('material_planning_set', {
+    p_material: str(f, 'material'), p_lead_time_days: num(f, 'lead') ?? 7, p_critical: f.get('critical') === 'on',
+  }));
+}
+
 export async function receiveGoods(_: ActionState, f: FormData) {
   return run('/logistik', 'Penerimaan dicatat', () => rpc('goods_receive', {
     p_material: str(f, 'material'), p_supplier: str(f, 'supplier'), p_qty: num(f, 'qty'), p_unit_cost: num(f, 'cost'),
