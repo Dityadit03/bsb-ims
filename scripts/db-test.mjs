@@ -1204,6 +1204,115 @@ await test('anon hanya bisa memanggil verifikasi dokumen & feed spreadsheet', as
   eq(r.rows.map(x => x.proname).sort().join(','), 'feed_rows,verify_document');
 });
 
+console.log('HRIS: Core HR');
+const selfUser = await createUser('operator.exc@bsb.co.id');
+await db.query(`insert into public.user_roles(user_id, role_code, department_id) values ($1,'STAFF',$2)`, [selfUser, PRD]);
+const OPREXC = await pos('OPR-EXC'), PGW = await pos('PGW-PRD');
+let ops, boss;
+await test('karyawan baru otomatis punya riwayat "join"; mutasi tercatat dengan alasan & SK', async () => {
+  boss = (await as(db, hrStaff, EMP_SQL, ['BSB-100', 'Dedi Pengawas', PRD, PGW, 'permanent', null, null])).rows[0];
+  ops = (await as(db, hrStaff, EMP_SQL, ['BSB-101', 'Eko Operator', PRD, OPRDT, 'contract', null, 'operator.exc@bsb.co.id'])).rows[0];
+  eq((await db.query(`select kind from public.employee_movements where employee_id = $1`, [ops.id])).rows[0].kind, 'join');
+  const MOVE = `select public.employee_move($1, $2::date, $3, $4, null, $5, null, $6, 'SK/HR/01')`;
+  await expectError('42501', async () => as(db, spvPrd, MOVE, [ops.id, today, 'position_change', PRD, OPREXC, 'Rotasi unit']));
+  await expectError('22023', async () => as(db, hrStaff, MOVE, [ops.id, today, 'position_change', PRD, OPREXC, '']));
+  await expectError('22023', async () => as(db, hrStaff, MOVE, [ops.id, today, 'position_change', PRD, MEK, 'Salah dept']));
+  await as(db, hrStaff, MOVE, [ops.id, today, 'position_change', PRD, OPREXC, 'Rotasi ke excavator']);
+  const m = (await db.query(`select kind, reason, reference_no, from_position, to_position from public.movement_register where employee_id = $1 and kind <> 'join'`, [ops.id])).rows[0];
+  eq(m.kind, 'position_change'); eq(m.reason, 'Rotasi ke excavator'); eq(m.reference_no, 'SK/HR/01'); eq(m.to_position, 'Operator excavator');
+  // pengaturan sesi tidak bocor ke perubahan berikutnya
+  await as(db, hrStaff, EMP_SQL, ['BSB-101', 'Eko Operator', PRD, OPRDT, 'contract', null, null]);
+  eq((await db.query(`select reason from public.employee_movements where employee_id = $1 order by created_at desc limit 1`, [ops.id])).rows[0].reason, null);
+});
+await test('atasan langsung tidak boleh melingkar; atasan langsung bisa melihat riwayat bawahannya', async () => {
+  const ORG = `select public.employee_org_save($1, $2, null, 'G3', '10/4', 'Balikpapan')`;
+  await as(db, hrStaff, ORG, [ops.id, boss.id]);
+  await expectError('22023', async () => as(db, hrStaff, ORG, [boss.id, ops.id]));
+  eq((await db.query(`select kind from public.employee_movements where employee_id = $1 order by created_at desc limit 1`, [ops.id])).rows[0].kind, 'supervisor_change');
+  eq((await as(db, selfUser, `select 1 from public.employee_movements where employee_id = $1`, [ops.id])).rowCount > 0, true);
+  eq((await as(db, spvHse, `select 1 from public.employee_movements where employee_id = $1`, [ops.id])).rowCount, 0);
+});
+await test('data pribadi hanya HRGA & karyawan ybs; karyawan hanya boleh ubah kontak, bukan rekening', async () => {
+  await as(db, hrStaff, `select public.employee_private_save($1, $2::jsonb)`, [ops.id, JSON.stringify({ nik: '6471010101900001', bank_account: '123', ptkp_status: 'K/1', birth_date: '1990-01-01' })]);
+  await expectError('22023', async () => as(db, hrStaff, `select public.employee_private_save($1, '{"gaji":1}'::jsonb)`, [ops.id]));
+  await expectError('23514', async () => as(db, hrStaff, `select public.employee_private_save($1, '{"nik":"123"}'::jsonb)`, [ops.id]));
+  eq((await as(db, spvPrd, `select 1 from public.employee_private`)).rowCount, 0);
+  eq((await as(db, selfUser, `select nik from public.employee_private`)).rows[0].nik, '6471010101900001');
+  await as(db, selfUser, `select public.my_private_update('{"phone":"0812","shoe_size":"42"}'::jsonb)`);
+  await expectError('42501', async () => as(db, selfUser, `select public.my_private_update('{"bank_account":"999"}'::jsonb)`));
+  const r = (await db.query(`select phone, bank_account from public.employee_private where employee_id = $1`, [ops.id])).rows[0];
+  eq(r.phone, '0812'); eq(r.bank_account, '123');
+});
+await test('kontrak: PKWT wajib tanggal akhir, status kerja ikut kontrak, register menandai segera habis', async () => {
+  await expectError('23514', async () => as(db, hrStaff, `select public.contract_add($1, 'pkwt', 'PKWT/1', $2::date, null)`, [ops.id, today]));
+  await as(db, hrStaff, `select public.contract_add($1, 'pkwt', 'PKWT/1', $2::date - 340, $2::date + 20)`, [ops.id, today]);
+  eq((await as(db, hrStaff, `select contract_status from public.contract_register where employee_id = $1`, [ops.id])).rows[0].contract_status, 'expiring');
+  await as(db, hrStaff, `select public.contract_add($1, 'pkwtt', 'SK-TETAP/1', $2::date + 21, null)`, [ops.id, today]);
+  eq((await db.query(`select employment_type from public.employees where id = $1`, [ops.id])).rows[0].employment_type, 'permanent');
+  eq((await as(db, spvPrd, `select 1 from public.contract_register`)).rowCount, 0);
+});
+await test('MPP vs aktual per jabatan', async () => {
+  const y = Number(today.slice(0, 4));
+  await expectError('42501', async () => as(db, spvPrd, `select public.mpp_set($1, $2, 5)`, [y, OPRDT]));
+  await as(db, hrStaff, `select public.mpp_set($1, $2, 5, 'Tambahan 2 DT')`, [y, OPRDT]);
+  const g = (await as(db, spvPrd, `select planned, actual, gap from public.manpower_gap where year = $1 and position_id = $2`, [y, OPRDT])).rows[0];
+  eq(g.planned, 5); eq(g.gap, g.actual - 5);
+});
+await test('MCU unfit membatalkan kelayakan: SIMPER & ID card ditolak sampai fit', async () => {
+  await as(db, hrStaff, ADD_SQL, [ops.id, INDUKSI, today, null, null]);
+  const mcu = (await as(db, hrStaff, ADD_SQL, [ops.id, MCU, today, null, 'MCU-77'])).rows[0];
+  const DET = `select public.employee_competency_detail($1, $2, $3, null)`;
+  await expectError('22023', async () => as(db, hrStaff, DET, [mcu.id, 'temporary_unfit', '']));
+  await as(db, hrStaff, DET, [mcu.id, 'temporary_unfit', 'Hipertensi, kontrol 2 minggu']);
+  eq((await db.query(`select validity from public.employee_competency_view where id = $1`, [mcu.id])).rows[0].validity, 'unfit');
+  await expectError('22023', async () => as(db, hrStaff, ADD_SQL, [ops.id, SIMDT, today, null, 'SIM-9']));
+  await expectError('22023', async () => as(db, hrStaff, `select public.id_card_issue($1, 'ID-101', '{PIT}')`, [ops.id]));
+  await as(db, hrStaff, DET, [mcu.id, 'fit', null]);
+  const sim = (await as(db, hrStaff, ADD_SQL, [ops.id, SIMDT, today, null, 'SIM-9'])).rows[0];
+  await expectError('22023', async () => as(db, hrStaff, `select public.employee_competency_detail($1, 'fit', null, null)`, [sim.id]));
+  await as(db, hrStaff, `select public.employee_competency_detail($1, null, null, 'B')`, [sim.id]);
+});
+await test('ID card: area harus dikenal, satu kartu aktif, ditangguhkan otomatis saat karyawan keluar', async () => {
+  await expectError('22023', async () => as(db, hrStaff, `select public.id_card_issue($1, 'ID-101', '{BULAN}')`, [ops.id]));
+  await as(db, hrStaff, `select public.id_card_issue($1, 'id-101', '{PIT,HAULING}')`, [ops.id]);
+  await expectError('22023', async () => as(db, hrStaff, `select public.id_card_issue($1, 'ID-102', '{PIT}')`, [ops.id]));
+  const w = (await as(db, spvPrd, `select ready, id_card_ok, unit_types from public.workforce_readiness where employee_id = $1`, [ops.id])).rows[0];
+  eq(w.id_card_ok, true); eq(w.unit_types.join(), 'DT');
+  const a = (await as(db, spvPrd, `select authorized from public.operator_availability where unit_type = 'DT'`)).rows[0];
+  eq(a.authorized >= 1, true);
+});
+await test('mobilisasi: checklist manual + otomatis (induksi, MCU, ID card) wajib lengkap sebelum selesai', async () => {
+  const m = (await as(db, hrStaff, `select (m).* from public.mobilization_create($1, 'mob', $2::date) m`, [boss.id, today])).rows[0];
+  await expectError('22023', async () => as(db, hrStaff, `select public.mobilization_create($1, 'mob', $2::date)`, [boss.id, today]));
+  for (const i of m.items) await as(db, hrStaff, `select public.mobilization_check($1, $2, true)`, [m.id, i.key]);
+  try { await as(db, hrStaff, `select public.mobilization_complete($1)`, [m.id]); throw new Error('harus gagal'); }
+  catch (e) { if (!/induksi/.test(e.message) || !/ID card/.test(e.message)) throw e; }
+  eq((await as(db, selfUser, `select 1 from public.mobilizations where id = $1`, [m.id])).rowCount, 0);
+  await as(db, hrStaff, `select public.mobilization_cancel($1, 'Batal berangkat')`, [m.id]);
+});
+await test('impor satu tombol: data pribadi & kontrak lewat NRP', async () => {
+  const rows = JSON.stringify([{ nrp: 'bsb-100', nik: '6471-0101-0190-0002', jenis_kelamin: 'Laki-laki', ptkp: 'k / 2', no_rekening: '123-456' },
+    { nrp: 'TIDAKADA', nik: '1' }]);
+  const r = (await as(db, hrStaff, `select public.import_rows('data_pribadi', $1::jsonb, true) r`, [rows])).rows[0].r;
+  eq(r.ok, 1); eq(r.errors.length, 1);
+  const p = (await db.query(`select nik, gender, ptkp_status, bank_account from public.employee_private where employee_id = $1`, [boss.id])).rows[0];
+  eq(p.nik, '6471010101900002'); eq(p.gender, 'L'); eq(p.ptkp_status, 'K/2'); eq(p.bank_account, '123456');
+  const k = JSON.stringify([{ nrp: 'BSB-100', jenis: 'Tetap', no_kontrak: 'SK/9', mulai: '2025-01-01' }]);
+  eq((await as(db, hrStaff, `select public.import_rows('kontrak', $1::jsonb, true) r`, [k])).rows[0].r.ok, 1);
+  eq((await as(db, spvPrd, `select public.import_rows('data_pribadi', $1::jsonb, true) r`, [rows])).rows[0].r.ok, 0);
+  const o = JSON.stringify([{ nrp: 'BSB-002', atasan: 'bsb-100', pola_roster: '10/4' }, { nrp: 'BSB-002', atasan: 'X-1' }]);
+  const ro = (await as(db, hrStaff, `select public.import_rows('organisasi', $1::jsonb, true) r`, [o])).rows[0].r;
+  eq(ro.ok, 1); eq(ro.errors[0].error.includes('X-1'), true);
+  eq((await db.query(`select supervisor_id from public.employees where nrp = 'BSB-002'`)).rows[0].supervisor_id, boss.id);
+  const c = JSON.stringify([{ nrp: 'BSB-100', no_kartu: 'idc-100', area: 'office; pit' }]);
+  eq((await as(db, hrStaff, `select public.import_rows('idcard', $1::jsonb, true) r`, [c])).rows[0].r.errors[0].error.includes('induksi'), true);
+});
+await test('karyawan keluar: riwayat "exit" dan ID card ditangguhkan', async () => {
+  await as(db, hrHead, `select public.employee_exit($1, $2::date, 'Habis kontrak')`, [ops.id, today]);
+  eq((await db.query(`select status from public.id_cards where employee_id = $1`, [ops.id])).rows[0].status, 'suspended');
+  eq((await db.query(`select reason from public.employee_movements where employee_id = $1 and kind = 'exit'`, [ops.id])).rows[0].reason, 'Habis kontrak');
+});
+
 console.log('audit trail');
 await test('setiap penerbitan nomor tercatat', async () => {
   const r = await db.query(`select count(*)::int c from public.audit_logs where action = 'numbering.issue'`);

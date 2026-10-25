@@ -2,7 +2,7 @@
 import { HAZARD_TYPE, INCIDENT_CLASS, OPEN_CLOSED, VALIDITY } from '@/lib/she';
 import { UNIT_STATUS, WO_STATUS, WO_TYPE } from '@/lib/plant';
 import { CATEGORY, MOVE, MR_STATUS, PO_STATUS, PR_STATUS, STAGE } from '@/lib/logistics';
-import { EMPLOYMENT } from '@/lib/hrga';
+import { CARD_STATUS, CONTRACT, CONTRACT_STATUS, EMPLOYMENT, MOVE as MOVEMENT } from '@/lib/hrga';
 
 type Label = Record<string, string | [string, string]>;
 const lbl = (m: Label) => (v: unknown) => { const x = m[String(v)]; return x == null ? v : Array.isArray(x) ? x[1] : x; };
@@ -84,6 +84,22 @@ export const DATASETS: Dataset[] = [
     ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['competency_code', 'Kode'], ['competency_name', 'Kompetensi'],
     ['unit_type', 'Jenis unit'], ['cert_no', 'No. sertifikat'], ['issuer', 'Penerbit'], ['issued_on', 'Terbit'], ['valid_until', 'Berlaku sampai'],
     ['days_left', 'Sisa hari'], ['validity', 'Masa berlaku', lbl(VALIDITY)], ['status', 'Status']] },
+  { key: 'kesiapan', label: 'Kesiapan tenaga kerja', group: 'HRGA', view: 'workforce_readiness', order: 'full_name', feed: false, columns: [
+    ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['position_name', 'Jabatan'], ['employment_type', 'Status kerja', lbl(EMPLOYMENT)],
+    ['company', 'Perusahaan'], ['induction_ok', 'Induksi', yn], ['medical_ok', 'MCU fit', yn], ['compliant', 'Kompetensi terpenuhi'],
+    ['required', 'Kompetensi wajib'], ['id_card_ok', 'ID card', yn], ['unit_types', 'SIMPER', v => (Array.isArray(v) ? v.join(', ') : v)],
+    ['roster_today', 'Roster hari ini'], ['ready', 'Siap kerja', yn]] },
+  { key: 'kontrak', label: 'Kontrak kerja aktif', group: 'HRGA', view: 'contract_register', order: 'end_date', feed: false, columns: [
+    ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['contract_type', 'Jenis', lbl(CONTRACT)], ['contract_no', 'No. kontrak'],
+    ['start_date', 'Mulai'], ['end_date', 'Berakhir'], ['days_left', 'Sisa hari'], ['contract_status', 'Status', lbl(CONTRACT_STATUS)]] },
+  { key: 'riwayat_karyawan', label: 'Riwayat mutasi & promosi', group: 'HRGA', view: 'movement_register', order: 'effective_date', desc: true, feed: false, columns: [
+    ['effective_date', 'Tgl efektif'], ['nrp', 'NRP'], ['full_name', 'Nama'], ['kind', 'Jenis', lbl(MOVEMENT)], ['from_department', 'Dari dept'],
+    ['to_department', 'Ke dept'], ['from_position', 'Dari jabatan'], ['to_position', 'Ke jabatan'], ['from_type', 'Dari status'], ['to_type', 'Ke status'],
+    ['reason', 'Alasan'], ['reference_no', 'No. SK'], ['recorded_by_name', 'Dicatat oleh']] },
+  { key: 'idcard', label: 'ID card & akses site', group: 'HRGA', view: 'id_card_register', order: 'card_no', feed: false, columns: [
+    ['card_no', 'No. kartu'], ['nrp', 'NRP'], ['full_name', 'Nama'], ['department_code', 'Dept'], ['company', 'Perusahaan'],
+    ['access_areas', 'Area', v => (Array.isArray(v) ? v.join(', ') : v)], ['issued_on', 'Terbit'], ['valid_until', 'Berlaku sampai'],
+    ['status', 'Status', lbl(CARD_STATUS)], ['status_note', 'Keterangan']] },
   { key: 'dokumen', label: 'Register dokumen', group: 'Dokumen', view: 'document_register', order: 'document_number', feed: false, columns: [
     ['document_number', 'No. dokumen'], ['title', 'Judul'], ['type_code', 'Jenis'], ['department_code', 'Dept'], ['section_code', 'Seksi'],
     ['current_revision', 'Revisi'], ['status', 'Status'], ['effective_date', 'Berlaku'], ['next_review_at', 'Tinjau ulang'], ['owner_name', 'Pemilik']] },
@@ -139,6 +155,44 @@ export const IMPORTS: ImportKind[] = [
     f('berlaku_sampai', 'Berlaku sampai', ['berlaku sampai', 'masa berlaku', 'expired', 'exp', 'valid until'], '2027-03-01', { date: true }),
     f('no_sertifikat', 'No. sertifikat', ['no sertifikat', 'nomor sertifikat', 'no simper', 'no'], 'SIM/001'),
     f('penerbit', 'Penerbit', ['penerbit', 'lembaga', 'issuer'], 'Internal')] },
+  { key: 'data_pribadi', label: 'Data pribadi karyawan', perm: 'hr.manage', note: 'Hanya kolom yang diisi yang diperbarui. Data ini hanya terlihat oleh HRGA dan karyawan ybs.', fields: [
+    f('nrp', 'NRP', ['nrp', 'no karyawan'], 'BSB-0123', { required: true }),
+    f('nik', 'NIK KTP', ['nik', 'nik ktp', 'no ktp', 'ktp'], '6471010101900001'),
+    f('tempat_lahir', 'Tempat lahir', ['tempat lahir', 'tmp lahir'], 'Balikpapan'),
+    f('tgl_lahir', 'Tgl lahir', ['tgl lahir', 'tanggal lahir', 'birth date'], '1990-01-01', { date: true }),
+    f('jenis_kelamin', 'Jenis kelamin', ['jenis kelamin', 'jk', 'gender', 'l/p'], 'L'),
+    f('agama', 'Agama', ['agama'], 'Islam'),
+    f('ptkp', 'Status PTKP', ['ptkp', 'status ptkp', 'status pajak'], 'K/1'),
+    f('pendidikan', 'Pendidikan', ['pendidikan', 'pendidikan terakhir'], 'SMA'),
+    f('alamat', 'Alamat KTP', ['alamat', 'alamat ktp'], 'Jl. ...'),
+    f('no_hp', 'No. HP', ['no hp', 'hp', 'telepon', 'no telp'], '0812...'),
+    f('npwp', 'NPWP', ['npwp'], ''),
+    f('bpjs_tk', 'BPJS TK', ['bpjs tk', 'bpjs ketenagakerjaan', 'no bpjs tk'], ''),
+    f('bpjs_kes', 'BPJS Kesehatan', ['bpjs kes', 'bpjs kesehatan', 'no bpjs kes'], ''),
+    f('bank', 'Bank', ['bank', 'nama bank'], 'Mandiri'),
+    f('no_rekening', 'No. rekening', ['no rekening', 'rekening', 'no rek'], ''),
+    f('nama_rekening', 'Nama rekening', ['nama rekening', 'atas nama'], ''),
+    f('kontak_darurat', 'Kontak darurat', ['kontak darurat', 'nama darurat'], ''),
+    f('hp_darurat', 'HP darurat', ['hp darurat', 'telp darurat'], '')] },
+  { key: 'kontrak', label: 'Kontrak kerja', perm: 'hr.manage', note: 'Jenis: PKWT, PKWTT, percobaan, subkon. Status kerja karyawan ikut kontrak terbaru.', fields: [
+    f('nrp', 'NRP', ['nrp', 'no karyawan'], 'BSB-0123', { required: true }),
+    f('jenis', 'Jenis', ['jenis', 'jenis kontrak', 'status'], 'PKWT', { required: true }),
+    f('no_kontrak', 'No. kontrak', ['no kontrak', 'nomor kontrak', 'no pkwt'], 'PKWT/001/2026'),
+    f('mulai', 'Mulai', ['mulai', 'tgl mulai', 'awal kontrak'], '2026-01-01', { required: true, date: true }),
+    f('berakhir', 'Berakhir', ['berakhir', 'tgl berakhir', 'akhir kontrak', 'selesai'], '2026-12-31', { date: true }),
+    f('catatan', 'Catatan', ['catatan', 'keterangan'], '')] },
+  { key: 'organisasi', label: 'Atasan langsung & data organisasi', perm: 'hr.manage', note: 'Atasan diisi NRP atasan langsung; dipakai untuk struktur organisasi dan persetujuan cuti/lembur.', fields: [
+    f('nrp', 'NRP', ['nrp', 'no karyawan'], 'BSB-0123', { required: true }),
+    f('atasan', 'NRP atasan', ['atasan', 'nrp atasan', 'atasan langsung', 'supervisor'], 'BSB-0010'),
+    f('golongan', 'Golongan', ['golongan', 'grade', 'level'], 'G3'),
+    f('pola_roster', 'Pola roster', ['pola roster', 'roster', 'pola kerja'], '10/4'),
+    f('poh', 'Point of hire', ['poh', 'point of hire', 'asal penerimaan'], 'Balikpapan'),
+    f('site', 'Kode site', ['site', 'kode site', 'lokasi'], 'BDA')] },
+  { key: 'idcard', label: 'ID card & akses site', perm: 'hr.manage', note: 'Area dipisah koma: OFFICE, MESS, WORKSHOP, PIT, HAULING, PORT, FUEL. Karyawan wajib punya induksi & MCU fit yang berlaku.', fields: [
+    f('nrp', 'NRP', ['nrp', 'no karyawan'], 'BSB-0123', { required: true }),
+    f('no_kartu', 'No. kartu', ['no kartu', 'nomor kartu', 'no id card', 'id card'], 'IDC-0123', { required: true }),
+    f('area', 'Area', ['area', 'akses', 'area akses'], 'OFFICE, MESS, PIT'),
+    f('berlaku_sampai', 'Berlaku sampai', ['berlaku sampai', 'masa berlaku', 'expired'], '2027-06-30', { date: true })] },
   { key: 'unit', label: 'Unit / sarana', perm: 'plant.manage', note: 'No. unit yang sudah ada diperbarui. Jenis: DT, LV, ST, FT, WT, BUS, EXC, OTHER.', fields: [
     f('no_unit', 'No. unit', ['no unit', 'no lambung', 'unit', 'kode unit'], 'DT-21', { required: true }),
     f('jenis', 'Jenis', ['jenis', 'tipe unit', 'type'], 'DT', { required: true }),

@@ -107,3 +107,78 @@ export async function processGa(_: ActionState, f: FormData) {
 export async function cancelGa(_: ActionState, f: FormData) {
   return run('/hrga/ga', 'Permintaan dibatalkan', () => rpc('ga_request_cancel', { p_id: str(f, 'id') }));
 }
+
+// ---------------------------------------------------------------- HRIS: Core HR
+const PRIVATE_KEYS = ['nik', 'kk_no', 'birth_place', 'birth_date', 'gender', 'religion', 'marital_status', 'ptkp_status', 'blood_type', 'address_ktp',
+  'address_domicile', 'phone', 'personal_email', 'emergency_name', 'emergency_relation', 'emergency_phone', 'education_level', 'education_major',
+  'npwp', 'bpjs_tk_no', 'bpjs_kes_no', 'bank_name', 'bank_account', 'bank_holder', 'uniform_size', 'shoe_size'];
+const pick = (f: FormData) => Object.fromEntries(PRIVATE_KEYS.filter(k => f.has(k)).map(k => [k, String(f.get(k) ?? '').trim()]));
+const emp = (f: FormData) => `/hrga/${str(f, 'employee')}`;
+
+export async function saveOrg(_: ActionState, f: FormData) {
+  return run(emp(f), 'Data organisasi disimpan', () => rpc('employee_org_save', {
+    p_employee: str(f, 'employee'), p_supervisor: str(f, 'supervisor'), p_site: str(f, 'site'), p_grade: str(f, 'grade'),
+    p_roster_pattern: str(f, 'roster_pattern'), p_point_of_hire: str(f, 'poh'),
+  }));
+}
+
+export async function savePrivate(_: ActionState, f: FormData) {
+  return run(emp(f), 'Data pribadi disimpan', () => rpc('employee_private_save', { p_employee: str(f, 'employee'), p_data: pick(f) }));
+}
+
+export async function saveMyPrivate(_: ActionState, f: FormData) {
+  return run('/saya', 'Data Anda diperbarui', () => rpc('my_private_update', { p_data: pick(f) }));
+}
+
+export async function addContract(_: ActionState, f: FormData) {
+  return run(emp(f), 'Kontrak dicatat', () => rpc('contract_add', {
+    p_employee: str(f, 'employee'), p_type: str(f, 'type'), p_no: str(f, 'no'), p_start: str(f, 'start'), p_end: str(f, 'end'), p_note: str(f, 'note'),
+  }));
+}
+
+export async function moveEmployee(_: ActionState, f: FormData) {
+  return run(emp(f), 'Perubahan dicatat di riwayat', () => rpc('employee_move', {
+    p_employee: str(f, 'employee'), p_effective: str(f, 'date'), p_kind: str(f, 'kind'), p_department: str(f, 'department'),
+    p_section: str(f, 'section'), p_position: str(f, 'position'), p_employment_type: str(f, 'type'), p_reason: str(f, 'reason'), p_reference: str(f, 'ref'),
+  }));
+}
+
+export async function setCompetencyDetail(_: ActionState, f: FormData) {
+  return run(emp(f), 'Disimpan', () => rpc('employee_competency_detail', {
+    p_id: str(f, 'id'), p_fitness: str(f, 'fitness'), p_fitness_note: str(f, 'note'), p_license_class: str(f, 'class'),
+  }));
+}
+
+export async function issueIdCard(_: ActionState, f: FormData) {
+  return run(emp(f), 'ID card diterbitkan', () => rpc('id_card_issue', {
+    p_employee: str(f, 'employee'), p_card_no: str(f, 'card_no'), p_areas: f.getAll('areas').map(String), p_valid_until: str(f, 'valid_until'),
+  }));
+}
+
+export async function setIdCardStatus(_: ActionState, f: FormData) {
+  return run(emp(f), 'Status kartu diperbarui', () => rpc('id_card_status', { p_id: str(f, 'id'), p_status: str(f, 'status'), p_note: str(f, 'note') }));
+}
+
+export async function createMobilization(_: ActionState, f: FormData) {
+  return run(emp(f), 'Checklist dibuat', () => rpc('mobilization_create', {
+    p_employee: str(f, 'employee'), p_kind: str(f, 'kind'), p_date: str(f, 'date'), p_note: str(f, 'note'),
+  }));
+}
+
+export async function checkMobilization(_: ActionState, f: FormData) {
+  return run(emp(f), 'Diperbarui', () => rpc('mobilization_check', { p_id: str(f, 'id'), p_key: str(f, 'key'), p_done: str(f, 'done') === 'true' }));
+}
+
+export async function completeMobilization(_: ActionState, f: FormData) {
+  return run(emp(f), 'Checklist selesai', () => rpc('mobilization_complete', { p_id: str(f, 'id') }));
+}
+
+export async function cancelMobilization(_: ActionState, f: FormData) {
+  return run(emp(f), 'Checklist dibatalkan', () => rpc('mobilization_cancel', { p_id: str(f, 'id'), p_reason: str(f, 'reason') }));
+}
+
+export async function setMpp(_: ActionState, f: FormData) {
+  return run('/hrga/organisasi', 'MPP disimpan', () => rpc('mpp_set', {
+    p_year: num(f, 'year'), p_position: str(f, 'position'), p_planned: num(f, 'planned'), p_note: str(f, 'note'),
+  }));
+}
