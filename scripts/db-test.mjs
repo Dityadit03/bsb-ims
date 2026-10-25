@@ -2057,6 +2057,45 @@ await test('push: klaim dan penyelesaian antrean hanya untuk service_role; 3 kal
   eq((await db.query(`select status from public.notification_outbox where id = $1`, [id])).rows[0].status, 'failed');
   eq((await db.query(`select count(*)::int c from public.push_subscriptions where endpoint = 'https://push.example/dead'`)).rows[0].c, 0);
 });
+await test('whatsapp: nomor dari data HRGA, wajib opt-in, saklar utama, jenis terbatas, klaim hanya service_role', async () => {
+  eq((await db.query(`select app.wa_normalize('0812-3456-7890') n, app.wa_normalize('+62 811 222 333') m, app.wa_normalize('123') x`)).rows[0].n, '6281234567890');
+  eq((await db.query(`select app.wa_normalize('+62 811 222 333') m`)).rows[0].m, '62811222333');
+  eq((await db.query(`select app.wa_normalize('123') x`)).rows[0].x, null);
+  // akun tanpa karyawan tertaut / tanpa nomor ditolak
+  await expectError('22023', () => as(db, outsiderId, `select public.whatsapp_optin()`));
+  const emp = (await db.query(`select id from public.employees where profile_id = $1`, [opUser])).rows[0];
+  if (!emp) throw new Error('opUser tidak tertaut karyawan');
+  {
+    await db.query(`insert into public.employee_private(employee_id, phone) values ($1, '0812-0000-1111') on conflict (employee_id) do update set phone = excluded.phone`, [emp.id]);
+    await as(db, opUser, `select public.whatsapp_optin()`);
+    eq((await as(db, opUser, `select public.whatsapp_status() s`)).rows[0].s.number_hint, '…111');
+    const cnt = async () => (await db.query(`select count(*)::int c from public.notification_outbox where channel = 'whatsapp'`)).rows[0].c;
+    await db.query(`insert into public.notifications(user_id, kind, title) values ($1, 'workflow.task', 'A')`, [opUser]);
+    eq(await cnt(), 0, 'saklar utama mati');
+    await db.query(`update public.app_settings set value = 'true'::jsonb where key = 'whatsapp_enabled'`);
+    await db.query(`insert into public.notifications(user_id, kind, title) values ($1, 'workflow.result', 'B'), ($1, 'workflow.task', 'C')`, [opUser]);
+    eq(await cnt(), 1, 'hanya jenis yang diizinkan');
+    await expectError('42501', () => as(db, opUser, `select public.dispatch_claim_whatsapp(5)`));
+    await db.query('begin');
+    await db.query(`select set_config('request.jwt.claims', '{"role":"service_role"}', true)`);
+    await db.query('set local role service_role');
+    const c = (await db.query(`select public.dispatch_claim_whatsapp(5) c`)).rows[0].c;
+    await db.query('commit');
+    eq(c.length, 1); eq(c[0].title, 'C');
+    eq(c[0].phone, null, 'karyawan sudah keluar -> tidak ada nomor, pengirim akan skip');
+    await db.query(`update public.notification_outbox set status = 'pending', attempts = 0`);
+    await db.query(`update public.employees set status = 'active' where id = $1`, [emp.id]);
+    await db.query('begin');
+    await db.query(`select set_config('request.jwt.claims', '{"role":"service_role"}', true)`);
+    await db.query('set local role service_role');
+    const c2 = (await db.query(`select public.dispatch_claim_whatsapp(5) c`)).rows[0].c;
+    await db.query('commit');
+    eq(c2[0].phone, '6281200001111');
+    await as(db, opUser, `select public.whatsapp_optout()`);
+    await db.query(`insert into public.notifications(user_id, kind, title) values ($1, 'workflow.task', 'D')`, [opUser]);
+    eq(await cnt(), 1, 'setelah opt-out tidak ada antrean baru');
+  }
+});
 await test('pengguna tanpa audit.read tidak melihat audit log', async () => {
   eq((await as(db, staffId, `select 1 from public.audit_logs`)).rowCount, 0);
 });

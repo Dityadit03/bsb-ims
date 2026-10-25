@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { NAV } from '@/lib/modules';
 import type { Alert } from '@/lib/alerts';
-import { PushToggle } from './push-toggle';
+import { PushToggle, WhatsappToggle } from './push-toggle';
 import { forgetDevice } from '@/lib/push';
 
 // Aksi yang paling sering dipakai di lapangan, selalu terlihat di bawah layar HP
@@ -164,6 +164,7 @@ export function Sidebar({ permissions, name, email, role, unit, alerts, alertTot
                   </span>
                 </div>
                 <PushToggle />
+                <WhatsappToggle />
                 <div className={row}>
                   <span className="grid"><span className="text-sm font-medium">Tautan Google Drive</span><span className="text-xs text-muted">Link Form / Sheet / Drive di Pusat Data</span></span>
                   <Link href="/pusat-data" className={small}>Atur tautan</Link>
