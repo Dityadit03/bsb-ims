@@ -2165,6 +2165,15 @@ await test('lokasi rak: hanya gudang yang mengatur; format dibatasi; tampil di s
   await as(db, logStaff, `select public.material_location_set($1, '')`, [m.id]);
   eq((await as(db, spvPlt, `select location from public.material_stock where id = $1`, [m.id])).rows[0].location, null);
 });
+await test('rekonsiliasi downtime: WO breakdown vs penundaan produksi menandai selisih', async () => {
+  const r = (await as(db, spvPlt, `select count(*)::int c from public.downtime_reconcile where flag is not null`)).rows[0];
+  eq(typeof r.c, 'number');
+  const all = (await as(db, spvPlt, `select unit_no, wo_hours::float w, production_hours::float p, gap_hours::float g, flag from public.downtime_reconcile`)).rows;
+  for (const x of all) {
+    eq(Math.abs(x.g - (x.w - x.p)) < 0.11, true, 'selisih konsisten');
+    if (x.g > 4) eq(x.flag, 'wo_not_in_production'); else if (-x.g > 2) eq(x.flag, 'production_without_wo'); else eq(x.flag, null);
+  }
+});
 await test('pengguna tanpa audit.read tidak melihat audit log', async () => {
   eq((await as(db, staffId, `select 1 from public.audit_logs`)).rowCount, 0);
 });

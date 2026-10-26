@@ -21,13 +21,15 @@ export default async function UnitDetail({ params }: { params: Promise<{ id: str
   const supabase = await createClient();
   const { data: u } = await supabase.from('units').select('*').eq('id', id).maybeSingle<Unit>();
   if (!u) notFound();
-  const [{ data: wos }, { data: plans }, { data: pa }, { data: p2h }] = await Promise.all([
+  const [{ data: wos }, { data: plans }, { data: pa }, { data: p2h }, { data: tyres }] = await Promise.all([
     supabase.from('work_order_register').select('id, wo_no, wo_type, priority, description, status, reported_at, downtime_hours').eq('unit_id', id)
       .order('reported_at', { ascending: false }).limit(30),
     supabase.from('pm_plans').select('id, task, interval_hm, last_service_hm, last_service_at').eq('unit_id', id).eq('active', true).order('task'),
     supabase.from('unit_availability').select('pa_30d, breakdown_hours_30d').eq('unit_id', id).maybeSingle(),
     supabase.from('p2h_checks').select('id, p2h_no, check_date, shift, conclusion, hour_meter').eq('unit_no', u.unit_no)
       .order('check_date', { ascending: false }).limit(10),
+    supabase.from('tyre_status').select('tyre_id, tyre_no, position, last_rtd_mm, usable_pct, alert, brand').eq('unit_id', id).eq('status', 'installed').order('position')
+      .returns<{ tyre_id: string; tyre_no: string; position: string; last_rtd_mm: number | null; usable_pct: number | null; alert: string | null; brand: string | null }[]>(),
   ]);
   const manage = s.can('plant.manage');
 
@@ -55,6 +57,20 @@ export default async function UnitDetail({ params }: { params: Promise<{ id: str
               </Table>
             ) : <p className="text-sm text-muted">Belum ada work order.</p>}
           </Panel>
+          {tyres && tyres.length > 0 && (
+            <Panel title="Ban terpasang" sub="Warna menurut sisa alur: hijau baik, oranye segera ganti, merah di batas buang.">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {tyres.map(t => (
+                  <Link key={t.tyre_id} href={`/plant/ban?status=installed`} className={`rounded-xl border p-2 text-center text-sm ${
+                    t.alert === 'replace' ? 'border-crit/50 bg-crit/10' : t.alert === 'soon' ? 'border-warn/50 bg-warn/10' : 'border-line bg-panel'}`}>
+                    <div className="font-mono text-base font-bold">{t.position}</div>
+                    <div className="tabular text-xs">{t.last_rtd_mm ?? '–'} mm</div>
+                    <div className="truncate text-[11px] text-muted">{t.tyre_no}</div>
+                  </Link>
+                ))}
+              </div>
+            </Panel>
+          )}
           {u.status !== 'retired' && s.can('plant.report') && (
             <Panel title={manage ? 'Buat work order' : 'Laporkan kerusakan'}>
               <ActionForm action={createWo} label="Buat WO" primary hidden={{ unit: u.id, idem: randomUUID(), ...(manage ? {} : { type: 'breakdown' }) }}>

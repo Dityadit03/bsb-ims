@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { PageHeader, Pill, Stat, Table } from '@/components/ui';
+import { PageHeader, Panel, Pill, Stat, Table } from '@/components/ui';
 import { createClient } from '@/lib/supabase/server';
 import { PlantTabs } from '../tabs';
 
@@ -8,12 +8,17 @@ export const metadata = { title: 'Produktivitas unit' };
 type Row = { unit_id: string; unit_no: string; unit_type: string; shifts: number; trips: number; tonnage: number; hm_worked: number; ton_per_hm: number | null;
   delay_hours: number; fuel_liters: number; l_per_ton: number | null };
 
+type Rec = { unit_id: string; unit_no: string; wo_hours: number; production_hours: number; gap_hours: number; flag: string };
+
 const n0 = (n: number | string) => Number(n).toLocaleString('id-ID', { maximumFractionDigits: 0 });
 const n1 = (n: number | string | null) => (n == null ? '–' : Number(n).toLocaleString('id-ID', { maximumFractionDigits: 1 }));
 
 export default async function ProductivityPage() {
   const supabase = await createClient();
-  const { data } = await supabase.from('unit_productivity').select('*').returns<Row[]>();
+  const [{ data }, { data: rec }] = await Promise.all([
+    supabase.from('unit_productivity').select('*').returns<Row[]>(),
+    supabase.from('downtime_reconcile').select('*').not('flag', 'is', null).order('gap_hours', { ascending: false }).returns<Rec[]>(),
+  ]);
   const all = (data ?? []).filter(r => r.unit_type === 'DT' || r.trips > 0);
   const active = all.filter(r => r.trips > 0).sort((a, b) => Number(b.tonnage) - Number(a.tonnage));
   const idle = all.filter(r => r.trips === 0);
@@ -54,6 +59,20 @@ export default async function ProductivityPage() {
           })}
         </Table>
       ) : <p className="text-sm text-muted">Belum ada laporan produksi yang dikirim untuk 30 hari terakhir.</p>}
+      {rec && rec.length > 0 && (
+        <Panel title="Rekonsiliasi downtime" sub="Jam breakdown menurut WO Plant dibanding penundaan 'breakdown' di laporan produksi (30 hari). Selisih besar berarti salah satu pihak belum mencatat.">
+          <Table head={['Unit', 'Jam WO', 'Jam laporan produksi', 'Selisih', 'Catatan']}>
+            {rec.map(r => (
+              <tr key={r.unit_id}>
+                <td className="font-mono text-xs"><Link href={`/plant/${r.unit_id}`} className="font-medium hover:text-accent">{r.unit_no}</Link></td>
+                <td className="tabular text-xs">{n1(r.wo_hours)}</td><td className="tabular text-xs">{n1(r.production_hours)}</td>
+                <td className="tabular text-xs">{n1(r.gap_hours)}</td>
+                <td><Pill tone="warn">{r.flag === 'wo_not_in_production' ? 'WO ada, penundaan produksi belum dicatat' : 'Penundaan tercatat, WO belum dibuat'}</Pill></td>
+              </tr>
+            ))}
+          </Table>
+        </Panel>
+      )}
       {idle.length > 0 && (
         <p className="text-sm text-muted">Dump truck tanpa trip 30 hari: {idle.map(r => r.unit_no).join(', ')}.</p>
       )}
