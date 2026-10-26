@@ -23,7 +23,7 @@ export async function proxy(request: NextRequest) {
   if (!data?.claims && !PUBLIC_PATHS.some(p => path.startsWith(p))) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    url.search = path === '/' ? '' : `?next=${encodeURIComponent(path)}`;
+    url.search = path === '/' ? '' : `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
     return NextResponse.redirect(url);
   }
   return response;

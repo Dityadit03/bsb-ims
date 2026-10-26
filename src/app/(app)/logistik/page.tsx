@@ -5,13 +5,13 @@ import { PageHeader, Panel, Pill, Stat, Table, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { CATEGORY, qty, rp } from '@/lib/logistics';
-import { issueFuel, opname, receiveGoods, saveMaterial, savePlanning } from './actions';
+import { issueFuel, opname, receiveGoods, saveLocation, saveMaterial, savePlanning } from './actions';
 import { LogTabs } from './tabs';
 
 export const metadata = { title: 'Logistik' };
 
 type Row = { id: string; code: string; name: string; category: string; uom: string; min_stock: number; stock_qty: number;
-  avg_cost: number; stock_value: number; low_stock: boolean; active: boolean };
+  avg_cost: number; stock_value: number; low_stock: boolean; active: boolean; location: string | null };
 
 type Plan = { material_id: string; critical: boolean; lead_time_days: number; daily_use: number; cover_days: number | null; reorder_point: number;
   suggested_qty: number; reorder_now: boolean; reserved_qty: number; abc: 'A' | 'B' | 'C'; on_order: number };
@@ -36,7 +36,7 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
   const reorderCount = (plan ?? []).filter(p => p.reorder_now).length;
   const criticalLow = (plan ?? []).filter(p => p.critical && p.reorder_now).length;
   const term = (sp.q ?? '').toLowerCase();
-  const shown = term ? all.filter(r => `${r.code} ${r.name}`.toLowerCase().includes(term)) : all;
+  const shown = term ? all.filter(r => `${r.code} ${r.name} ${r.location ?? ''}`.toLowerCase().includes(term)) : all;
   const fuels = base.filter(r => r.category === 'fuel' || r.category === 'lubricant');
   const wh = s.canIn('log.warehouse', 'LOG');
 
@@ -52,7 +52,7 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
         <Stat label="MR siap dikeluarkan" value={mrOpen ?? 0} href="/logistik/mr?status=approved" />
       </div>
       <form className="flex flex-wrap gap-2">
-        <input name="q" type="search" defaultValue={sp.q ?? ''} placeholder="Cari kode / nama barang" className={`${input} !w-56`} />
+        <input name="q" type="search" defaultValue={sp.q ?? ''} placeholder="Cari kode / nama / rak" className={`${input} !w-56`} />
         <select name="kategori" defaultValue={sp.kategori ?? ''} className={`${input} !w-auto`} aria-label="Kategori">
           <option value="">Semua kategori</option>{Object.entries(CATEGORY).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
@@ -62,12 +62,12 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
         <button className="text-sm text-accent">Saring</button>
       </form>
       {shown.length ? (
-        <Table head={['Kode', 'Nama', 'Kategori', 'Stok', 'Hari cukup', 'ROP', 'Usulan pesan', 'ABC', 'Nilai']}>
+        <Table head={['Kode', 'Nama', 'Rak', 'Stok', 'Hari cukup', 'ROP', 'Usulan pesan', 'ABC', 'Nilai']}>
           {shown.map(r => (
             <tr key={r.id}>
               <td className="font-mono text-xs">{r.code}</td>
               <td className="text-sm">{r.name}</td>
-              <td className="text-xs">{CATEGORY[r.category]}</td>
+              <td className="font-mono text-xs">{r.location ?? <span className="text-muted">–</span>}<span className="block font-sans text-[11px] text-muted">{CATEGORY[r.category]}</span></td>
               <td className="tabular text-xs">{r.low_stock ? <Pill tone="crit">{qty(r.stock_qty)} {r.uom}</Pill> : `${qty(r.stock_qty)} ${r.uom}`}{Number(pm.get(r.id)?.reserved_qty) > 0 && <span className="block text-[11px] text-muted">dicadangkan {qty(pm.get(r.id)!.reserved_qty)}</span>}</td>
               <td className="tabular text-xs">{pm.get(r.id)?.cover_days != null ? `${pm.get(r.id)!.cover_days} hr` : '–'}</td>
               <td className="tabular text-xs">{qty(pm.get(r.id)?.reorder_point ?? r.min_stock)}</td>
@@ -118,6 +118,16 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
               <select name="material" required className={input} aria-label="Barang">{base.map(m => <option key={m.id} value={m.id}>{m.code} · {m.name}</option>)}</select>
               <label className="grid gap-1 text-xs">Lead time (hari)<input type="number" name="lead" min={0} max={365} defaultValue={7} className={input} /></label>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="critical" /> Suku cadang kritis</label>
+            </div>
+          </ActionForm>
+        </Panel>
+      )}
+      {wh && (
+        <Panel title="Lokasi rak" sub="Kode rak / bin tempat barang disimpan, mis. R2-B03. Kosongkan untuk menghapus.">
+          <ActionForm action={saveLocation} label="Simpan lokasi" className="max-w-3xl">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <select name="material" required className={input} aria-label="Barang">{base.map(m => <option key={m.id} value={m.id}>{m.code} · {m.name}{m.location ? ` (${m.location})` : ''}</option>)}</select>
+              <input name="location" maxLength={24} className={`${input} uppercase`} placeholder="R2-B03" />
             </div>
           </ActionForm>
         </Panel>

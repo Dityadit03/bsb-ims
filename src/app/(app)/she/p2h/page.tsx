@@ -45,10 +45,10 @@ export default async function P2hPage({ searchParams }: { searchParams: Promise<
               <label className="grid gap-1 text-sm">Tanggal<input type="date" name="date" required defaultValue={today()} max={today()} className={input} /></label>
               <label className="grid gap-1 text-sm">Shift<select name="shift" className={input}><option value="1">Shift 1</option><option value="2">Shift 2</option></select></label>
               <DeptSelect depts={depts} value={s.profile.department_id} />
-              <label className="grid gap-1 text-sm">No. lambung unit<input name="unit" required list="unit-list" autoComplete="off" className={`${input} uppercase`} placeholder="mis. DTS-7011" />
+              <label className="grid gap-1 text-sm">No. lambung unit<input name="unit" required list="unit-list" autoComplete="off" defaultValue={(sp.unit ?? '').toUpperCase()} className={`${input} uppercase`} placeholder="mis. DTS-7011" />
                 <datalist id="unit-list">{(units ?? []).map(u => <option key={u.unit_no} value={u.unit_no}>{u.unit_type}</option>)}</datalist></label>
               <label className="grid gap-1 text-sm">Jenis unit
-                <select name="unit_type" className={input}>{Object.entries(UNIT_TYPE).map(([k, l]) => <option key={k} value={k}>{k} · {l}</option>)}</select>
+                <select name="unit_type" defaultValue={(units ?? []).find(u => u.unit_no === (sp.unit ?? '').toUpperCase())?.unit_type ?? 'DT'} className={input}>{Object.entries(UNIT_TYPE).map(([k, l]) => <option key={k} value={k}>{k} · {l}</option>)}</select>
               </label>
               <label className="grid gap-1 text-sm">HM / KM<input type="number" name="hm" min={0} step="0.1" className={input} /></label>
             </div>

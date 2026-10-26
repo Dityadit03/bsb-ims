@@ -33,6 +33,10 @@ export async function savePlanning(_: ActionState, f: FormData) {
   }));
 }
 
+export async function saveLocation(_: ActionState, f: FormData) {
+  return run('/logistik', 'Lokasi rak disimpan', () => rpc('material_location_set', { p_material: str(f, 'material'), p_location: str(f, 'location') }));
+}
+
 export async function receiveGoods(_: ActionState, f: FormData) {
   return run('/logistik', 'Penerimaan dicatat', () => rpc('goods_receive', {
     p_material: str(f, 'material'), p_supplier: str(f, 'supplier'), p_qty: num(f, 'qty'), p_unit_cost: num(f, 'cost'),

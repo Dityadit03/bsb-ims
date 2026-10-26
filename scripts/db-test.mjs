@@ -2156,6 +2156,15 @@ await test('reservasi: MR disetujui belum keluar mengurangi stok tersedia; WO me
   await db.query(`update public.materials set stock_qty = 4 where id = $1`, [m.id]);
   eq((await as(db, spvPlt, `select short from public.wo_parts where wo_id = $1`, [wo.id])).rows[0].short, true);
 });
+await test('lokasi rak: hanya gudang yang mengatur; format dibatasi; tampil di stok', async () => {
+  const m = (await db.query(`select id from public.materials where code = 'RSV-TEST'`)).rows[0];
+  await expectError('42501', async () => as(db, spvPlt, `select public.material_location_set($1, 'R1-B01')`, [m.id]));
+  await expectError('23514', async () => as(db, logStaff, `select public.material_location_set($1, '<script>')`, [m.id]));
+  await as(db, logStaff, `select public.material_location_set($1, ' r2-b03 ')`, [m.id]);
+  eq((await as(db, spvPlt, `select location from public.material_stock where id = $1`, [m.id])).rows[0].location, 'R2-B03');
+  await as(db, logStaff, `select public.material_location_set($1, '')`, [m.id]);
+  eq((await as(db, spvPlt, `select location from public.material_stock where id = $1`, [m.id])).rows[0].location, null);
+});
 await test('pengguna tanpa audit.read tidak melihat audit log', async () => {
   eq((await as(db, staffId, `select 1 from public.audit_logs`)).rowCount, 0);
 });

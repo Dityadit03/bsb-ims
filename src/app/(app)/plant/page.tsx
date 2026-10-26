@@ -38,7 +38,7 @@ export default async function PlantPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader eyebrow="SMKP 4.4 · Sarana, prasarana, instalasi & peralatan" title="Unit & work order">
-        <ExportLinks dataset="unit" />
+        <span className="flex items-center gap-3"><Link href="/plant/qr" className="text-sm text-accent">Stiker QR</Link><ExportLinks dataset="unit" /></span>
       </PageHeader>
       <PlantTabs active="/plant" />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">

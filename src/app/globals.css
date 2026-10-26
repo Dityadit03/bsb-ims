@@ -71,3 +71,9 @@ h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; letter-spacin
   box-shadow: 0 1px 2px rgb(30 20 51 / 0.05), 0 4px 16px -8px rgb(30 20 51 / 0.12);
   @media (prefers-color-scheme: dark) { box-shadow: none; }
 }
+
+/* Cetak (stiker QR, dll.): sembunyikan bilah atas, menu, aksi cepat, dan penanda antrean offline */
+@media print {
+  body > * header, body > * aside, body > * nav, [aria-label="Aksi cepat"] { display: none !important; }
+  body { background: #fff !important; }
+}
