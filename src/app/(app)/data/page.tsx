@@ -34,7 +34,7 @@ export default async function DataPage() {
                 <td className="font-mono text-xs">…{t.hint}</td>
                 <td className="text-xs">{fmtDateTime(t.created_at)}</td>
                 <td className="text-xs">{t.last_used_at ? fmtDateTime(t.last_used_at) : 'Belum'}</td>
-                <td>{t.revoked_at ? <Pill>Dicabut</Pill> : <ActionForm action={revokeFeedToken} label="Cabut" hidden={{ id: t.id }} />}</td>
+                <td>{t.revoked_at ? <Pill>Dicabut</Pill> : <ActionForm action={revokeFeedToken} label="Cabut" confirm="Cabut token ini? Spreadsheet yang memakainya akan berhenti." hidden={{ id: t.id }} />}</td>
               </tr>
             ))}
           </Table>

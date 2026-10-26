@@ -105,7 +105,7 @@ export default async function WoDetail({ params }: { params: Promise<{ id: strin
           )}
           {open && s.can('plant.manage') && (
             <Panel title="Batalkan">
-              <ActionForm action={cancelWo} label="Batalkan WO" hidden={{ id: w.id }}>
+              <ActionForm action={cancelWo} label="Batalkan WO" confirm="Batalkan work order ini?" hidden={{ id: w.id }}>
                 <input name="reason" required className={input} placeholder="Alasan pembatalan" />
               </ActionForm>
             </Panel>

@@ -75,7 +75,7 @@ async function Materials({ id, supabase }: { id: string; supabase: Client }) {
                   {m.url && <a href={m.url} target="_blank" rel="noreferrer" className="truncate text-xs text-violet hover:underline">{m.url}</a>}
                   {m.attachment_id && <a href={`/api/lampiran/${m.attachment_id}`} className="text-xs text-violet hover:underline">Buka berkas</a>}
                 </div>
-                <ActionForm action={deleteMaterial} label="Hapus" hidden={{ course: id, material: m.id }} />
+                <ActionForm action={deleteMaterial} label="Hapus" confirm="Hapus materi ini?" hidden={{ course: id, material: m.id }} />
               </li>
             ))}
           </ol>
@@ -110,7 +110,7 @@ async function Questions({ id, supabase }: { id: string; supabase: Client }) {
                     {q.options.map((o, k) => <li key={k} className={k + 1 === q.answer ? 'font-semibold text-ok' : 'text-muted'}>{LETTERS[k]}. {o}{k + 1 === q.answer && ' ✓'}</li>)}
                   </ul>
                 </div>
-                <ActionForm action={deleteQuestion} label="Hapus" hidden={{ course: id, question: q.id }} />
+                <ActionForm action={deleteQuestion} label="Hapus" confirm="Hapus soal ini?" hidden={{ course: id, question: q.id }} />
               </li>
             ))}
           </ol>

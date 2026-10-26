@@ -59,7 +59,7 @@ export default async function AuditDetail({ params }: { params: Promise<{ id: st
                           <span className="text-crit">Belum ada action plan</span>
                           {s.can('capa.create') && <Link className="text-accent" href={`/capa/baru?tabel=audit_findings&sid=${f.id}&sumber=audit&ref=${encodeURIComponent(f.finding_ref)}&clause=${f.clause_id}&dept=${f.department_id}`}>Buat action plan →</Link>}
                         </> : null}
-                      {member && a.status === 'in_progress' && <ActionForm action={removeFinding} label="Hapus" hidden={{ id: a.id, finding: f.id }} />}
+                      {member && a.status === 'in_progress' && <ActionForm action={removeFinding} label="Hapus" confirm="Hapus temuan ini?" hidden={{ id: a.id, finding: f.id }} />}
                     </div>
                   </li>
                 ))}
@@ -82,7 +82,7 @@ export default async function AuditDetail({ params }: { params: Promise<{ id: st
           {lead && a.status === 'planned' && <Panel title="Mulai audit"><ActionForm action={startAudit} label="Mulai audit" primary hidden={{ id: a.id }} /></Panel>}
           {lead && a.status === 'in_progress' && (
             <Panel title="Terbitkan laporan">
-              <ActionForm action={reportAudit} label="Terbitkan laporan" primary hidden={{ id: a.id }}>
+              <ActionForm action={reportAudit} label="Terbitkan laporan" confirm="Terbitkan laporan audit? Setelah terbit temuan tidak bisa diubah." primary hidden={{ id: a.id }}>
                 <textarea name="summary" required rows={3} className={input} placeholder="Ringkasan hasil, kesimpulan pemenuhan, rekomendasi" />
                 <p className="text-xs text-muted">Setelah laporan terbit, temuan terkunci.</p>
               </ActionForm>
@@ -91,12 +91,12 @@ export default async function AuditDetail({ params }: { params: Promise<{ id: st
           {a.status === 'reported' && s.can('ia.manage') && !lead && (
             <Panel title="Tutup audit">
               {a.without_capa > 0 && <p className="text-sm text-crit">{a.without_capa} temuan mayor/minor belum punya action plan.</p>}
-              <ActionForm action={closeAudit} label="Tutup audit" primary hidden={{ id: a.id }} />
+              <ActionForm action={closeAudit} label="Tutup audit" confirm="Tutup audit ini?" primary hidden={{ id: a.id }} />
             </Panel>
           )}
           {['planned', 'in_progress'].includes(a.status) && s.can('ia.manage') && (
             <Panel title="Batalkan">
-              <ActionForm action={cancelAudit} label="Batalkan audit" hidden={{ id: a.id }}><input name="reason" required className={input} placeholder="Alasan" /></ActionForm>
+              <ActionForm action={cancelAudit} label="Batalkan audit" confirm="Batalkan audit ini?" hidden={{ id: a.id }}><input name="reason" required className={input} placeholder="Alasan" /></ActionForm>
             </Panel>
           )}
         </div>

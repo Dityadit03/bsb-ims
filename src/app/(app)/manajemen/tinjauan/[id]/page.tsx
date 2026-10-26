@@ -91,7 +91,7 @@ export default async function ReviewDetail({ params }: { params: Promise<{ id: s
           )}
           {r.status === 'held' && chair && (
             <Panel title="Tutup tinjauan">
-              <ActionForm action={closeReview} label="Tutup tinjauan" primary hidden={{ id: r.id }}>
+              <ActionForm action={closeReview} label="Tutup tinjauan" confirm="Tutup tinjauan manajemen ini?" primary hidden={{ id: r.id }}>
                 <textarea name="conclusion" required rows={3} className={input} placeholder="Kesimpulan kecukupan, kesesuaian dan efektivitas sistem" />
               </ActionForm>
             </Panel>

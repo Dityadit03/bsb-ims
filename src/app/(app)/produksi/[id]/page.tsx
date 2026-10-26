@@ -52,7 +52,7 @@ export default async function ReportDetail({ params }: { params: Promise<{ id: s
                     <td className="tabular text-xs">{t.trips}</td>
                     <td className="tabular text-xs">{ton(t.tonnage)}</td>
                     <td className="tabular text-xs">{t.hm_start ?? '–'} → {t.hm_end ?? '–'}</td>
-                    {edit && <td><ActionForm action={removeTrip} label="Hapus" hidden={{ ...h, id: t.id }} /></td>}
+                    {edit && <td><ActionForm action={removeTrip} label="Hapus" confirm="Hapus baris ritase ini?" hidden={{ ...h, id: t.id }} /></td>}
                   </tr>
                 ))}
               </Table>
@@ -81,7 +81,7 @@ export default async function ReportDetail({ params }: { params: Promise<{ id: s
                 {delays.map(d => (
                   <li key={d.id} className="flex items-center justify-between gap-2 border-b border-line py-1">
                     <span>{DELAY[d.category]} · {d.hours} jam{d.units ? ` · ${d.units.unit_no}` : ''}{d.note ? ` · ${d.note}` : ''}</span>
-                    {edit && <ActionForm action={removeDelay} label="Hapus" hidden={{ ...h, id: d.id }} />}
+                    {edit && <ActionForm action={removeDelay} label="Hapus" confirm="Hapus delay ini?" hidden={{ ...h, id: d.id }} />}
                   </li>
                 ))}
               </ul>

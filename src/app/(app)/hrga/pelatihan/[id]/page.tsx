@@ -36,7 +36,7 @@ export default async function TrainingDetail({ params }: { params: Promise<{ id:
       {t.competencies && <p className="text-sm text-muted">Peserta lulus mendapat kompetensi <b className="font-mono">{t.competencies.code}</b> · {t.competencies.name}</p>}
       <Panel title={`Peserta (${att?.length ?? 0})`}>
         {open && att?.length ? (
-          <ActionForm action={completeTraining} label="Tutup pelatihan & simpan hasil" primary hidden={{ training: t.id }}>
+          <ActionForm action={completeTraining} label="Tutup pelatihan & simpan hasil" confirm="Tutup pelatihan dan simpan hasil? Tidak bisa dibuka lagi." primary hidden={{ training: t.id }}>
             {att.map(a => (
               <div key={a.id} className="grid grid-cols-[2fr_1fr_1fr] items-center gap-2 text-sm">
                 <input type="hidden" name="employee" value={a.employee_id} />

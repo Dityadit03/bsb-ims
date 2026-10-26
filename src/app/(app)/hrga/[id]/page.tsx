@@ -285,7 +285,7 @@ export default async function EmployeeDetail({ params, searchParams }: { params:
                         </ActionForm></details>)}
                     {c.validity !== 'revoked' && c.validity !== 'expired' && (
                       <details><summary className="cursor-pointer text-xs text-muted">Cabut</summary>
-                        <ActionForm action={revokeCompetency} label="Cabut" hidden={{ id: c.id, employee: e.id }}>
+                        <ActionForm action={revokeCompetency} label="Cabut" confirm="Cabut kompetensi ini?" hidden={{ id: c.id, employee: e.id }}>
                           <input name="reason" required className={input} placeholder="Alasan pencabutan" /></ActionForm></details>)}
                   </td>}
                 </tr>
@@ -362,9 +362,9 @@ export default async function EmployeeDetail({ params, searchParams }: { params:
                 </ul>
                 {hr && m.status === 'open' && (
                   <div className="flex flex-wrap gap-2">
-                    <ActionForm action={completeMobilization} label="Selesaikan" primary hidden={{ id: m.id, employee: id }} />
+                    <ActionForm action={completeMobilization} label="Selesaikan" confirm="Selesaikan mobilisasi? Status karyawan akan berubah." primary hidden={{ id: m.id, employee: id }} />
                     <details><summary className="cursor-pointer text-xs text-muted">Batalkan</summary>
-                      <ActionForm action={cancelMobilization} label="Batalkan" hidden={{ id: m.id, employee: id }}><input name="reason" required className={input} placeholder="Alasan" /></ActionForm></details>
+                      <ActionForm action={cancelMobilization} label="Batalkan" confirm="Batalkan mobilisasi ini?" hidden={{ id: m.id, employee: id }}><input name="reason" required className={input} placeholder="Alasan" /></ActionForm></details>
                   </div>
                 )}
               </div>

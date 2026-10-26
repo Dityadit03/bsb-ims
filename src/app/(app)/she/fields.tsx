@@ -58,7 +58,7 @@ export function Files({ label = 'Foto / lampiran' }: { label?: string }) {
 const TABS = [
   ['/she', 'Ringkasan'], ['/she/hazard', 'Hazard'], ['/she/observasi', 'Observasi'], ['/she/inspeksi', 'Inspeksi'],
   ['/she/p2h', 'P2H'], ['/she/ftw', 'Fit to work'], ['/she/insiden', 'Insiden'], ['/she/risiko', 'Risk register'], ['/she/sap', 'SAP'],
-  ['/she/pelanggaran', 'Pelanggaran'], ['/she/induksi', 'Induksi'], ['/she/izin', 'Izin area'],
+  ['/she/toolbox', 'Toolbox talk'], ['/she/serah-terima', 'Serah terima'], ['/she/pelanggaran', 'Pelanggaran'], ['/she/induksi', 'Induksi'], ['/she/izin', 'Izin area'],
 ] as const;
 
 // Daftar karyawan aktif untuk isian "NRP · Nama" (dipakai bersama EmployeeInput)

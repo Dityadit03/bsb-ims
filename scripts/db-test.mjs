@@ -2174,6 +2174,20 @@ await test('rekonsiliasi downtime: WO breakdown vs penundaan produksi menandai s
     if (x.g > 4) eq(x.flag, 'wo_not_in_production'); else if (-x.g > 2) eq(x.flag, 'production_without_wo'); else eq(x.flag, null);
   }
 });
+await test('toolbox talk & serah terima shift: izin, peserta valid, penerima orang lain, sekali terima', async () => {
+  const emp = (await db.query(`select nrp from public.employees where status = 'active' order by nrp limit 2`)).rows.map(r => r.nrp);
+  await expectError('42501', async () => as(db, spvPlt, `select public.toolbox_record(current_date, 1, $1, 'APD', null, $2)`, [HSE, emp]));
+  await expectError('22023', async () => as(db, ownerId, `select public.toolbox_record(current_date, 1, $1, 'APD', null, $2)`, [HSE, []]));
+  await expectError('22023', async () => as(db, ownerId, `select public.toolbox_record(current_date, 1, $1, 'APD', null, $2)`, [HSE, ['XX.99.999']]));
+  const t = (await as(db, ownerId, `select (t).* from public.toolbox_record(current_date, 1, $1, ' Bahaya jalan licin ', 'Hujan', $2) t`, [HSE, [...emp, emp[0]]])).rows[0];
+  eq((await as(db, staffId, `select count(*)::int c from public.toolbox_attendees where talk_id = $1`, [t.id])).rows[0].c, emp.length);
+  const h = (await as(db, ownerId, `select (h).* from public.handover_submit(current_date, 1, $1, 'Pit A', 'Unit DT-01 selesai servis', 'Ganti ban DT-05', 'Jalan licin', null) h`, [HSE])).rows[0];
+  await expectError('42501', async () => as(db, ownerId, `select public.handover_ack($1)`, [h.id]));
+  await expectError('42501', async () => as(db, spvPlt, `select public.handover_ack($1)`, [h.id]));
+  await as(db, spvHse, `select public.handover_ack($1)`, [h.id]);
+  await expectError('23505', async () => as(db, spvHse, `select public.handover_ack($1)`, [h.id]));
+  eq((await as(db, staffId, `select received_by from public.shift_handovers where id = $1`, [h.id])).rows[0].received_by, spvHse);
+});
 await test('pengguna tanpa audit.read tidak melihat audit log', async () => {
   eq((await as(db, staffId, `select 1 from public.audit_logs`)).rowCount, 0);
 });

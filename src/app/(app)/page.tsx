@@ -80,6 +80,16 @@ export default async function HomePage() {
         </div>
       </header>
 
+      {s.can('she.report') && (
+        <nav aria-label="Aksi cepat" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {([['/she/p2h', 'P2H unit', '🚛'], ['/absen', 'Absen', '🕒'], ['/she/hazard', 'Lapor hazard', '⚠️'], ['/tugas', 'Tugas saya', '✅'], ['/she/toolbox', 'Toolbox talk', '🦺'], ['/she/serah-terima', 'Serah terima', '🔁']] as const).map(([href, label, icon]) => (
+            <Link key={href} href={href} className="flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl border border-line bg-panel p-3 text-center text-base font-semibold transition-colors hover:border-violet/60 active:bg-accent-soft">
+              <span aria-hidden className="text-2xl">{icon}</span>{label}
+            </Link>
+          ))}
+        </nav>
+      )}
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <Stat label="Karyawan aktif" value={num.format(empRows.length)} note={`${depts} departemen`} href="/hrga" />
         <Stat label="LTI" value={lti} tone={lti ? 'crit' : 'ok'} note={`${nearmiss} nearmiss · ${inc.length} insiden YTD`} href="/she/insiden" />

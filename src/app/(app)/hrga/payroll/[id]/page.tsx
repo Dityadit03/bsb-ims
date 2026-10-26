@@ -77,8 +77,8 @@ export default async function RunPage({ params, searchParams }: { params: Promis
           </dl>
           <div className="flex flex-wrap items-start gap-2">
             {manage && open && <ActionForm action={calculateRun} label={run.status === 'draft' ? 'Hitung gaji' : 'Hitung ulang'} primary={run.status === 'draft'} hidden={runId} />}
-            {approve && run.status === 'calculated' && <ActionForm action={approveRun} label="Setujui" primary hidden={runId} />}
-            {manage && run.status === 'approved' && !run.parallel && <ActionForm action={publishRun} label="Terbitkan slip ke karyawan" primary hidden={runId} />}
+            {approve && run.status === 'calculated' && <ActionForm action={approveRun} label="Setujui" confirm="Setujui penggajian periode ini?" primary hidden={runId} />}
+            {manage && run.status === 'approved' && !run.parallel && <ActionForm action={publishRun} label="Terbitkan slip ke karyawan" confirm="Terbitkan slip ke seluruh karyawan? Tidak bisa ditarik." primary hidden={runId} />}
             {(manage || approve) && run.status === 'approved' && (
               <details className="text-sm">
                 <summary className="cursor-pointer rounded-lg border border-line px-3.5 py-2 hover:border-violet/60">Buka ulang</summary>
@@ -88,7 +88,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
             {manage && run.status !== 'published' && run.status !== 'cancelled' && (
               <details className="text-sm">
                 <summary className="cursor-pointer rounded-lg border border-line px-3.5 py-2 hover:border-crit/60">Batalkan</summary>
-                <ActionForm action={cancelRun} label="Batalkan proses" hidden={runId} className="mt-2 w-64"><input name="reason" required placeholder="Alasan" className={input} /></ActionForm>
+                <ActionForm action={cancelRun} label="Batalkan proses" confirm="Batalkan proses penggajian ini?" hidden={runId} className="mt-2 w-64"><input name="reason" required placeholder="Alasan" className={input} /></ActionForm>
               </details>
             )}
           </div>
@@ -186,7 +186,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
                   <td className="font-mono text-xs">{i.component_code}</td>
                   <td className="tabular text-sm">{rp(i.amount)}</td>
                   <td className="text-sm text-muted">{i.note ?? ''}</td>
-                  <td>{manage && open && <ActionForm action={deleteInput} label="Hapus" hidden={{ id: i.id, run: id }} />}</td>
+                  <td>{manage && open && <ActionForm action={deleteInput} label="Hapus" confirm="Hapus input ini?" hidden={{ id: i.id, run: id }} />}</td>
                 </tr>
               );
             })}
