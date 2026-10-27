@@ -38,7 +38,7 @@ const TONES = {
 } as const;
 
 export function Pill({ tone = 'muted', children }: { tone?: keyof typeof TONES; children: React.ReactNode }) {
-  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide ${TONES[tone]}`}>{children}</span>;
+  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs uppercase tracking-wide ${TONES[tone]}`}>{children}</span>;
 }
 
 export function Table({ head, children }: { head: string[]; children: React.ReactNode }) {
@@ -48,7 +48,7 @@ export function Table({ head, children }: { head: string[]; children: React.Reac
         <thead>
           <tr>
             {head.map(h => (
-              <th key={h} className="border-b border-line bg-ground px-3 py-2 text-left font-mono text-[11px] font-medium uppercase tracking-wider text-muted">{h}</th>
+              <th key={h} className="border-b border-line bg-ground px-3 py-2 text-left font-mono text-xs font-medium uppercase tracking-wider text-muted">{h}</th>
             ))}
           </tr>
         </thead>
@@ -65,7 +65,7 @@ const VALUE = { crit: 'text-crit', warn: 'text-orange', ok: '', accent: '' } as 
 export function Stat({ label, value, href, note, tone }: { label: string; value: number | string; href?: string; note?: string; tone?: keyof typeof BAR }) {
   const body = (
     <div className={`relative grid h-full content-start gap-1.5 overflow-hidden rounded-2xl border border-line bg-panel p-4 shadow-soft transition-colors ${tone ? `before:absolute before:inset-y-0 before:left-0 before:w-1 ${BAR[tone]}` : ''}`}>
-      <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted">{label}</span>
+      <span className="font-mono text-xs font-semibold uppercase tracking-wider text-muted">{label}</span>
       <span className={`tabular text-3xl font-extrabold leading-none tracking-tight sm:text-4xl ${tone ? VALUE[tone] : ''}`}>{value}</span>
       {note && <span className="text-xs text-muted">{note}</span>}
     </div>

@@ -47,7 +47,7 @@ export default async function SmkpPage() {
         const iso = (maps ?? []).filter(m => m.clause_id === el.id).map(m => `${m.mapped.framework_code.replace('ISO', 'ISO ')} §${m.mapped.code}`);
         return (
           <Panel key={el.id} title={`Elemen ${el.code} · ${el.title}`}
-            action={<span className="hidden font-mono text-[11px] text-muted md:inline">{[...new Set(iso)].join(' · ')}</span>}>
+            action={<span className="hidden font-mono text-xs text-muted md:inline">{[...new Set(iso)].join(' · ')}</span>}>
             <ul className="grid gap-1">
               {children.map(c => {
                 const [tone, label] = clauseHealth(c);
@@ -56,7 +56,7 @@ export default async function SmkpPage() {
                     <Link href={`/smkp/${c.id}`} className="grid grid-cols-[3.5rem_1fr_auto] items-center gap-3 rounded px-2 py-2 hover:bg-ground">
                       <span className="font-mono text-xs text-muted">{c.code}</span>
                       <span className="text-sm">{c.title}
-                        <span className="ml-2 font-mono text-[11px] text-muted">
+                        <span className="ml-2 font-mono text-xs text-muted">
                           {c.controls} kontrol · {c.evidence_accepted} bukti{c.capa_open ? ` · ${c.capa_open} action plan` : ''}
                         </span>
                       </span>

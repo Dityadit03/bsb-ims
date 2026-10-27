@@ -127,7 +127,7 @@ async function Structure({ sp, manage, comps, supabase }: { sp: Record<string, s
         <Table head={['Karyawan', 'Dept', ...cols.map(c => c.code), 'Upah tetap', 'Perubahan terakhir']}>
           {pg.rows.map(r => (
             <tr key={r.employee_id}>
-              <td><Link href={`/hrga/${r.employee_id}`} className="font-medium hover:text-accent">{r.full_name}</Link><span className="block font-mono text-[11px] text-muted">{r.nrp}</span></td>
+              <td><Link href={`/hrga/${r.employee_id}`} className="font-medium hover:text-accent">{r.full_name}</Link><span className="block font-mono text-xs text-muted">{r.nrp}</span></td>
               <td className="text-xs">{r.department_code}</td>
               {cols.map(c => <td key={c.code} className="tabular text-sm">{r.amounts?.[c.code] != null ? rp(r.amounts[c.code]) : '–'}</td>)}
               <td className="tabular text-sm font-semibold">{r.fixed_wage ? rp(r.fixed_wage) : <span className="text-warn">belum</span>}</td>
@@ -186,7 +186,7 @@ async function Components({ manage, comps, supabase }: { manage: boolean; comps:
         <div className="grid gap-2">
           {SETTINGS.map(([k, l, hint]) => manage ? (
             <ActionForm key={k} action={saveSetting} label="Simpan" hidden={{ key: k }} className="grid-cols-[1fr_8rem_auto] items-end">
-              <span className="text-sm">{l}{hint && <span className="block text-[11px] text-muted">{hint}</span>}</span>
+              <span className="text-sm">{l}{hint && <span className="block text-xs text-muted">{hint}</span>}</span>
               <input name="value" defaultValue={String(val.get(k) ?? '')} inputMode="decimal" className={input} />
             </ActionForm>
           ) : (

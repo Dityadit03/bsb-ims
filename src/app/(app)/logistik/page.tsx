@@ -67,8 +67,8 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
             <tr key={r.id}>
               <td className="font-mono text-xs">{r.code}</td>
               <td className="text-sm">{r.name}</td>
-              <td className="font-mono text-xs">{r.location ?? <span className="text-muted">–</span>}<span className="block font-sans text-[11px] text-muted">{CATEGORY[r.category]}</span></td>
-              <td className="tabular text-xs">{r.low_stock ? <Pill tone="crit">{qty(r.stock_qty)} {r.uom}</Pill> : `${qty(r.stock_qty)} ${r.uom}`}{Number(pm.get(r.id)?.reserved_qty) > 0 && <span className="block text-[11px] text-muted">dicadangkan {qty(pm.get(r.id)!.reserved_qty)}</span>}</td>
+              <td className="font-mono text-xs">{r.location ?? <span className="text-muted">–</span>}<span className="block font-sans text-xs text-muted">{CATEGORY[r.category]}</span></td>
+              <td className="tabular text-xs">{r.low_stock ? <Pill tone="crit">{qty(r.stock_qty)} {r.uom}</Pill> : `${qty(r.stock_qty)} ${r.uom}`}{Number(pm.get(r.id)?.reserved_qty) > 0 && <span className="block text-xs text-muted">dicadangkan {qty(pm.get(r.id)!.reserved_qty)}</span>}</td>
               <td className="tabular text-xs">{pm.get(r.id)?.cover_days != null ? `${pm.get(r.id)!.cover_days} hr` : '–'}</td>
               <td className="tabular text-xs">{qty(pm.get(r.id)?.reorder_point ?? r.min_stock)}</td>
               <td className="tabular text-xs">{pm.get(r.id)?.reorder_now ? <Pill tone={pm.get(r.id)!.critical ? 'crit' : 'warn'}>{qty(pm.get(r.id)!.suggested_qty)} {r.uom}</Pill> : (pm.get(r.id)?.on_order ? <span className="text-muted">PO {qty(pm.get(r.id)!.on_order)}</span> : '–')}</td>

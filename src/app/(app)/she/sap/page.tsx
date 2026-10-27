@@ -76,7 +76,7 @@ function Ring({ value, size = 64, stroke = 7, children }: { value: number | null
 }
 
 const Pct = ({ v }: { v: number | null }) => (
-  <span className={`inline-block min-w-11 rounded-full px-1.5 py-0.5 text-center font-mono text-[11px] font-semibold ${pill(v)}`}>{fmtPct(v)}</span>
+  <span className={`inline-block min-w-11 rounded-full px-1.5 py-0.5 text-center font-mono text-xs font-semibold ${pill(v)}`}>{fmtPct(v)}</span>
 );
 
 export default async function SapPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -124,7 +124,7 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
   return (
     <>
       <header className="grid gap-3">
-        <div className="flex flex-wrap gap-2 font-mono text-[11px] font-semibold">
+        <div className="flex flex-wrap gap-2 font-mono text-xs font-semibold">
           <span className="rounded-md bg-violet/10 px-2 py-1 text-violet">Fungsi Safety · Evaluasi kinerja</span>
           <span className="rounded-md bg-accent-soft px-2 py-1 text-accent">SMKP IV-C · SMK3 E6 · E12</span>
         </div>
@@ -154,7 +154,7 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
             <section className="flex min-w-0 items-center gap-5 rounded-2xl border border-line bg-panel p-5 shadow-soft sm:gap-7 sm:p-6">
               <Ring value={mtdAll} size={128} stroke={12}><span className="text-3xl sm:text-4xl">{fmtPct(mtdAll)}</span></Ring>
               <div className="grid gap-1.5">
-                <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted">SAP site · month to date</span>
+                <span className="font-mono text-xs font-semibold uppercase tracking-wider text-muted">SAP site · month to date</span>
                 <span className={`text-2xl font-extrabold tracking-tight sm:text-3xl ${status[1]}`}>{status[0]}</span>
                 {delta != null && (
                   <span className={`w-fit rounded-full px-2 py-0.5 text-xs font-semibold ${delta < 0 ? 'bg-crit/10 text-crit' : 'bg-ok/12 text-ok'}`}>
@@ -172,7 +172,7 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
                     <section key={m.key} className={`flex items-center gap-3 rounded-2xl border border-line border-t-4 bg-panel p-4 shadow-soft ${m.border}`}>
                       <Ring value={pooled(mtdRows, m.key)} size={64} stroke={7}><span className="text-sm">{fmtPct(pooled(mtdRows, m.key))}</span></Ring>
                       <div className="grid gap-0.5">
-                        <span className="flex items-center gap-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-muted">
+                        <span className="flex items-center gap-1.5 font-mono text-xs font-semibold uppercase tracking-wider text-muted">
                           <span className="size-2 rounded-full" style={{ background: m.color }} />{m.label}
                         </span>
                         <span className="tabular"><b className="text-2xl font-extrabold">{t.act}</b><span className="text-sm text-muted"> / {t.plan}</span></span>
@@ -204,7 +204,7 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
                 <div className="overflow-x-auto rounded-xl border border-line">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="font-mono text-[11px] font-semibold">
+                      <tr className="font-mono text-xs font-semibold">
                         <th className="bg-coal px-3 py-2 text-left text-coal-ink">SECTION</th>
                         {METRICS.map(m => <th key={m.key} className={`px-2 py-2 ${m.bg} ${m.text}`}>{m.short}</th>)}
                       </tr>
@@ -243,7 +243,7 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
                   return (
                     <div key={sec} className="overflow-x-auto rounded-xl border border-line">
                       <table className="w-full text-sm">
-                        <thead className="font-mono text-[11px] font-semibold">
+                        <thead className="font-mono text-xs font-semibold">
                           <tr>
                             <th rowSpan={3} className="w-16 bg-coal px-3 py-2 text-left align-top text-coal-ink">{sec}</th>
                             <th colSpan={6} className="bg-ground py-1.5 text-center">W-{no} · {fmtPct(pooled(rs))}</th>
@@ -280,7 +280,7 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
               );
               return (
                 <tr key={r.employee_id}>
-                  <td className="min-w-44">{r.full_name}<div className="font-mono text-[11px] text-muted">{r.sap_section} · {r.nrp}</div></td>
+                  <td className="min-w-44">{r.full_name}<div className="font-mono text-xs text-muted">{r.sap_section} · {r.nrp}</div></td>
                   <td className="text-xs">{r.level}</td>
                   {cell('obs')}{cell('insp')}{cell('hazard')}
                   <td>{r.on_leave ? <span className="text-xs text-muted">Cuti</span> : <Pct v={w} />}</td>
@@ -299,7 +299,7 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
           <Table head={['Peserta', 'Section', 'Level', 'Target obs', 'Target insp', 'Target hazard', 'Status']}>
             {week.map(r => (
               <tr key={r.employee_id}>
-                <td className="min-w-44">{r.full_name}<div className="font-mono text-[11px] text-muted">{r.nrp}</div></td>
+                <td className="min-w-44">{r.full_name}<div className="font-mono text-xs text-muted">{r.nrp}</div></td>
                 <td className="font-mono text-xs">{r.sap_section}</td>
                 <td className="text-xs">{SAP_LEVEL[r.level!] ?? r.level}</td>
                 <td className="tabular text-xs">{r.on_leave ? '–' : r.obs_target}</td>

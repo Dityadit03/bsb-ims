@@ -83,12 +83,12 @@ async function Daily({ date, sp, base, supabase }: { date: string; sp: Record<st
             <Table head={['Karyawan', 'Dept', 'Roster', 'Masuk', 'Pulang', 'Jam kerja', 'Status']}>
               {pg.rows.map(r => (
                 <tr key={r.employee_id}>
-                  <td><Link href={`/hrga/${r.employee_id}`} className="font-medium hover:text-accent">{r.full_name}</Link><span className="block font-mono text-[11px] text-muted">{r.nrp}</span></td>
+                  <td><Link href={`/hrga/${r.employee_id}`} className="font-medium hover:text-accent">{r.full_name}</Link><span className="block font-mono text-xs text-muted">{r.nrp}</span></td>
                   <td className="text-xs">{r.department_code}</td>
                   <td>{r.roster_code ? <Pill tone={ROSTER[r.roster_code]?.[0] ?? 'muted'}>{ROSTER[r.roster_code]?.[1] ?? r.roster_code}</Pill> : <span className="text-xs text-muted">{r.holiday_name ?? '–'}</span>}</td>
-                  <td className="tabular text-sm">{fmtTime(r.clock_in)}{r.late_minutes > 0 && <span className="block text-[11px] text-warn">+{r.late_minutes} mnt</span>}</td>
-                  <td className="tabular text-sm">{fmtTime(r.clock_out)}{r.early_minutes > 0 && <span className="block text-[11px] text-warn">−{r.early_minutes} mnt</span>}
-                    {r.missing_out && <span className="block text-[11px] text-crit">belum pulang</span>}</td>
+                  <td className="tabular text-sm">{fmtTime(r.clock_in)}{r.late_minutes > 0 && <span className="block text-xs text-warn">+{r.late_minutes} mnt</span>}</td>
+                  <td className="tabular text-sm">{fmtTime(r.clock_out)}{r.early_minutes > 0 && <span className="block text-xs text-warn">−{r.early_minutes} mnt</span>}
+                    {r.missing_out && <span className="block text-xs text-crit">belum pulang</span>}</td>
                   <td className="tabular text-sm">{r.worked_hours ?? '–'}</td>
                   <td className="whitespace-nowrap"><Pill tone={ATT_STATUS[r.status]?.[0] ?? 'muted'}>{ATT_STATUS[r.status]?.[1] ?? r.status}</Pill>
                     {r.outside_geofence && <span className="ml-1"><Pill tone="warn">luar radius</Pill></span>}</td>
@@ -146,7 +146,7 @@ async function Monthly({ month, sp, supabase }: { month: string; sp: Record<stri
               const p = att(a);
               return (
                 <tr key={a.id}>
-                  <td><Link href={`/hrga/${a.id}`} className="font-medium hover:text-accent">{a.name}</Link><span className="block font-mono text-[11px] text-muted">{a.nrp}</span></td>
+                  <td><Link href={`/hrga/${a.id}`} className="font-medium hover:text-accent">{a.name}</Link><span className="block font-mono text-xs text-muted">{a.nrp}</span></td>
                   <td className="text-xs">{a.dept}</td>
                   {[a.sched, a.c.hadir, a.c.terlambat, a.c.alpa, a.c.cuti, a.c.sakit, a.c.izin, a.late, Math.round(a.hours)].map((v, i) => (
                     <td key={i} className={`tabular text-sm ${i === 3 && v ? 'font-semibold text-crit' : ''}`}>{v || '–'}</td>

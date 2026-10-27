@@ -80,7 +80,7 @@ export default async function TugasPage() {
                 </div>
                 {v?.draft && (
                   <p className="text-sm">Berkas yang diperiksa: <span className="font-mono text-xs">{v.draft.file_name}</span>{' '}
-                    <span className="font-mono text-[11px] text-muted">SHA-256 {v.draft_sha256?.slice(0, 16)}…</span></p>
+                    <span className="font-mono text-xs text-muted">SHA-256 {v.draft_sha256?.slice(0, 16)}…</span></p>
                 )}
                 <TaskActions taskId={t.task_id} subjectHash={v?.draft_sha256 ?? ''} kind={t.step_kind} />
               </Panel>

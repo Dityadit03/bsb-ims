@@ -34,11 +34,11 @@ export default async function UnitQrPage({ searchParams }: { searchParams: Promi
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 print:grid-cols-4 print:gap-2">
         {items.map(u => (
           <div key={u.unit_no} className="break-inside-avoid rounded-xl border border-line bg-white p-3 text-center text-black">
-            <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold tracking-wide"><Image src="/logo.png" alt="" width={18} height={18} /> BSB · P2H</div>
+            <div className="flex items-center justify-center gap-1.5 text-xs font-bold tracking-wide"><Image src="/logo.png" alt="" width={18} height={18} /> BSB · P2H</div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={u.png} alt={`QR ${u.unit_no}`} className="mx-auto my-1 h-32 w-32" />
             <div className="font-mono text-lg font-bold leading-tight">{u.unit_no}</div>
-            <div className="text-[10px] text-neutral-600">Scan untuk isi P2H</div>
+            <div className="text-xs text-neutral-600">Scan untuk isi P2H</div>
           </div>
         ))}
       </div>

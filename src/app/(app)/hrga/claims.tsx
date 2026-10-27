@@ -21,10 +21,10 @@ export type AdvanceRow = { id: string; advance_no: string; employee_id: string; 
 
 const Who = ({ r }: { r: { employee_id: string; full_name: string; nrp: string; department_code: string } }) => (
   <td><Link href={`/hrga/${r.employee_id}`} className="font-medium hover:text-accent">{r.full_name}</Link>
-    <span className="block text-[11px] text-muted">{r.nrp} · {r.department_code}</span></td>
+    <span className="block text-xs text-muted">{r.nrp} · {r.department_code}</span></td>
 );
 const Trail = ({ a, b, note }: { a: string | null; b: string | null; note: string | null }) =>
-  (a || note) ? <span className="block text-[11px] text-muted">{[a, b].filter(Boolean).join(' → ')}{note && ` · ${note}`}</span> : null;
+  (a || note) ? <span className="block text-xs text-muted">{[a, b].filter(Boolean).join(' → ')}{note && ` · ${note}`}</span> : null;
 
 // Setujui / tolak; tahap payroll juga menetapkan nominal disetujui dan cara bayar
 function ClaimDecide({ r }: { r: ClaimRow }) {
@@ -61,17 +61,17 @@ export async function ClaimTable({ rows, mode, payroll = false }: { rows: ClaimR
     <Table head={['No.', ...(mode === 'manage' ? ['Karyawan'] : []), 'Jenis & keterangan', 'Tgl biaya', 'Diajukan', 'Disetujui', 'Status', '']}>
       {rows.map(r => (
         <tr key={r.id}>
-          <td className="font-mono text-[11px]">{r.claim_no}</td>
+          <td className="font-mono text-xs">{r.claim_no}</td>
           {mode === 'manage' && <Who r={r} />}
-          <td className="text-sm">{r.claim_type_name}<span className="block text-[11px] text-muted">{r.description}{r.advance_no && ` · uang muka ${r.advance_no}`}</span>
+          <td className="text-sm">{r.claim_type_name}<span className="block text-xs text-muted">{r.description}{r.advance_no && ` · uang muka ${r.advance_no}`}</span>
             <span className="mt-0.5 flex flex-wrap gap-1">{(atts ?? []).filter(a => a.owner_id === r.id).map(a =>
-              <a key={a.id} href={`/api/lampiran/${a.id}`} target="_blank" className="rounded border border-line px-1.5 font-mono text-[10px] hover:border-accent">📎 {a.file_name}</a>)}</span></td>
+              <a key={a.id} href={`/api/lampiran/${a.id}`} target="_blank" className="rounded border border-line px-1.5 font-mono text-xs hover:border-accent">📎 {a.file_name}</a>)}</span></td>
           <td className="whitespace-nowrap text-sm">{fmtDate(r.expense_date)}</td>
           <td className="tabular text-sm">{rp(r.amount)}</td>
           <td className="tabular text-sm">{r.approved_amount == null ? '–' : <span className={Number(r.approved_amount) < Number(r.amount) ? 'text-warn' : ''}>{rp(r.approved_amount)}</span>}
-            {r.pay_method && <span className="block text-[11px] text-muted">{PAY_METHOD[r.pay_method]}</span>}</td>
+            {r.pay_method && <span className="block text-xs text-muted">{PAY_METHOD[r.pay_method]}</span>}</td>
           <td><Pill tone={CLAIM_STATUS[r.status]?.[0] ?? 'muted'}>{CLAIM_STATUS[r.status]?.[1] ?? r.status}</Pill>
-            {r.status === 'paid' && <span className="block text-[11px] text-muted">{fmtDate(r.paid_on)}{r.paid_run_no && ` · ${r.paid_run_no}`}</span>}
+            {r.status === 'paid' && <span className="block text-xs text-muted">{fmtDate(r.paid_on)}{r.paid_run_no && ` · ${r.paid_run_no}`}</span>}
             <Trail a={r.approver1_name} b={r.approver2_name} note={r.decision_note} /></td>
           <td>{r.can_decide ? <ClaimDecide r={r} />
             : payroll && r.status === 'approved' && r.pay_method === 'transfer'
@@ -103,17 +103,17 @@ export function AdvanceTable({ rows, mode, payroll = false }: { rows: AdvanceRow
     <Table head={['No.', ...(mode === 'manage' ? ['Karyawan'] : []), 'Jenis & keperluan', 'Nominal', 'Potong gaji', 'Sisa', 'Status', '']}>
       {rows.map(r => (
         <tr key={r.id}>
-          <td className="font-mono text-[11px]">{r.advance_no}</td>
+          <td className="font-mono text-xs">{r.advance_no}</td>
           {mode === 'manage' && <Who r={r} />}
           <td className="text-sm">{ADV_KIND[r.kind]}{r.opening && <span className="ml-1"><Pill tone="muted">saldo awal</Pill></span>}
-            <span className="block text-[11px] text-muted">{r.purpose}</span></td>
+            <span className="block text-xs text-muted">{r.purpose}</span></td>
           <td className="tabular text-sm">{rp(r.amount)}
-            {r.actual_amount != null && <span className="block text-[11px] text-muted">terpakai {rp(r.actual_amount)}</span>}</td>
+            {r.actual_amount != null && <span className="block text-xs text-muted">terpakai {rp(r.actual_amount)}</span>}</td>
           <td className="tabular text-sm">{r.kind === 'loan' ? `${rp(r.installment_amount)} × ${r.installments}` : 'sisa saja'}</td>
           <td className="tabular text-sm font-semibold">{['active', 'settled'].includes(r.status) ? rp(r.balance) : '–'}</td>
           <td><Pill tone={ADV_STATUS[r.status]?.[0] ?? 'muted'}>{ADV_STATUS[r.status]?.[1] ?? r.status}</Pill>
-            {r.disbursed_on && <span className="block text-[11px] text-muted">cair {fmtDate(r.disbursed_on)}</span>}
-            {r.report_overdue && <span className="block text-[11px] font-semibold text-crit">belum dipertanggungjawabkan</span>}
+            {r.disbursed_on && <span className="block text-xs text-muted">cair {fmtDate(r.disbursed_on)}</span>}
+            {r.report_overdue && <span className="block text-xs font-semibold text-crit">belum dipertanggungjawabkan</span>}
             <Trail a={r.approver1_name} b={r.approver2_name} note={r.decision_note} /></td>
           <td className="min-w-40">
             {r.can_decide && <AdvanceDecide id={r.id} />}
@@ -129,7 +129,7 @@ export function AdvanceTable({ rows, mode, payroll = false }: { rows: AdvanceRow
                   <input name="actual" required inputMode="numeric" placeholder="Biaya sebenarnya (Rp)" className={input} />
                   <input name="note" placeholder="Rincian singkat" className={input} />
                   <DropZone label="Kuitansi / bukti" accept="image/*,application/pdf" />
-                  <span className="text-[11px] text-muted">Sisa uang muka dipotong gaji berikutnya. Biaya lebih dari uang muka: ajukan klaim Perjalanan dinas.</span>
+                  <span className="text-xs text-muted">Sisa uang muka dipotong gaji berikutnya. Biaya lebih dari uang muka: ajukan klaim Perjalanan dinas.</span>
                 </ActionForm>
               </details>
             )}

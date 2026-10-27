@@ -108,10 +108,10 @@ export default async function ReadinessPage({ searchParams }: { searchParams: Pr
         {pg.rows.map(r => (
           <tr key={r.employee_id}>
             <td className="min-w-44 text-sm"><Link href={`/hrga/${r.employee_id}`} className="hover:text-accent">{r.full_name}</Link>
-              <div className="font-mono text-[11px] text-muted">{r.nrp} · {r.department_code}{r.employment_type === 'subcon' ? ` · ${r.company ?? EMPLOYMENT.subcon}` : ''}</div></td>
+              <div className="font-mono text-xs text-muted">{r.nrp} · {r.department_code}{r.employment_type === 'subcon' ? ` · ${r.company ?? EMPLOYMENT.subcon}` : ''}</div></td>
             <td className="text-xs">{r.position_name ?? '–'}</td>
             <td><Check ok={r.induction_ok} /></td>
-            <td><Check ok={r.medical_ok} />{r.fitness && r.fitness !== 'fit' && <div className="text-[11px] text-warn">{FITNESS[r.fitness][1]}</div>}</td>
+            <td><Check ok={r.medical_ok} />{r.fitness && r.fitness !== 'fit' && <div className="text-xs text-warn">{FITNESS[r.fitness][1]}</div>}</td>
             <td className="tabular text-xs">{r.required ? `${r.compliant}/${r.required}` : '–'}</td>
             <td><Check ok={r.id_card_ok} /></td>
             <td className="font-mono text-xs">{r.unit_types.join(', ') || '–'}</td>

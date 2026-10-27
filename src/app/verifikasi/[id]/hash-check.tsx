@@ -16,7 +16,7 @@ export function HashCheck({ expected }: { expected: string }) {
       </label>
       {result === 'match' && <p className="text-ok">Cocok: berkas sama persis dengan yang diterbitkan.</p>}
       {result === 'diff' && <p className="text-crit">Tidak cocok: berkas sudah berubah, atau ini salinan unduhan berlabel tidak terkendali.</p>}
-      <p className="break-all font-mono text-[11px] text-muted">SHA-256 terbit: {expected}</p>
+      <p className="break-all font-mono text-xs text-muted">SHA-256 terbit: {expected}</p>
     </div>
   );
 }

@@ -61,7 +61,7 @@ export default async function ClausePage({ params }: { params: Promise<{ id: str
                   return (
                     <tr key={e.id}>
                       <td className="min-w-56">{link ? <Link href={link} className="hover:text-accent">{e.label}</Link> : e.label}
-                        <div className="font-mono text-[10px] text-muted">{e.source_table === 'attachments' ? 'berkas unggahan' : e.source_table.replace('_', ' ')}</div></td>
+                        <div className="font-mono text-xs text-muted">{e.source_table === 'attachments' ? 'berkas unggahan' : e.source_table.replace('_', ' ')}</div></td>
                       <td className="whitespace-nowrap text-xs">{e.period_start ? `${fmtDate(e.period_start)} – ${fmtDate(e.period_end)}` : '–'}</td>
                       <td className="text-xs">{e.linker?.full_name ?? '–'}<div className="text-muted">{fmtDate(e.linked_at)}</div></td>
                       <td><Pill tone={t}>{l}</Pill>{e.review_note && <div className="mt-1 text-xs text-muted">{e.review_note}</div>}</td>
@@ -111,7 +111,7 @@ export default async function ClausePage({ params }: { params: Promise<{ id: str
           <Panel title="Kontrol">
             {controls?.length ? (
               <ul className="grid gap-2 text-sm">
-                {controls.map(k => <li key={k.id}>{k.title}<div className="font-mono text-[11px] text-muted">{FREQUENCY[k.frequency]}{k.document_type_code ? ` · ${k.document_type_code}` : ''}</div></li>)}
+                {controls.map(k => <li key={k.id}>{k.title}<div className="font-mono text-xs text-muted">{FREQUENCY[k.frequency]}{k.document_type_code ? ` · ${k.document_type_code}` : ''}</div></li>)}
               </ul>
             ) : <p className="text-sm text-muted">Belum ada kontrol.</p>}
           </Panel>

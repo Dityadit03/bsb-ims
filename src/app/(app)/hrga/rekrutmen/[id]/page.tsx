@@ -69,7 +69,7 @@ export default async function ReqPage({ params }: { params: Promise<{ id: string
                 <ActionForm action={closeRequisition} label="Tutup" confirm="Tutup permintaan tenaga kerja ini?" hidden={h} className="mt-2 w-64">
                   <select name="cancel" className={input}><option value="0">Ditutup (kebutuhan selesai)</option><option value="1">Dibatalkan</option></select>
                   <input name="reason" required placeholder="Alasan" className={input} />
-                  <span className="text-[11px] text-muted">Pelamar yang masih proses dinyatakan tidak lolos.</span></ActionForm></details>
+                  <span className="text-xs text-muted">Pelamar yang masih proses dinyatakan tidak lolos.</span></ActionForm></details>
             )}
           </div>
         </div>
@@ -91,7 +91,7 @@ export default async function ReqPage({ params }: { params: Promise<{ id: string
                     </div>
                     <div className="text-right">
                       <Pill tone={APP_STAGE[a.stage]?.[0] ?? 'muted'}>{APP_STAGE[a.stage]?.[1] ?? a.stage}</Pill>
-                      {a.close_reason && <p className="text-[11px] text-muted">{a.close_reason}</p>}
+                      {a.close_reason && <p className="text-xs text-muted">{a.close_reason}</p>}
                       {a.employee_id && <Link href={`/hrga/${a.employee_id}`} className="block text-xs text-accent hover:underline">Lihat data karyawan</Link>}
                     </div>
                   </div>
@@ -137,7 +137,7 @@ export default async function ReqPage({ params }: { params: Promise<{ id: string
                         <ActionForm action={hire} label="Jadikan karyawan" primary hidden={{ ...h, app: a.id }} className="md:grid-cols-3 md:items-end">
                           <label className="grid gap-1 text-xs">NRP<input name="nrp" required placeholder="26.11.001" className={input} /></label>
                           <label className="grid gap-1 text-xs">Email akun (opsional)<input name="email" type="email" placeholder="harus sudah pernah login" className={input} /></label>
-                          <span className="text-[11px] text-muted">Membuat data karyawan, kontrak {r.employment_type === 'contract' ? 'PKWT' : 'percobaan'} dan checklist mobilisasi. Payroll diberi tahu untuk mengisi gaji.</span>
+                          <span className="text-xs text-muted">Membuat data karyawan, kontrak {r.employment_type === 'contract' ? 'PKWT' : 'percobaan'} dan checklist mobilisasi. Payroll diberi tahu untuk mengisi gaji.</span>
                         </ActionForm>
                       )}
                     </div>

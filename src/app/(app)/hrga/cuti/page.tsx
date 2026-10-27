@@ -73,7 +73,7 @@ export default async function CutiPage({ searchParams }: { searchParams: Promise
               <Table head={['Karyawan', 'Dept', 'Jenis', 'Kuota', 'Penyesuaian', 'Terpakai', 'Menunggu', 'Sisa']}>
                 {paginate(bal, sp.hal).rows.map(b => (
                   <tr key={`${b.employee_id}${b.leave_type}`}>
-                    <td><Link href={`/hrga/${b.employee_id}`} className="font-medium hover:text-accent">{b.full_name}</Link><span className="block font-mono text-[11px] text-muted">{b.nrp}</span></td>
+                    <td><Link href={`/hrga/${b.employee_id}`} className="font-medium hover:text-accent">{b.full_name}</Link><span className="block font-mono text-xs text-muted">{b.nrp}</span></td>
                     <td className="text-xs">{b.department_code}</td>
                     <td className="text-sm">{b.leave_name}</td>
                     {[b.quota, b.adjustment, b.used, b.pending].map((v, i) => <td key={i} className="tabular text-sm">{Number(v) || '–'}</td>)}

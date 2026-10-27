@@ -65,7 +65,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ id: str
                     t.alert === 'replace' ? 'border-crit/50 bg-crit/10' : t.alert === 'soon' ? 'border-warn/50 bg-warn/10' : 'border-line bg-panel'}`}>
                     <div className="font-mono text-base font-bold">{t.position}</div>
                     <div className="tabular text-xs">{t.last_rtd_mm ?? '–'} mm</div>
-                    <div className="truncate text-[11px] text-muted">{t.tyre_no}</div>
+                    <div className="truncate text-xs text-muted">{t.tyre_no}</div>
                   </Link>
                 ))}
               </div>

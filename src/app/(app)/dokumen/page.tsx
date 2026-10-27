@@ -64,7 +64,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
               <tr key={r.id}>
                 <td className="whitespace-nowrap font-mono text-xs">
                   <Link href={`/dokumen/${r.id}`} className="font-medium text-ink hover:text-accent">{r.document_number ?? r.registration_no}</Link>
-                  {!r.document_number && <div className="text-[10px] text-muted">belum bernomor resmi</div>}
+                  {!r.document_number && <div className="text-xs text-muted">belum bernomor resmi</div>}
                 </td>
                 <td className="min-w-64"><Link href={`/dokumen/${r.id}`} className="hover:text-accent">{r.title}</Link>
                   {r.access_class !== 'internal' && <span className="ml-2"><Pill tone="crit">{r.access_class === 'restricted' ? 'Terbatas' : 'Rahasia'}</Pill></span>}

@@ -62,7 +62,7 @@ export default async function Search({ searchParams }: { searchParams: Promise<{
                 <li key={h.href + h.code}>
                   <Link href={h.href} className="grid gap-0.5 rounded-lg px-2 py-1.5 hover:bg-accent-soft/50">
                     <span className="flex items-baseline justify-between gap-2"><span className="font-mono text-xs font-medium text-accent">{h.code}</span>
-                      {h.note && <span className="text-[11px] text-muted">{h.note}</span>}</span>
+                      {h.note && <span className="text-xs text-muted">{h.note}</span>}</span>
                     <span className="line-clamp-1 text-sm">{h.text}</span>
                   </Link>
                 </li>

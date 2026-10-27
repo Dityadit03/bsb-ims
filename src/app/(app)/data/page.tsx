@@ -45,7 +45,7 @@ export default async function DataPage() {
           <ul className="grid gap-2 sm:grid-cols-2">
             {DATASETS.filter(d => d.group === g).map(d => (
               <li key={d.key} className="flex items-center justify-between gap-2 rounded-lg border border-line px-3 py-2">
-                <span className="text-sm">{d.label}{d.feed && <span className="ml-2 text-[11px] text-accent">Sheets</span>}</span>
+                <span className="text-sm">{d.label}{d.feed && <span className="ml-2 text-xs text-accent">Sheets</span>}</span>
                 <span className="flex shrink-0 gap-1.5">
                   <a href={`/api/ekspor/${d.key}`} className={`${btnGhost} px-2.5 py-1 text-xs`}>Excel</a>
                   <a href={`/api/ekspor/${d.key}?format=csv`} className={`${btnGhost} px-2.5 py-1 text-xs`}>CSV</a>

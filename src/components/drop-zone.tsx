@@ -54,7 +54,7 @@ export function DropZone({ name = 'files', label = 'Foto / lampiran', hint = 'Se
               {f.type.startsWith('image/')
                 // eslint-disable-next-line @next/next/no-img-element
                 ? <img src={URL.createObjectURL(f)} alt="" className="h-8 w-8 rounded object-cover" />
-                : <span className="grid h-8 w-8 place-items-center rounded bg-accent-soft font-mono text-[10px] text-accent">{f.name.split('.').pop()?.slice(0, 4).toUpperCase()}</span>}
+                : <span className="grid h-8 w-8 place-items-center rounded bg-accent-soft font-mono text-xs text-accent">{f.name.split('.').pop()?.slice(0, 4).toUpperCase()}</span>}
               <span className="min-w-0 flex-1 truncate">{f.name}</span>
               <span className="text-muted">{size(f.size)}</span>
               <button type="button" onClick={() => apply(files.filter((_, j) => j !== i))} className="px-1 text-muted hover:text-crit" aria-label={`Hapus ${f.name}`}>✕</button>

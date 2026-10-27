@@ -91,7 +91,7 @@ export default async function PenggunaPage() {
                 <td>
                   <div className="flex flex-wrap gap-1">
                     {u.user_roles.length ? u.user_roles.map(r => (
-                      <span key={r.role_code + (r.departments?.code ?? '')} className="rounded border border-line px-1.5 py-0.5 font-mono text-[11px]">
+                      <span key={r.role_code + (r.departments?.code ?? '')} className="rounded border border-line px-1.5 py-0.5 font-mono text-xs">
                         {r.role_code}{r.departments ? `·${r.departments.code}` : ''}
                       </span>
                     )) : <span className="text-xs text-muted">Belum ada</span>}

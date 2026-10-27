@@ -21,7 +21,7 @@ function Tree({ id, byBoss, emps, depth = 0 }: { id: string; byBoss: Map<string 
       <Link href={`/hrga/${e.id}`} className="inline-flex flex-wrap items-baseline gap-x-2 rounded-lg px-2 py-1 hover:bg-ground">
         <span className="text-sm font-semibold">{e.full_name}</span>
         <span className="text-xs text-muted">{e.positions?.name ?? '–'}</span>
-        {kids.length > 0 && <span className="text-[11px] text-violet">{kids.length} bawahan</span>}
+        {kids.length > 0 && <span className="text-xs text-violet">{kids.length} bawahan</span>}
       </Link>
       {kids.length > 0 && depth < 6 && <ul className="ml-2 grid gap-0.5">{kids.map(k => <Tree key={k.id} id={k.id} byBoss={byBoss} emps={emps} depth={depth + 1} />)}</ul>}
     </li>

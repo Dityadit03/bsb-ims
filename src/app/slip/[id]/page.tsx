@@ -63,7 +63,7 @@ export default async function SlipPage({ params }: { params: Promise<{ id: strin
           <div className="text-right">
             <p className="text-lg font-extrabold">{run.kind === 'thr' ? 'SLIP THR' : 'SLIP GAJI'}</p>
             <p className="text-sm">{periodName}</p>
-            <p className="font-mono text-[11px] text-neutral-500">{run.run_no}</p>
+            <p className="font-mono text-xs text-neutral-500">{run.run_no}</p>
           </div>
         </header>
         {draft && <p className="mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">{run.parallel ? 'UJI PARALEL · bukan slip resmi' : 'DRAF · belum diterbitkan'}</p>}
@@ -98,7 +98,7 @@ export default async function SlipPage({ params }: { params: Promise<{ id: strin
           <Section title="Dibayar perusahaan (tidak dipotong)" rows={by('employer')} />
           <Section title="Keterangan" rows={by('info')} />
         </div>
-        <p className="mt-6 text-[11px] text-neutral-500">
+        <p className="mt-6 text-xs text-neutral-500">
           PPh 21 {s.annualized ? 'dihitung setahun (tarif Pasal 17)' : s.ter_rate != null ? `memakai tarif efektif bulanan kategori ${s.ter_category} ${s.ter_rate}%` : ''} sesuai PP 58/2023.
           Slip ini dibuat oleh sistem BSB IMS dan sah tanpa tanda tangan. Pertanyaan tentang gaji hubungi HRGA.
         </p>

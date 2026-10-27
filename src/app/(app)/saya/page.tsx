@@ -134,7 +134,7 @@ async function Kehadiran({ id, month: m, supabase }: { id: string; month?: strin
               <tr key={r.work_date}>
                 <td className="whitespace-nowrap text-sm">{fmtDate(r.work_date)}</td>
                 <td>{r.roster_code ? <Pill tone={ROSTER[r.roster_code]?.[0] ?? 'muted'}>{ROSTER[r.roster_code]?.[1] ?? r.roster_code}</Pill> : '–'}</td>
-                <td className="tabular text-sm">{fmtTime(r.clock_in)}{r.late_minutes > 0 && <span className="ml-1 text-[11px] text-warn">+{r.late_minutes}</span>}</td>
+                <td className="tabular text-sm">{fmtTime(r.clock_in)}{r.late_minutes > 0 && <span className="ml-1 text-xs text-warn">+{r.late_minutes}</span>}</td>
                 <td className="tabular text-sm">{fmtTime(r.clock_out)}</td>
                 <td className="tabular text-sm">{r.worked_hours ?? '–'}</td>
                 <td><Pill tone={ATT_STATUS[r.status]?.[0] ?? 'muted'}>{ATT_STATUS[r.status]?.[1] ?? r.status}</Pill></td>

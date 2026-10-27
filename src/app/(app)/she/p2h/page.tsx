@@ -56,7 +56,7 @@ export default async function P2hPage({ searchParams }: { searchParams: Promise<
               <legend className="px-1 text-sm font-medium">Checklist</legend>
               {(items ?? []).map(it => (
                 <div key={it.code} className="flex flex-wrap items-center justify-between gap-2 border-b border-line py-1.5 text-sm last:border-0">
-                  <span>{it.label}{it.is_critical && <span className="ml-2 font-mono text-[10px] uppercase text-crit">kritis</span>}</span>
+                  <span>{it.label}{it.is_critical && <span className="ml-2 font-mono text-xs uppercase text-crit">kritis</span>}</span>
                   <span className="grid w-full grid-cols-3 gap-1 sm:w-auto">
                     {CHOICES.map(([v, l, on]) => (
                       <label key={v} className="cursor-pointer">

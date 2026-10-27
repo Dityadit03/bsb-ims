@@ -14,15 +14,15 @@ export function LeaveTable({ rows, cancel }: { rows: LeaveRow[]; cancel?: 'hr' |
     <Table head={['No.', 'Karyawan', 'Jenis', 'Tanggal', 'Hari', 'Status', '']}>
       {rows.map(r => (
         <tr key={r.id}>
-          <td className="font-mono text-[11px]">{r.request_no}</td>
+          <td className="font-mono text-xs">{r.request_no}</td>
           <td><Link href={`/hrga/${r.employee_id}`} className="font-medium hover:text-accent">{r.full_name}</Link>
-            <span className="block text-[11px] text-muted">{r.nrp} · {r.department_code}</span></td>
-          <td className="text-sm">{r.leave_name}{!r.paid && <span className="block text-[11px] text-warn">tidak dibayar</span>}
-            <span className="block text-[11px] text-muted">{r.reason}</span></td>
+            <span className="block text-xs text-muted">{r.nrp} · {r.department_code}</span></td>
+          <td className="text-sm">{r.leave_name}{!r.paid && <span className="block text-xs text-warn">tidak dibayar</span>}
+            <span className="block text-xs text-muted">{r.reason}</span></td>
           <td className="whitespace-nowrap text-sm">{fmtDate(r.start_date)}{r.end_date !== r.start_date && <> – {fmtDate(r.end_date)}</>}</td>
           <td className="tabular text-sm">{Number(r.days)}</td>
           <td><Pill tone={LEAVE_STATUS[r.status]?.[0] ?? 'muted'}>{LEAVE_STATUS[r.status]?.[1] ?? r.status}</Pill>
-            {(r.approver1_name || r.decision_note) && <span className="block text-[11px] text-muted">
+            {(r.approver1_name || r.decision_note) && <span className="block text-xs text-muted">
               {[r.approver1_name, r.approver2_name].filter(Boolean).join(' → ')}{r.decision_note && ` · ${r.decision_note}`}</span>}</td>
           <td>{r.can_decide ? <Decide id={r.id} action={decideLeave} approveLabel={r.status === 'approved_1' ? 'Verifikasi HRGA' : 'Setujui'} />
             : cancel && (['submitted', 'approved_1'].includes(r.status) || (cancel === 'hr' && r.status === 'approved' && r.start_date > siteToday()))
@@ -43,15 +43,15 @@ export function OvertimeTable({ rows, canCancel }: { rows: OtRow[]; canCancel?: 
     <Table head={['No.', 'Karyawan', 'Tanggal & jam', 'Jam SPL', 'Aktual', 'Status', '']}>
       {rows.map(r => (
         <tr key={r.id}>
-          <td className="font-mono text-[11px]">{r.request_no}</td>
+          <td className="font-mono text-xs">{r.request_no}</td>
           <td><Link href={`/hrga/${r.employee_id}`} className="font-medium hover:text-accent">{r.full_name}</Link>
-            <span className="block text-[11px] text-muted">{r.nrp} · {r.department_code}</span></td>
+            <span className="block text-xs text-muted">{r.nrp} · {r.department_code}</span></td>
           <td className="whitespace-nowrap text-sm">{fmtDate(r.work_date)} · {fmtTime(r.start_at)}–{fmtTime(r.end_at)}
-            <span className="block text-[11px] text-muted">{DAY_TYPE[r.day_type]} · {r.reason}</span></td>
+            <span className="block text-xs text-muted">{DAY_TYPE[r.day_type]} · {r.reason}</span></td>
           <td className="tabular text-sm">{Number(r.hours)}</td>
           <td className="tabular text-sm">{r.actual_hours == null ? '–' : <span className={Number(r.actual_hours) < Number(r.hours) ? 'text-warn' : ''}>{Number(r.actual_hours)}</span>}</td>
           <td><Pill tone={OT_STATUS[r.status]?.[0] ?? 'muted'}>{OT_STATUS[r.status]?.[1] ?? r.status}</Pill>
-            {(r.approver_name || r.decision_note) && <span className="block text-[11px] text-muted">{r.approver_name}{r.decision_note && ` · ${r.decision_note}`}</span>}</td>
+            {(r.approver_name || r.decision_note) && <span className="block text-xs text-muted">{r.approver_name}{r.decision_note && ` · ${r.decision_note}`}</span>}</td>
           <td>{r.can_decide ? <Decide id={r.id} action={decideOvertime} />
             : canCancel && r.status === 'submitted' ? <ActionForm action={cancelOvertime} label="Batalkan" hidden={{ id: r.id }} /> : null}</td>
         </tr>

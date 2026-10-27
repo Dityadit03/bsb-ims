@@ -73,12 +73,12 @@ async function Requisitions({ rows: all, sp, supabase }: { rows: ReqRow[]; sp: R
                 <tr key={r.id}>
                   <td><Link href={`/hrga/rekrutmen/${r.id}`} className="font-mono text-xs font-semibold hover:text-accent">{r.req_no}</Link></td>
                   <td className="text-sm"><Link href={`/hrga/rekrutmen/${r.id}`} className="font-medium hover:text-accent">{r.position_name}</Link>
-                    <span className="block text-[11px] text-muted">{r.department_code} · {r.employment_type === 'contract' ? 'PKWT' : 'Tetap'}</span></td>
+                    <span className="block text-xs text-muted">{r.department_code} · {r.employment_type === 'contract' ? 'PKWT' : 'Tetap'}</span></td>
                   <td className="tabular text-sm">{r.hired}/{r.headcount}</td>
-                  <td className="text-sm">{REQ_REASON[r.reason]}{r.replaced_name && <span className="block text-[11px] text-muted">{r.replaced_name}</span>}</td>
+                  <td className="text-sm">{REQ_REASON[r.reason]}{r.replaced_name && <span className="block text-xs text-muted">{r.replaced_name}</span>}</td>
                   <td className={`whitespace-nowrap text-sm ${r.overdue ? 'font-semibold text-crit' : ''}`}>{fmtDate(r.needed_by)}</td>
                   <td className="tabular text-xs text-muted">{r.mpp_planned == null ? 'belum ada MPP' : `${r.mpp_actual}/${r.mpp_planned}`}</td>
-                  <td className="tabular text-sm">{r.applicants}{r.in_process > 0 && <span className="block text-[11px] text-muted">{r.in_process} proses</span>}</td>
+                  <td className="tabular text-sm">{r.applicants}{r.in_process > 0 && <span className="block text-xs text-muted">{r.in_process} proses</span>}</td>
                   <td><Pill tone={REQ_STATUS[r.status]?.[0] ?? 'muted'}>{REQ_STATUS[r.status]?.[1] ?? r.status}</Pill></td>
                 </tr>
               ))}
@@ -121,15 +121,15 @@ function Applicants({ rows: all, sp }: { rows: AppRow[]; sp: Record<string, stri
             {pg.rows.map(a => (
               <tr key={a.id}>
                 <td className="text-sm font-medium">{a.full_name}{a.is_local && <span className="ml-1"><Pill tone="ok">lokal</Pill></span>}
-                  <span className="block text-[11px] text-muted">{CAND_SOURCE[a.source]}</span></td>
+                  <span className="block text-xs text-muted">{CAND_SOURCE[a.source]}</span></td>
                 <td className="text-sm"><Link href={`/hrga/rekrutmen/${a.requisition_id}`} className="hover:text-accent">{a.position_name}</Link>
-                  <span className="block font-mono text-[11px] text-muted">{a.req_no} · {a.department_code}</span></td>
+                  <span className="block font-mono text-xs text-muted">{a.req_no} · {a.department_code}</span></td>
                 <td className="text-sm">{a.education_level ?? '–'}</td>
                 <td className="tabular text-sm">{a.experience_years != null ? `${Number(a.experience_years)} th` : '–'}</td>
                 <td className="tabular text-sm">{a.psikotes_score ?? '–'}</td>
                 <td className="tabular text-sm">{a.interview_score ?? '–'}</td>
                 <td><Pill tone={APP_STAGE[a.stage]?.[0] ?? 'muted'}>{APP_STAGE[a.stage]?.[1] ?? a.stage}</Pill>
-                  <span className="block text-[11px] text-muted">sejak {fmtDate(a.stage_at)}</span></td>
+                  <span className="block text-xs text-muted">sejak {fmtDate(a.stage_at)}</span></td>
               </tr>
             ))}
           </Table>
@@ -164,7 +164,7 @@ async function Candidates({ sp, supabase }: { sp: Record<string, string | undefi
                   <td className="font-mono text-xs">{c.nik ?? '–'}</td>
                   <td className="text-sm">{c.phone ?? '–'}</td>
                   <td className="text-sm">{[c.education_level, c.education_major].filter(Boolean).join(' ') || '–'}</td>
-                  <td className="text-sm">{c.experience_years != null ? `${Number(c.experience_years)} th` : '–'}{c.last_employer && <span className="block text-[11px] text-muted">{c.last_employer}</span>}</td>
+                  <td className="text-sm">{c.experience_years != null ? `${Number(c.experience_years)} th` : '–'}{c.last_employer && <span className="block text-xs text-muted">{c.last_employer}</span>}</td>
                   <td className="text-sm">{c.domicile ?? '–'}</td>
                   <td className="text-sm">{CAND_SOURCE[c.source]}</td>
                 </tr>

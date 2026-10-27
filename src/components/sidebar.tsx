@@ -37,7 +37,7 @@ const GROUP_ICON: Record<string, string> = { M2: I.file, M3: I.layers, M4: I.shi
 const initials = (s: string) => s.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('');
 const base = (href: string) => href.split('?')[0];
 const Badge = ({ n, tone = 'crit' }: { n: number; tone?: 'crit' | 'violet' }) => n > 0
-  ? <span className={`ml-auto min-w-6 rounded-full px-1.5 text-center text-[11px] font-bold leading-5 text-white ${tone === 'crit' ? 'bg-crit' : 'bg-violet'}`}>{n > 999 ? '999+' : n}</span>
+  ? <span className={`ml-auto min-w-6 rounded-full px-1.5 text-center text-xs font-bold leading-5 text-white ${tone === 'crit' ? 'bg-crit' : 'bg-violet'}`}>{n > 999 ? '999+' : n}</span>
   : null;
 
 type Theme = 'system' | 'light' | 'dark';
@@ -107,7 +107,7 @@ export function Sidebar({ permissions, name, email, role, unit, alerts, alertTot
             <Image src="/logo.png" alt="" width={34} height={34} priority className="size-8" />
             <span className="hidden leading-none sm:grid">
               <span className="text-[15px] font-extrabold tracking-tight">BSB IMS</span>
-              <span className="font-mono text-[10px] uppercase tracking-wider text-muted">Site BDA</span>
+              <span className="font-mono text-xs uppercase tracking-wider text-muted">Site BDA</span>
             </span>
           </Link>
           <form action="/cari" role="search" className="mx-auto hidden w-full max-w-xl md:block">
@@ -115,14 +115,14 @@ export function Sidebar({ permissions, name, email, role, unit, alerts, alertTot
               <Icon d={I.search} className="size-4" />
               <input ref={search} name="q" type="search" placeholder="Cari formulir, dokumen, karyawan, unit…" aria-label="Cari di semua modul"
                 className="min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-muted focus:outline-none" />
-              <kbd className="rounded border border-line bg-panel px-1.5 font-mono text-[11px]">/</kbd>
+              <kbd className="rounded border border-line bg-panel px-1.5 font-mono text-xs">/</kbd>
             </label>
           </form>
           <div ref={bar} className="relative ml-auto flex items-center gap-2 md:ml-0">
             <Link href="/cari" className={`${iconBtn(false)} md:hidden`} aria-label="Cari"><Icon d={I.search} /></Link>
             <button onClick={() => toggle('alerts')} className={iconBtn(pop === 'alerts')} aria-expanded={pop === 'alerts'} aria-label={`Peringatan, ${alertTotal}`}>
               <Icon d={I.bell} />
-              {alertTotal > 0 && <span className="absolute -right-2 -top-2 min-w-5 rounded-full bg-crit px-1 text-center text-[10px] font-bold leading-5 text-white">{alertTotal > 999 ? '999+' : alertTotal}</span>}
+              {alertTotal > 0 && <span className="absolute -right-2 -top-2 min-w-5 rounded-full bg-crit px-1 text-center text-xs font-bold leading-5 text-white">{alertTotal > 999 ? '999+' : alertTotal}</span>}
             </button>
             <button onClick={() => toggle('settings')} className={`${iconBtn(pop === 'settings')} hidden sm:grid`} aria-expanded={pop === 'settings'} aria-label="Pengaturan"><Icon d={I.gear} /></button>
             <button onClick={() => toggle('profile')} aria-expanded={pop === 'profile'} aria-label="Profil"
@@ -256,7 +256,7 @@ export function Sidebar({ permissions, name, email, role, unit, alerts, alertTot
         </div>
       </aside>
 
-      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-6 border-t border-line bg-panel/95 backdrop-blur pb-[env(safe-area-inset-bottom)] text-[11px] lg:hidden" aria-label="Aksi cepat">
+      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-6 border-t border-line bg-panel/95 backdrop-blur pb-[env(safe-area-inset-bottom)] text-xs lg:hidden" aria-label="Aksi cepat">
         {QUICK.map(([href, label, icon]) => {
           const active = href === '/' ? path === '/' : path.startsWith(href);
           return (

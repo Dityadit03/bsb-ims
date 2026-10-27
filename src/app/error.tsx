@@ -11,7 +11,7 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
         <button onClick={reset} className="rounded-xl bg-violet py-3 font-semibold text-white">Coba lagi</button>
         <a href="/" className="rounded-xl border border-line py-3 font-semibold">Ke beranda</a>
       </div>
-      {error.digest && <p className="font-mono text-[11px] text-muted">Kode: {error.digest}</p>}
+      {error.digest && <p className="font-mono text-xs text-muted">Kode: {error.digest}</p>}
     </main>
   );
 }

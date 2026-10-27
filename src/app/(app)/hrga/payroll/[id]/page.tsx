@@ -133,15 +133,15 @@ export default async function RunPage({ params, searchParams }: { params: Promis
             <Table head={['Karyawan', 'PTKP', 'Hadir', 'Lembur', 'Upah tetap', 'Bruto', 'Potongan', 'BPJS kary.', 'PPh 21', 'Bersih', ...(run.parallel ? ['Sistem lama', 'Selisih'] : []), '']}>
               {pg.rows.map(s => (
                 <tr key={s.id}>
-                  <td><span className="font-medium">{s.full_name}</span><span className="block font-mono text-[11px] text-muted">{s.nrp} · {s.department_code}</span></td>
+                  <td><span className="font-medium">{s.full_name}</span><span className="block font-mono text-xs text-muted">{s.nrp} · {s.department_code}</span></td>
                   <td className="text-xs">{s.ptkp_status} · {s.ter_category}</td>
-                  <td className="tabular text-sm">{s.days_present}{(s.days_absent > 0 || s.days_unpaid > 0) && <span className="ml-1 text-[11px] text-crit">−{s.days_absent + s.days_unpaid}</span>}</td>
+                  <td className="tabular text-sm">{s.days_present}{(s.days_absent > 0 || s.days_unpaid > 0) && <span className="ml-1 text-xs text-crit">−{s.days_absent + s.days_unpaid}</span>}</td>
                   <td className="tabular text-sm">{Number(s.overtime_hours) || '–'}</td>
                   <td className="tabular text-sm">{rp(s.fixed_wage)}</td>
                   <td className="tabular text-sm">{rp(s.earnings)}</td>
                   <td className="tabular text-sm">{rp(s.deductions)}</td>
                   <td className="tabular text-sm">{rp(s.bpjs_ee)}</td>
-                  <td className="tabular text-sm">{rp(s.pph21)}<span className="block text-[10px] text-muted">{s.annualized ? 'setahun' : s.ter_rate != null ? `TER ${s.ter_rate}%` : ''}</span></td>
+                  <td className="tabular text-sm">{rp(s.pph21)}<span className="block text-xs text-muted">{s.annualized ? 'setahun' : s.ter_rate != null ? `TER ${s.ter_rate}%` : ''}</span></td>
                   <td className="tabular text-sm font-semibold">{rp(s.net)}</td>
                   {run.parallel && <>
                     <td className="tabular text-sm">{rp(s.legacy_net)}</td>
@@ -182,7 +182,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
               const e = i.employee as unknown as { nrp: string; full_name: string } | null;
               return (
                 <tr key={i.id}>
-                  <td className="text-sm">{e?.full_name}<span className="block font-mono text-[11px] text-muted">{e?.nrp}</span></td>
+                  <td className="text-sm">{e?.full_name}<span className="block font-mono text-xs text-muted">{e?.nrp}</span></td>
                   <td className="font-mono text-xs">{i.component_code}</td>
                   <td className="tabular text-sm">{rp(i.amount)}</td>
                   <td className="text-sm text-muted">{i.note ?? ''}</td>

@@ -75,7 +75,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
                 <p key={t.step_name} className="text-sm">Menunggu: <b>{t.step_name}</b> · tenggat {fmtDateTime(t.due_at)}</p>
               ))}
               {current.draft && <p className="text-sm">Berkas draf: <span className="font-mono text-xs">{current.draft.file_name}</span>
-                <span className="ml-2 font-mono text-[11px] text-muted">SHA-256 {current.draft_sha256?.slice(0, 12)}…</span></p>}
+                <span className="ml-2 font-mono text-xs text-muted">SHA-256 {current.draft_sha256?.slice(0, 12)}…</span></p>}
               {isOwner && editable && (
                 <div className="grid gap-4 border-t border-line pt-3">
                   <ActionForm action={uploadDraft} label="Lampirkan draf" hidden={{ version: current.id, document: doc.id }}>
@@ -104,7 +104,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
               <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
                 <dt className="text-muted">Berlaku</dt><dd>{fmtDate(effective.effective_date)}</dd>
                 <dt className="text-muted">Terbit</dt><dd>{fmtDateTime(effective.released_at)}</dd>
-                <dt className="text-muted">SHA-256</dt><dd className="col-span-3 break-all font-mono text-[11px]">{effective.final_sha256 ?? '–'}</dd>
+                <dt className="text-muted">SHA-256</dt><dd className="col-span-3 break-all font-mono text-xs">{effective.final_sha256 ?? '–'}</dd>
               </dl>
               {myDist && !myDist.acknowledged_at && myDist.ack_required && (
                 <ActionForm action={acknowledge} label="Saya sudah menerima & membaca" primary hidden={{ version: effective.id, document: doc.id }} />
