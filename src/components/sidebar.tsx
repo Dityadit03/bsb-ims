@@ -199,6 +199,7 @@ export function Sidebar({ permissions, name, email, role, unit, alerts, alertTot
                 <Link href="/saya" className="block rounded-lg px-2 py-1.5 text-sm hover:bg-ground">Profil & pengajuan saya</Link>
                 <Link href="/absen" className="block rounded-lg px-2 py-1.5 text-sm hover:bg-ground">Absen</Link>
                 <Link href="/tugas" className="block rounded-lg px-2 py-1.5 text-sm hover:bg-ground">Kotak tugas</Link>
+                <Link href="/bantuan" className="block rounded-lg px-2 py-1.5 text-sm hover:bg-ground">Bantuan</Link>
                 {email.endsWith('@nrp.bsb.local') && <Link href="/ganti-sandi" className="block rounded-lg px-2 py-1.5 text-sm hover:bg-ground">Ganti sandi</Link>}
                 <button onClick={() => setPop('settings')} className="block w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-ground">Pengaturan</button>
                 <form action="/auth/keluar" method="post" onSubmit={async e => { e.preventDefault(); const f = e.currentTarget; await forgetDevice(); f.submit(); }}><button className="w-full rounded-lg px-2 py-1.5 text-left text-sm text-crit hover:bg-ground">Keluar</button></form>
