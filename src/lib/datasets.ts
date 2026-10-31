@@ -403,6 +403,13 @@ export const IMPORTS: ImportKind[] = [
     f('nama', 'Nama', ['nama', 'nama supplier', 'supplier', 'vendor'], 'CV Mitra Teknik', { required: true }),
     f('kategori', 'Kategori', ['kategori', 'bidang'], 'Suku cadang'), f('kontak', 'Kontak', ['kontak', 'pic', 'contact'], 'Pak Andi'),
     f('telepon', 'Telepon', ['telepon', 'hp', 'phone', 'no hp'], '0812xxxx')] },
+  { key: 'katalog', label: 'Katalog suku cadang', perm: 'catalog.manage', note: 'Model dan kelompok harus sudah ada (kode atau nama). Nomor part yang sama di kelompok yang sama diperbarui.', fields: [
+    f('model', 'Model unit', ['model', 'unit', 'kode model'], 'HILUX', { required: true }),
+    f('kelompok', 'Kelompok sistem', ['kelompok', 'sistem', 'group', 'kode kelompok'], 'ENG', { required: true }),
+    f('no_part', 'Nomor part', ['no part', 'nomor part', 'part number', 'part no'], '90915-YZZD4', { required: true }),
+    f('nama', 'Nama part', ['nama', 'nama part', 'deskripsi'], 'Filter oli', { required: true }),
+    f('jumlah', 'Jumlah per unit', ['jumlah', 'qty', 'jml'], '1'), f('no_ref', 'No. gambar (ref)', ['no ref', 'ref', 'no gambar'], '12'),
+    f('kode_barang', 'Kode barang gudang', ['kode barang', 'kode gudang', 'material'], 'SP-FLT-01'), f('keterangan', 'Keterangan', ['keterangan', 'catatan'], '')] },
   { key: 'opname', label: 'Stok opname', perm: 'log.warehouse', note: 'Stok sistem disamakan dengan hasil hitung; selisih tercatat sebagai penyesuaian.', fields: [
     f('kode', 'Kode barang', ['kode', 'kode barang', 'part number'], 'SP-FLT-01', { required: true }),
     f('stok_fisik', 'Stok fisik', ['stok fisik', 'hasil hitung', 'qty', 'jumlah', 'stok'], '12', { required: true }),

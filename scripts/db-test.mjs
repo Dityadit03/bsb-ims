@@ -2312,6 +2312,24 @@ await test('OWASP: klien tidak bisa mengikat lampiran ke rekaman orang lain atau
   await expectError('42501', async () => as(db, adminId, `insert into public.approver_designations(employee_id, role_code) values (gen_random_uuid(), 'PJO')`));
   eq((await db.query(`select count(*)::int c from information_schema.role_table_grants where grantee = 'authenticated' and table_name = 'approver_designations' and privilege_type <> 'SELECT'`)).rows[0].c, 0);
 });
+await test('katalog suku cadang: 5 model + kelompok, part hanya via fungsi, impor Excel, tautan stok', async () => {
+  eq((await db.query(`select count(*)::int c from public.catalog_models`)).rows[0].c, 5);
+  const m = (await db.query(`select id from public.catalog_models where code = 'HILUX'`)).rows[0].id;
+  const g = (await db.query(`select id from public.catalog_groups where model_id = $1 and code = 'ENG'`, [m])).rows[0].id;
+  await expectError('42501', async () => as(db, outsiderId, `select public.catalog_part_save($1, 'X-1', 'Tes')`, [g]));
+  await expectError('42501', async () => as(db, logStaff, `insert into public.catalog_parts(group_id, ref_no, part_no, name) values ($1, 1, 'X', 'X')`, [g]));
+  await as(db, logStaff, `select public.catalog_part_save($1, 'TST-001', 'Filter oli', 1, null, 'Uji', null)`, [g]);
+  await as(db, logStaff, `select public.catalog_part_save($1, 'TST-001', 'Filter oli v2', 2)`, [g]);
+  const p = (await as(db, staffId, `select ref_no, name, qty from public.catalog_part_view where group_id = $1`, [g])).rows;
+  eq(p.length, 1); eq(p[0].ref_no, 1); eq(p[0].name, 'Filter oli v2');
+  await expectError('22023', async () => as(db, logStaff, `select public.catalog_part_save($1, 'TST-002', 'Tes', 1, null, null, 'TIDAK-ADA')`, [g]));
+  const r = (await as(db, logStaff, `select public.import_rows('katalog', $1::jsonb, true) r`, [JSON.stringify([
+    { model: 'hilux', kelompok: 'eng', no_part: 'TST-003', nama: 'Filter udara', jumlah: '1' },
+    { model: 'NOPE', kelompok: 'ENG', no_part: 'TST-004', nama: 'x' }])])).rows[0].r;
+  eq(r.ok, 1); eq(r.errors.length, 1);
+  await as(db, logStaff, `select public.catalog_part_delete((select id from public.catalog_parts where part_no = 'TST-003'))`);
+  eq((await db.query(`select count(*)::int c from public.catalog_parts where part_no = 'TST-003'`)).rows[0].c, 0);
+});
 await test('anon tidak punya hak apa pun atas tabel/view public; fungsi anon hanya verify_document & feed_rows', async () => {
   eq((await db.query(`select count(*)::int c from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public'`)).rows[0].c, 0);
   const fn = (await db.query(`select string_agg(p.proname, ',' order by p.proname) s from pg_proc p join pg_namespace n on n.oid = p.pronamespace
