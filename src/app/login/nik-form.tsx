@@ -1,4 +1,5 @@
 'use client';
+import { PasswordInput } from '@/components/password-input';
 import { useActionState, useState } from 'react';
 import Script from 'next/script';
 import { btnPrimary } from '@/components/ui';
@@ -40,12 +41,12 @@ export function NikForm({ next }: { next?: string }) {
           </>
         )}
         <label className="grid gap-1 text-sm">Sandi
-          <input name="password" type="password" required minLength={mode === 'daftar' ? 10 : undefined}
+          <PasswordInput name="password" required minLength={mode === 'daftar' ? 10 : undefined}
             autoComplete={mode === 'masuk' ? 'current-password' : 'new-password'} className={field} />
         </label>
         {mode === 'daftar' && (
           <label className="grid gap-1 text-sm">Ulangi sandi
-            <input name="confirm" type="password" required autoComplete="new-password" className={field} />
+            <PasswordInput name="confirm" required autoComplete="new-password" className={field} />
           </label>
         )}
         {SITE_KEY && <div className="cf-turnstile" data-sitekey={SITE_KEY} data-theme="dark" />}

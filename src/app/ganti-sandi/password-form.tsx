@@ -1,5 +1,6 @@
 'use client';
 import { useActionState } from 'react';
+import { PasswordInput } from '@/components/password-input';
 import { btnPrimary, input } from '@/components/ui';
 import { changePassword } from './actions';
 
@@ -8,10 +9,10 @@ export function PasswordForm({ forced }: { nrp: string; forced: boolean }) {
   return (
     <form action={action} className="grid gap-3">
       <label className="grid gap-1 text-sm">Sandi baru
-        <input name="password" type="password" required minLength={10} autoComplete="new-password" className={input} />
+        <PasswordInput name="password" required minLength={10} autoComplete="new-password" className={input} />
       </label>
       <label className="grid gap-1 text-sm">Ulangi sandi baru
-        <input name="confirm" type="password" required autoComplete="new-password" className={input} />
+        <PasswordInput name="confirm" required autoComplete="new-password" className={input} />
       </label>
       <button className={`${btnPrimary} py-3`} disabled={pending}>{pending ? 'Menyimpan…' : 'Simpan sandi'}</button>
       {state.error && <p role="alert" className="text-sm text-crit">{state.error}</p>}
