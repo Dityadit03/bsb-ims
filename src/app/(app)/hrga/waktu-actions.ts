@@ -129,3 +129,7 @@ export async function decideOvertime(_: ActionState, f: FormData) {
 export async function cancelOvertime(_: ActionState, f: FormData) {
   return run(['/hrga/lembur', '/saya'], 'SPL dibatalkan', () => rpc('overtime_request_cancel', { p_id: str(f, 'id') }));
 }
+
+export async function setAttendancePolicy(_: ActionState, f: FormData) {
+  return run(['/hrga/absensi', '/absen'], 'Pengaturan kunci absen disimpan', () => rpc('attendance_policy_set', { p_mode: str(f, 'mode'), p_require_photo: true }));
+}

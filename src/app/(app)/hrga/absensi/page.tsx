@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/server';
 import { fmtDate } from '@/lib/documents';
 import { ATT_STATUS, ROSTER, fmtTime, siteToday } from '@/lib/hrga';
 import { EmployeeDatalist, EmployeeInput } from '../../she/fields';
-import { manualAttendance, saveLocation, saveShift, setHoliday } from '../waktu-actions';
+import { manualAttendance, saveLocation, saveShift, setAttendancePolicy, setHoliday } from '../waktu-actions';
 import { HrTabs } from '../tabs';
 
 export const metadata = { title: 'Absensi' };
@@ -22,7 +22,7 @@ const addDays = (d: string, n: number) => new Date(new Date(`${d}T00:00:00Z`).ge
 export default async function AbsensiPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
   const session = await getSession();
-  const isHr = session.canIn('hr.manage', 'HRGA');
+  const isHr = session.canIn('hr.manage', 'HRGA') || session.can('user.manage');
   const supabase = await createClient();
   const tab = sp.tab === 'rekap' || sp.tab === 'pengaturan' ? sp.tab : 'harian';
   const date = sp.tgl && /^\d{4}-\d{2}-\d{2}$/.test(sp.tgl) ? sp.tgl : siteToday();
@@ -165,13 +165,23 @@ async function Monthly({ month, sp, supabase }: { month: string; sp: Record<stri
 
 async function Settings({ isHr, supabase }: { isHr: boolean; supabase: Client }) {
   const year = siteToday().slice(0, 4);
-  const [{ data: locs }, { data: shifts }, { data: hols }] = await Promise.all([
+  const [{ data: locs }, { data: shifts }, { data: hols }, { data: pol }] = await Promise.all([
     supabase.from('attendance_locations').select('*').order('name'),
     supabase.from('work_shifts').select('*').order('code'),
     supabase.from('holidays').select('*').gte('holiday_date', `${year}-01-01`).order('holiday_date'),
+    supabase.from('app_settings').select('key, value').in('key', ['attendance_geofence_mode', 'attendance_require_photo']),
   ]);
+  const locked = pol?.find(r => r.key === 'attendance_geofence_mode')?.value === 'reject';
   return (
     <div className="grid gap-4 xl:grid-cols-2">
+      <Panel title="Kunci absen" sub="Mode kunci: karyawan hanya bisa absen di dalam radius lokasi aktif, GPS wajib (akurasi ≤ 100 m), absen tanpa GPS dinonaktifkan. Selfie selalu dari kamera langsung.">
+        <p className="text-sm">Status sekarang: {locked ? <Pill tone="ok">Terkunci ke lokasi</Pill> : <Pill tone="warn">Longgar (di luar radius hanya ditandai)</Pill>}</p>
+        {isHr && (
+          <ActionForm action={setAttendancePolicy} label={locked ? 'Longgarkan (hanya tandai)' : 'Kunci absen ke lokasi'} primary={!locked}
+            hidden={{ mode: locked ? 'flag' : 'reject' }} confirm={locked ? undefined : 'Kunci absen? Karyawan di luar radius lokasi aktif tidak bisa absen.'} />
+        )}
+        <p className="text-xs text-muted">Pastikan koordinat dan radius lokasi di bawah sudah benar sebelum mengunci. Aplikasi web tidak bisa mendeteksi aplikasi GPS palsu; tinjau juga kolom jarak dan perangkat di rekap harian.</p>
+      </Panel>
       <Panel title="Lokasi absen (geofence)" sub="Absen dari aplikasi dibandingkan dengan lokasi aktif terdekat. Ambil koordinat dari Google Maps (klik kanan → salin koordinat).">
         {locs?.length ? (
           <Table head={['Lokasi', 'Koordinat', 'Radius', 'Status']}>

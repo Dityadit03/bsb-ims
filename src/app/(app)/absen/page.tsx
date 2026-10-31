@@ -24,14 +24,16 @@ export default async function AbsenPage() {
     );
   }
   const since = new Date(Date.now() - 36 * 3600 * 1000).toISOString();
-  const [{ data: day }, { data: logs }, { data: setting }, { data: locs }] = await Promise.all([
+  const [{ data: day }, { data: logs }, { data: setting }, { data: locs }, { data: mode }] = await Promise.all([
     supabase.from('attendance_daily').select('work_date, roster_code, start_at, end_at, clock_in, clock_out, status, late_minutes')
       .eq('employee_id', me.id).lte('work_date', today).order('work_date', { ascending: false }).limit(2),
     supabase.from('attendance_logs').select('id, at, kind, source, in_geofence, distance_m, location_id').eq('employee_id', me.id)
       .gte('at', since).order('at', { ascending: false }).returns<Log[]>(),
     supabase.from('app_settings').select('value').eq('key', 'attendance_require_photo').maybeSingle(),
     supabase.from('attendance_locations').select('id, name').eq('active', true),
+    supabase.from('app_settings').select('value').eq('key', 'attendance_geofence_mode').maybeSingle(),
   ]);
+  const locked = mode?.value === 'reject';
   // shift malam kemarin yang belum pulang tetap jadi hari kerja aktif
   const cur = (day ?? []).find(d => d.work_date === today) ?? null;
   const prev = (day ?? []).find(d => d.work_date !== today && d.roster_code === 'N' && d.clock_in && !d.clock_out) ?? null;
@@ -65,7 +67,7 @@ export default async function AbsenPage() {
             </div>
           )}
         </Panel>
-        <Panel><ClockForm next={next} requirePhoto={setting?.value !== false} /></Panel>
+        <Panel><ClockForm next={next} requirePhoto={setting?.value !== false} locked={locked} /></Panel>
         <Panel title="Riwayat 36 jam terakhir">
           {logs?.length ? (
             <ul className="grid gap-2 text-sm">

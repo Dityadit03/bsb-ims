@@ -1365,6 +1365,22 @@ await test('absen aplikasi: selfie wajib, di luar radius ditandai (mode flag) at
   eq((await as(db, spvHse, `select 1 from public.attendance_logs where employee_id = $1`, [wk.id])).rowCount, 0);
   eq((await as(db, spvPrd, `select 1 from public.attendance_logs where employee_id = $1`, [wk.id])).rowCount, 2);
 });
+await test('kunci absen: mode reject menolak tanpa GPS, akurasi buruk, di luar radius, tanpa lokasi; pengaturan oleh admin/HRGA', async () => {
+  const CLOCK = `select (a).* from public.attendance_clock($1, $2, $3, $4, $5, 'test', now() - interval '2 days', $6) a`;
+  await expectError('42501', async () => as(db, absUser, `select public.attendance_policy_set('reject')`));
+  await as(db, hrStaff, `select public.attendance_policy_set('reject', true)`);
+  eq((await db.query(`select value #>> '{}' v from public.app_settings where key = 'attendance_geofence_mode'`)).rows[0].v, 'reject');
+  await expectError('22023', async () => as(db, absUser, CLOCK, ['in', null, null, null, (await upload(absUser)).id, 'GPS rusak']));
+  await expectError('22023', async () => as(db, absUser, CLOCK, ['in', -1.0005, 116.0005, 150, (await upload(absUser)).id, null]));
+  await expectError('22023', async () => as(db, absUser, CLOCK, ['in', -1.02, 116.0, 15, (await upload(absUser)).id, null]));
+  await expectError('22023', async () => as(db, absUser, CLOCK, ['in', -1.0005, 116.0005, 15, null, null]));
+  const ok = (await as(db, absUser, CLOCK, ['in', -1.0005, 116.0005, 15, (await upload(absUser)).id, null])).rows[0];
+  eq(ok.in_geofence, true);
+  await db.query(`update public.attendance_locations set active = false`);
+  await expectError('22023', async () => as(db, hrStaff, `select public.attendance_policy_set('reject')`));
+  await db.query(`update public.attendance_locations set active = true`);
+  await as(db, hrStaff, `select public.attendance_policy_set('flag', true)`);
+});
 await test('absen tanpa GPS wajib alasan & ditandai; waktu dari antrean offline dibatasi; kiriman ganda ditolak lewat client_requests', async () => {
   const NOGPS = `select (a).* from public.attendance_clock($1, null, null, null, $2, 'test', $3::timestamptz, $4) a`;
   await expectError('22023', async () => as(db, absUser, NOGPS, ['in', (await upload(absUser)).id, new Date(Date.now() - 36e5 * 30).toISOString(), null]));

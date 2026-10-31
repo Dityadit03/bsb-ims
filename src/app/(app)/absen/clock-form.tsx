@@ -2,13 +2,12 @@
 import { Icon } from '@/components/icon';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { clock } from '../hrga/waktu-actions';
-import { shrinkImage } from '@/lib/image';
 import { enqueue, formToFields, queueSupported } from '@/lib/offline/queue';
 import { flushQueue } from '@/lib/offline/replay';
 
 type Pos = { lat: number; lng: number; accuracy: number };
 
-export function ClockForm({ next, requirePhoto }: { next: 'in' | 'out'; requirePhoto: boolean }) {
+export function ClockForm({ next, requirePhoto, locked = false }: { next: 'in' | 'out'; requirePhoto: boolean; locked?: boolean }) {
   const [state, setState] = useState<{ error?: string; ok?: string }>({});
   const [pending, start] = useTransition();
   const [noGps, setNoGps] = useState(false);
@@ -17,7 +16,10 @@ export function ClockForm({ next, requirePhoto }: { next: 'in' | 'out'; requireP
   const [geoErr, setGeoErr] = useState<string | null>(null);
   const [photo, setPhoto] = useState<{ blob: Blob; url: string } | null>(null);
   const [kind, setKind] = useState<'in' | 'out'>(next);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [camOn, setCamOn] = useState(false);
+  const [camErr, setCamErr] = useState<string | null>(null);
   const [cid, setCid] = useState(() => crypto.randomUUID());
 
   const locate = () => {
@@ -33,10 +35,26 @@ export function ClockForm({ next, requirePhoto }: { next: 'in' | 'out'; requireP
   useEffect(() => setKind(next), [next]);
   useEffect(() => { if (state.ok) { setPhoto(null); setReason(''); } }, [state]);
 
-  const pick = async (f: File | undefined) => {
-    if (!f) return;
-    const small = await shrinkImage(f, 800, 0.75);
-    setPhoto({ blob: small, url: URL.createObjectURL(small) });
+  // Selfie hanya dari kamera langsung (tidak ada pilihan unggah dari galeri/berkas)
+  const stopCam = () => { streamRef.current?.getTracks().forEach(t => t.stop()); streamRef.current = null; setCamOn(false); };
+  useEffect(() => stopCam, []);
+  const openCam = async () => {
+    setCamErr(null);
+    if (!navigator.mediaDevices?.getUserMedia) return setCamErr('Kamera tidak didukung di perangkat/peramban ini');
+    try {
+      const st = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 720 } }, audio: false });
+      streamRef.current = st; setPhoto(null); setCamOn(true);
+      requestAnimationFrame(() => { if (videoRef.current) { videoRef.current.srcObject = st; void videoRef.current.play(); } });
+    } catch { setCamErr('Kamera tidak bisa dibuka. Izinkan akses kamera untuk situs ini.'); }
+  };
+  const snap = () => {
+    const v = videoRef.current;
+    if (!v || !v.videoWidth) return;
+    const scale = Math.min(1, 800 / v.videoWidth);
+    const c = document.createElement('canvas');
+    c.width = Math.round(v.videoWidth * scale); c.height = Math.round(v.videoHeight * scale);
+    c.getContext('2d')?.drawImage(v, 0, 0, c.width, c.height);
+    c.toBlob(b => { if (b) { setPhoto({ blob: b, url: URL.createObjectURL(b) }); stopCam(); } }, 'image/jpeg', 0.75);
   };
 
   const submit = (fd: FormData) => {
@@ -63,7 +81,7 @@ export function ClockForm({ next, requirePhoto }: { next: 'in' | 'out'; requireP
       } catch { await queue(); void flushQueue(); }
     });
   };
-  const ready = (!!pos || (noGps && reason.trim().length >= 5)) && (!requirePhoto || !!photo);
+  const ready = ((!!pos && (!locked || pos.accuracy <= 100)) || (!locked && noGps && reason.trim().length >= 5)) && (!requirePhoto || !!photo);
 
   return (
     <form onSubmit={e => { e.preventDefault(); submit(new FormData()); }} className="grid gap-4">
@@ -78,18 +96,18 @@ export function ClockForm({ next, requirePhoto }: { next: 'in' | 'out'; requireP
 
       <div className="flex items-center justify-between gap-3 rounded-xl border border-line p-3 text-sm">
         <div>
-          <div className="font-semibold">Lokasi</div>
+          <div className="font-semibold">Lokasi{locked && <span className="ml-2 rounded bg-violet/10 px-1.5 py-0.5 text-xs font-medium text-violet">terkunci ke area absen</span>}</div>
           {pos ? <div className="tabular text-xs text-muted">{pos.lat.toFixed(5)}, {pos.lng.toFixed(5)} · akurasi ±{pos.accuracy} m</div>
             : <div className={`text-xs ${geoErr ? 'text-crit' : 'text-muted'}`}>{geoErr ?? 'Membaca GPS…'}</div>}
         </div>
         <button type="button" onClick={locate} className="rounded-lg border border-line px-3 py-1.5 text-xs font-medium hover:border-violet/60">Perbarui</button>
       </div>
-      {!pos && geoErr && !noGps && (
+      {!locked && !pos && geoErr && !noGps && (
         <button type="button" onClick={() => setNoGps(true)} className="rounded-xl border border-warn/50 bg-warn/10 px-3 py-2 text-left text-sm text-warn">
           GPS tidak bisa dipakai? <span className="font-semibold underline">Absen tanpa GPS</span> (ditandai untuk ditinjau atasan)
         </button>
       )}
-      {!pos && noGps && (
+      {!locked && !pos && noGps && (
         <label className="grid gap-1 text-sm">Alasan absen tanpa GPS
           <input value={reason} onChange={e => setReason(e.target.value)} placeholder="mis. izin lokasi ditolak / GPS rusak" maxLength={200}
             className="w-full rounded-lg border border-line bg-panel px-3 py-2 text-sm" />
@@ -97,19 +115,25 @@ export function ClockForm({ next, requirePhoto }: { next: 'in' | 'out'; requireP
       )}
 
       <div className="grid gap-2">
-        <input ref={fileRef} type="file" accept="image/*" capture="user" aria-label="Foto selfie" className="hidden" onChange={e => pick(e.target.files?.[0])} />
-        {photo ? (
-          <button type="button" onClick={() => fileRef.current?.click()} className="relative overflow-hidden rounded-xl border border-line">
+        {camOn ? (
+          <div className="relative overflow-hidden rounded-xl border border-line bg-black">
+            <video ref={videoRef} playsInline muted className="mx-auto max-h-72 w-full -scale-x-100 object-cover" />
+            <button type="button" onClick={snap} className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-white px-5 py-2 text-sm font-bold text-black shadow">Ambil foto</button>
+          </div>
+        ) : photo ? (
+          <button type="button" onClick={openCam} className="relative overflow-hidden rounded-xl border border-line">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={photo.url} alt="Selfie" className="mx-auto max-h-64 object-cover" />
             <span className="absolute bottom-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white">Ambil ulang</span>
           </button>
         ) : (
-          <button type="button" onClick={() => fileRef.current?.click()}
+          <button type="button" onClick={openCam}
             className="grid h-40 place-items-center rounded-xl border-2 border-dashed border-line text-sm text-muted hover:border-violet/60">
-            <span><Icon name="camera" size={30} className="mx-auto mb-1" />Ambil selfie{requirePhoto ? '' : ' (opsional)'}</span>
+            <span><Icon name="camera" size={30} className="mx-auto mb-1" />Buka kamera untuk selfie{requirePhoto ? '' : ' (opsional)'}</span>
           </button>
         )}
+        {camErr && <p role="alert" className="text-sm text-crit">{camErr}</p>}
+        <p className="text-xs text-muted">Foto harus diambil langsung dari kamera; unggah dari galeri tidak tersedia.</p>
       </div>
 
       <button disabled={!ready || pending}
