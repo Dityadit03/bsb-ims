@@ -1,42 +1,23 @@
 'use client';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { VW, VH, buildUnit } from './units';
 
 export type CModel = { id: string; code: string; name: string; brand: string; template: 'pickup' | 'service' | 'dump'; description: string | null };
 export type CGroup = { id: string; code: string; name: string; description: string | null; sort: number };
 export type CPart = { id: string; group_id: string; ref_no: number; part_no: string; name: string; qty: number; description: string | null;
   material_code: string | null; note: string | null; stock_qty: number | null; uom: string | null; min_stock: number | null };
 
-const W = 800, H = 380;
-
-// Tata letak blok kelompok: grid 3 baris. "Terpasang" = blok merapat ke tengah dan mengecil membentuk unit; "terbongkar" = menyebar.
-function layout(n: number) {
-  const rows = 3, cols = Math.max(1, Math.ceil(n / rows));
-  const cw = (W - 40) / cols, ch = 100;
-  return Array.from({ length: n }, (_, i) => {
-    const r = i % rows, c = Math.floor(i / rows);
-    const w = cw - 14, h = ch - 14;
-    const x = 20 + c * cw + 7, y = 15 + r * (ch + 22) + 7;
-    return { x, y, w, h, cx: x + w / 2, cy: y + h / 2 };
-  });
-}
-
-function Truck({ template }: { template: CModel['template'] }) {
-  const body = template === 'pickup' ? 'M60 230 h40 l20 -50 h90 l40 50 h200 v20 H60z' : template === 'service' ? 'M60 230 h40 l20 -60 h90 v-20 h330 v100 H60z' : 'M60 230 h40 l20 -60 h90 l10 -30 h20 l260 -10 v110 H60z';
-  return (
-    <g className="text-muted" fill="none" stroke="currentColor" strokeWidth="2" opacity=".5">
-      <path d={body} />
-      <circle cx="170" cy="262" r="26" /><circle cx="540" cy="262" r="26" /><circle cx="610" cy="262" r="26" />
-    </g>
-  );
-}
+const W = VW, H = VH;
 
 export function Explorer({ models, current, groups, parts }: { models: CModel[]; current: CModel; groups: CGroup[]; parts: CPart[] }) {
   const [exploded, setExploded] = useState(false);
   const [gid, setGid] = useState<string | null>(null);
   const [pid, setPid] = useState<string | null>(null);
   const [q, setQ] = useState('');
-  const pos = useMemo(() => layout(groups.length), [groups.length]);
+  const art = useMemo(() => buildUnit(current.code, current.template), [current.code, current.template]);
+  const asmOf = useMemo(() => new Map(art.asms.map(a => [a.id, a])), [art]);
+  const abs = (code: string) => { const m = art.markers[code]; if (!m) return null; const a = asmOf.get(m.asm)!; return { x: m.x + (exploded ? a.dx : 0), y: m.y + (exploded ? a.dy : 0), asm: m.asm }; };
   const counts = useMemo(() => { const m = new Map<string, number>(); parts.forEach(p => m.set(p.group_id, (m.get(p.group_id) ?? 0) + 1)); return m; }, [parts]);
   const group = groups.find(g => g.id === gid) ?? null;
   const gparts = useMemo(() => parts.filter(p => p.group_id === gid), [parts, gid]);
@@ -50,11 +31,14 @@ export function Explorer({ models, current, groups, parts }: { models: CModel[];
   const jump = (p: CPart) => { setGid(p.group_id); setPid(p.id); setQ(''); };
   const back = () => { if (pid) setPid(null); else setGid(null); };
 
-  // Titik callout pada elips di sekitar blok kelompok terfokus
-  const callouts = gparts.slice(0, 40).map((p, i, a) => {
-    const ang = (i / a.length) * Math.PI * 2 - Math.PI / 2;
-    return { p, x: W / 2 + Math.cos(ang) * 300, y: H / 2 + Math.sin(ang) * 135 };
-  });
+  // Callout bernomor di dua kolom tepi; garis penunjuk ke penanda kelompok pada unit
+  const anchor = group ? (abs(group.code) ?? { x: W / 2, y: 200, asm: '' }) : null;
+  const shown = gparts.slice(0, 28);
+  const side = (i: number, ax: number) => (ax < W / 2 ? (i % 2 === 0 ? 'l' : 'r') : (i % 2 === 0 ? 'r' : 'l'));
+  const left = shown.filter((_, i) => side(i, anchor?.x ?? 0) === 'l'), right = shown.filter((_, i) => side(i, anchor?.x ?? 0) === 'r');
+  const place = (arr: CPart[], x: number) => arr.map((p, i) => ({ p, x, y: 40 + (arr.length === 1 ? (H - 120) / 2 : (i * (H - 120)) / (arr.length - 1)) }));
+  const callouts = [...place(left, 34), ...place(right, W - 34)];
+  const firstOf = (asm: string) => groups.find(g => art.markers[g.code]?.asm === asm)?.id;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[200px_minmax(0,1fr)_320px]">
@@ -76,44 +60,51 @@ export function Explorer({ models, current, groups, parts }: { models: CModel[];
             : <button type="button" onClick={() => setExploded(v => !v)} aria-pressed={exploded} className="rounded-lg bg-violet px-3 py-1.5 text-sm font-medium text-white hover:bg-violet/90">{exploded ? 'Rakit unit' : 'Bongkar unit'}</button>}
         </div>
 
-        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Diagram skematik ${current.name}`} className="h-auto w-full select-none">
-          {!gid && (
-            <g style={{ transition: 'opacity .5s' }} opacity={exploded ? 0 : 1}><Truck template={current.template} /></g>
-          )}
-          {!gid && groups.map((g, i) => {
-            const p = pos[i];
-            const dx = (W / 2 - p.cx) * 0.55, dy = (H / 2 - p.cy) * 0.55;
-            const tf = exploded ? 'translate(0px,0px) scale(1)' : `translate(${dx}px,${dy}px) scale(.5)`;
+        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Ilustrasi ${current.name}`} className="h-auto w-full select-none rounded-xl" style={{ background: 'linear-gradient(180deg, color-mix(in srgb, var(--color-violet, #7A1FD0) 7%, transparent), color-mix(in srgb, var(--color-violet, #7A1FD0) 2%, transparent) 70%)' }}>
+          {art.defs}
+          <ellipse cx={W / 2} cy="326" rx="380" ry="12" fill="#000" opacity=".18" />
+          <rect x="0" y="322" width={W} height="2" fill="currentColor" opacity=".12" />
+          {art.asms.map((a, i) => {
+            const dim = !!gid && !!anchor?.asm && anchor.asm !== a.id;
+            const first = firstOf(a.id);
             return (
-              <g key={g.id} role="button" tabIndex={0} aria-label={`${g.name}, ${counts.get(g.id) ?? 0} part`}
-                onClick={() => (exploded ? openGroup(g.id) : setExploded(true))}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (exploded) openGroup(g.id); else setExploded(true); } }}
-                className="cursor-pointer outline-none motion-reduce:!transition-none [&:focus-visible>rect]:stroke-[3]"
-                style={{ transform: tf, transformBox: 'fill-box', transformOrigin: 'center', transition: `transform .7s cubic-bezier(.2,.8,.2,1) ${i * 35}ms` }}>
-                <rect x={p.x} y={p.y} width={p.w} height={p.h} rx="12" className="fill-panel stroke-violet" strokeWidth="2" style={{ fill: 'color-mix(in srgb, var(--color-violet, #7A1FD0) 10%, var(--color-panel, #fff))' }} />
-                <text x={p.cx} y={p.cy - 6} textAnchor="middle" className="fill-current font-mono" fontSize="15" fontWeight="700">{g.code}</text>
-                <text x={p.cx} y={p.cy + 14} textAnchor="middle" className="fill-current" fontSize="12">{g.name.length > 24 ? g.name.slice(0, 23) + '…' : g.name}</text>
-                <text x={p.cx} y={p.cy + 32} textAnchor="middle" className="fill-muted" fontSize="11">{counts.get(g.id) ?? 0} part</text>
+              <g key={a.id} onClick={() => { if (!exploded) setExploded(true); else if (!gid && first) openGroup(first); }}
+                className={`${gid ? '' : 'cursor-pointer'} motion-reduce:!transition-none`}
+                style={{ transform: exploded ? `translate(${a.dx}px, ${a.dy}px)` : 'translate(0,0)', transition: `transform .8s cubic-bezier(.2,.8,.2,1) ${i * 45}ms, opacity .4s`, opacity: dim ? 0.28 : 1 }}>
+                {a.node}
+                {Object.entries(art.markers).filter(([code, m]) => m.asm === a.id && groups.some(g => g.code === code)).map(([code, m]) => {
+                  const g = groups.find(x => x.code === code)!;
+                  const on = g.id === gid;
+                  return (
+                    <g key={code} role="button" tabIndex={exploded ? 0 : -1} aria-label={`${g.name}, ${counts.get(g.id) ?? 0} part`}
+                      onClick={e => { e.stopPropagation(); if (exploded) openGroup(g.id); }}
+                      onKeyDown={e => { if (exploded && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openGroup(g.id); } }}
+                      className="cursor-pointer outline-none [&:focus-visible>rect]:stroke-white [&:focus-visible>rect]:stroke-[3]"
+                      style={{ opacity: exploded ? 1 : 0, pointerEvents: exploded ? 'auto' : 'none', transition: 'opacity .5s .5s' }}>
+                      <title>{g.name}</title>
+                      {on && <rect x={m.x - 26} y={m.y - 15} width="52" height="30" rx="15" fill="#7A1FD0" opacity=".25" className="animate-pulse motion-reduce:animate-none" />}
+                      <rect x={m.x - 22} y={m.y - 11} width="44" height="22" rx="11" fill={on ? '#7A1FD0' : '#3B2BC9'} stroke="#fff" strokeWidth="2" />
+                      <text x={m.x} y={m.y + 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff" className="font-mono">{code}</text>
+                    </g>
+                  );
+                })}
               </g>
             );
           })}
-          {gid && (
-            <g>
-              <rect x={W / 2 - 110} y={H / 2 - 50} width="220" height="100" rx="16" strokeWidth="2.5" className="stroke-violet" style={{ fill: 'color-mix(in srgb, var(--color-violet, #7A1FD0) 12%, var(--color-panel, #fff))' }} />
-              <text x={W / 2} y={H / 2 - 4} textAnchor="middle" className="fill-current font-mono" fontSize="22" fontWeight="700">{group?.code}</text>
-              <text x={W / 2} y={H / 2 + 22} textAnchor="middle" className="fill-current" fontSize="13">{group?.name}</text>
-              {callouts.map(({ p, x, y }) => (
-                <g key={p.id} role="button" tabIndex={0} aria-label={`Part ${p.ref_no}: ${p.name}`} className="cursor-pointer outline-none"
-                  onClick={() => setPid(p.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPid(p.id); } }}>
-                  <line x1={W / 2} y1={H / 2} x2={x} y2={y} strokeWidth="1" className="stroke-line" />
-                  <circle cx={x} cy={y} r="15" strokeWidth="2" className={p.id === pid ? 'fill-violet stroke-violet' : 'fill-panel stroke-violet'} />
-                  <text x={x} y={y + 5} textAnchor="middle" fontSize="13" fontWeight="700" className={p.id === pid ? 'fill-white' : 'fill-current'}>{p.ref_no}</text>
-                </g>
-              ))}
-            </g>
-          )}
+          {gid && anchor && callouts.map(({ p, x, y }) => {
+            const on = p.id === pid;
+            return (
+              <g key={p.id} role="button" tabIndex={0} aria-label={`Part ${p.ref_no}: ${p.name}`} className="cursor-pointer outline-none"
+                onClick={() => setPid(p.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPid(p.id); } }}>
+                <title>{p.name}</title>
+                <line x1={anchor.x} y1={anchor.y} x2={x} y2={y} stroke="#7A1FD0" strokeWidth="1.5" opacity={on ? 1 : 0.55} strokeDasharray={on ? undefined : '4 3'} />
+                <circle cx={x} cy={y} r="14" strokeWidth="2" stroke="#7A1FD0" fill={on ? '#7A1FD0' : '#fff'} />
+                <text x={x} y={y + 5} textAnchor="middle" fontSize="13" fontWeight="700" fill={on ? '#fff' : '#3B2BC9'}>{p.ref_no}</text>
+              </g>
+            );
+          })}
         </svg>
-        <p className="text-xs text-muted">Gambar skematik (bukan skala). {gid ? (callouts.length ? 'Klik nomor untuk melihat part.' : 'Belum ada part di kelompok ini.') : exploded ? 'Klik kelompok sistem untuk melihat part-nya.' : 'Klik unit atau tombol Bongkar untuk memecah per sistem.'}</p>
+        <p className="text-xs text-muted">Ilustrasi ilustratif unit (bukan gambar teknis pabrikan). {gid ? (callouts.length ? 'Klik nomor untuk melihat part.' : 'Belum ada part di kelompok ini.') : exploded ? 'Klik kelompok sistem untuk melihat part-nya.' : 'Klik unit atau tombol Bongkar untuk memecah per sistem.'}</p>
       </section>
 
       <aside className="grid min-w-0 content-start gap-3 rounded-2xl border border-line bg-panel p-4 shadow-soft">
