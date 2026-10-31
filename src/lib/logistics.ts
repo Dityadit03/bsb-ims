@@ -20,10 +20,14 @@ export const STAGE: Record<string, [Tone, string]> = {
   issued: ['ok', 'Sudah dikeluarkan'], line_rejected: ['muted', 'Baris ditolak'], rejected: ['crit', 'Ditolak'], cancelled: ['muted', 'Dibatalkan'],
 };
 export const PR_STATUS: Record<string, [Tone, string]> = {
-  submitted: ['warn', 'Menunggu persetujuan'], approved: ['accent', 'Cari penawaran'], ordered: ['accent', 'Sudah PO'],
+  dept_review: ['warn', 'Menunggu setuju departemen'], submitted: ['warn', 'Menunggu persetujuan'], approved: ['accent', 'Cari penawaran'], ordered: ['accent', 'Sudah PO'],
   closed: ['ok', 'Barang diterima'], rejected: ['crit', 'Ditolak'], cancelled: ['muted', 'Dibatalkan'],
 };
 export const PO_STATUS: Record<string, [Tone, string]> = {
   awaiting_approval: ['warn', 'Menunggu approval'], issued: ['accent', 'Terkirim ke supplier'], partial: ['accent', 'Diterima sebagian'],
   received: ['ok', 'Diterima penuh'], cancelled: ['muted', 'Dibatalkan'],
+};
+// Asal PR: dibedakan agar jelas mana yang mengambil dari stok dan mana pembelian langsung departemen
+export const PR_SOURCE: Record<string, [Tone, string]> = {
+  mr_shortage: ['accent', 'Kekurangan stok MR'], stock_refill: ['muted', 'Isi ulang stok'], dept_direct: ['warn', 'Pembelian langsung dept'],
 };

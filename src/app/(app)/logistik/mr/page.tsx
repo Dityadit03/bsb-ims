@@ -57,7 +57,7 @@ export default async function MrPage({ searchParams }: { searchParams: Promise<R
         </Table>
       ) : <p className="text-sm text-muted">Tidak ada material request untuk saringan ini.</p>}
       {s.can('log.request') && (
-        <Panel title="Buat material request">
+        <Panel title="Buat material request" sub="MR untuk mengambil barang dari stok gudang. Untuk membeli barang atau jasa dari luar yang tidak masuk stok, ajukan di Pengadaan, bagian Ajukan pembelian langsung.">
           <ActionForm action={createMr} label="Kirim MR" primary hidden={{ idem: randomUUID() }} className="max-w-4xl">
             <div className="grid gap-3 sm:grid-cols-3">
               <DeptSelect depts={depts} value={s.profile.department_id} />

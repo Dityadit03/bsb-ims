@@ -11,7 +11,7 @@ export const getAlerts = cache(async () => {
   const supabase = await createClient();
   const head = { count: 'exact' as const, head: true };
   const count = (q: PromiseLike<{ count: number | null }>) => q.then(r => r.count ?? 0);
-  const [certs, spip, hazardOpen, hazardLate, capaLate, mrWait, poWait, lowStock, tasks, unread, contractExp, contractSoon, leaveWait, otWait, claimWait, advWait, advLate, reqWait, perfWait, courseDue, compDue, fuelAnom, tyreReplace, tyreSoon, criticalLow] = await Promise.all([
+  const [certs, spip, hazardOpen, hazardLate, capaLate, mrWait, poWait, prDeptWait, prWait, lowStock, tasks, unread, contractExp, contractSoon, leaveWait, otWait, claimWait, advWait, advLate, reqWait, perfWait, courseDue, compDue, fuelAnom, tyreReplace, tyreSoon, criticalLow] = await Promise.all([
     supabase.from('employee_competency_view').select('employee_id, competency_id, category, valid_until, validity')
       .neq('validity', 'revoked').limit(20000).returns<Cert[]>(),
     supabase.from('commissioning_register').select('validity').in('validity', ['expired', 'expiring']).limit(5000),
@@ -20,6 +20,8 @@ export const getAlerts = cache(async () => {
     count(supabase.from('capa_register').select('*', head).eq('is_overdue', true)),
     count(supabase.from('mr_register').select('*', head).in('status', ['submitted', 'pending'])),
     count(supabase.from('po_register').select('*', head).eq('status', 'awaiting_approval')),
+    count(supabase.from('pr_register').select('*', head).eq('status', 'dept_review')),
+    count(supabase.from('pr_register').select('*', head).eq('status', 'submitted')),
     count(supabase.from('material_stock').select('*', head).eq('low_stock', true)),
     supabase.rpc('my_tasks').then(r => (r.data as unknown[] | null)?.length ?? 0),
     count(supabase.from('notifications').select('*', head).is('read_at', null)),
@@ -51,7 +53,7 @@ export const getAlerts = cache(async () => {
   const c = {
     mcuExp: cert(mcu, 'expired'), mcuSoon: cert(mcu, 'expiring'), simExp: cert(simper, 'expired'), simSoon: cert(simper, 'expiring'),
     othExp: cert(other, 'expired'), spipExp: (spip.data ?? []).filter(r => r.validity === 'expired').length,
-    spipSoon: (spip.data ?? []).filter(r => r.validity === 'expiring').length, hazardOpen, hazardLate, capaLate, mrWait, poWait, lowStock, tasks, unread,
+    spipSoon: (spip.data ?? []).filter(r => r.validity === 'expiring').length, hazardOpen, hazardLate, capaLate, mrWait, poWait, prDeptWait, prWait, lowStock, tasks, unread,
     contractExp, contractSoon, leaveWait, otWait, claimWait, advWait, advLate, reqWait, perfWait, courseDue, compDue, fuelAnom, tyreReplace, tyreSoon, criticalLow,
   };
   const items = ([
@@ -82,6 +84,8 @@ export const getAlerts = cache(async () => {
     [c.hazardLate, 'crit', 'hazard lewat batas waktu', 'Belum ditutup PIC', '/she/hazard'],
     [c.capaLate, 'crit', 'action plan terlambat', 'Lewat tanggal target', '/capa'],
     [c.mrWait, 'warn', 'MR menunggu persetujuan', 'Material request', '/logistik/mr'],
+    [c.prDeptWait, 'warn', 'Permintaan pembelian menunggu setuju departemen', 'Pembelian langsung dept', '/logistik/pengadaan'],
+    [c.prWait, 'warn', 'PR menunggu persetujuan Logistik', 'Purchase requisition', '/logistik/pengadaan'],
     [c.poWait, 'warn', 'PO menunggu approval', 'Di atas batas nilai', '/logistik/pengadaan'],
     [c.lowStock, 'warn', 'barang di bawah stok minimum', 'Perlu PR isi ulang', '/logistik?rendah=1'],
   ] as [number, AlertTone, string, string, string][])

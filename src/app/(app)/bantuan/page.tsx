@@ -25,6 +25,7 @@ const FLOWS: { role: string; steps: [string, string][] }[] = [
     ['Rak', 'Isi lokasi rak per barang supaya penerimaan dan pengeluaran cepat.'],
     ['Pengeluaran', 'MR yang disetujui mencadangkan stok; keluarkan barang dari MR tersebut. Peminta lalu mengonfirmasi penerimaan; laporannya ada di tab Keluar ke plant.'],
     ['Part khusus', 'Part di luar katalog diproses dulu di detail MR (kaitkan ke barang katalog atau tolak) sebelum MR bisa disetujui.'],
+    ['MR atau pembelian langsung?', 'MR dipakai untuk mengambil barang yang ada di stok gudang; bila stok kurang, Logistik membuat PR otomatis. Barang atau jasa yang dibeli dari luar dan tidak masuk stok diajukan di Logistik, Pengadaan, Ajukan pembelian langsung: disetujui Kepala Departemen Anda, lalu Logistik, PO, dan barang diserahkan ke Anda.'],
     ['Formulir fisik', 'Foto atau PDF formulir WO, MR, PR, dan PO yang sudah ditandatangani diunggah di halaman detail masing-masing.'],
   ] },
 ];

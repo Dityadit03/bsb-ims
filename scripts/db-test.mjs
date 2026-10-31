@@ -2230,6 +2230,66 @@ await test('MR: unit & part khusus diproses logistik sebelum disetujui; lampiran
   eq((await as(db, spvPlt, `select pic_partner_name from public.she_hazard_register where id = $1`, [hz.id])).rows[0].pic_partner_name, 'PT Mitra Las');
   await expectError('22023', async () => as(db, spvPlt, `select public.set_pic_partner('hazard_reports', $1, gen_random_uuid())`, [hz.id]));
 });
+await test('penunjukan approver: peran mengikuti karyawan, diberikan saat akun tertaut, dicabut saat penunjukan dicabut', async () => {
+  const kadep = (await db.query(`insert into public.employees(nrp, full_name, department_id) values ('AP-001', 'Kepala Prod', $1) returning id`, [PRD])).rows[0].id;
+  const kadepUser = await createUser('kadep.prd@bsb.co.id');
+  await expectError('42501', async () => as(db, staffId, `select public.designate_approver($1, 'DEPT_HEAD', $2, 'uji')`, [kadep, PRD]));
+  await expectError('22023', async () => as(db, adminId, `select public.designate_approver($1, 'DEPT_HEAD', null, 'uji')`, [kadep]));
+  await expectError('22023', async () => as(db, adminId, `select public.designate_approver($1, 'PAYROLL_OFFICER', null, 'uji')`, [kadep]));
+  const id = (await as(db, adminId, `select public.designate_approver($1, 'DEPT_HEAD', $2, 'uji') id`, [kadep, PRD])).rows[0].id;
+  eq((await db.query(`select 1 from public.user_roles where user_id = $1 and role_code = 'DEPT_HEAD'`, [kadepUser])).rowCount, 0, 'belum punya akun');
+  await db.query(`update public.employees set profile_id = $1 where id = $2`, [kadepUser, kadep]);
+  eq((await db.query(`select 1 from public.user_roles where user_id = $1 and role_code = 'DEPT_HEAD' and department_id = $2`, [kadepUser, PRD])).rowCount, 1, 'peran diberikan saat akun tertaut');
+  eq((await as(db, staffId, `select 1 from public.approval_chain where employee_id = $1 and has_account`, [kadep])).rowCount, 1);
+  await expectError('42501', async () => as(db, kadepUser, `select public.designate_approver($1, 'PJO', null, 'uji')`, [kadep]));
+  // atasan langsung terisi dari penunjukan (SPV/FOR di departemen -> kepala departemen)
+  const spvPos = (await db.query(`select id from public.positions where department_id = $1 and level in ('SPV','FOR') limit 1`, [PRD])).rows[0]?.id;
+  const spv = (await db.query(`insert into public.employees(nrp, full_name, department_id, position_id) values ('AP-002', 'Spv Prod', $1, $2) returning id`, [PRD, spvPos])).rows[0].id;
+  const opr = (await db.query(`insert into public.employees(nrp, full_name, department_id) values ('AP-003', 'Operator Prod', $1) returning id`, [PRD])).rows[0].id;
+  await expectError('42501', async () => as(db, opUser, `select public.fill_supervisors()`));
+  const n = (await as(db, adminId, `select public.fill_supervisors() n`)).rows[0].n;
+  if (n < 1) throw new Error('tidak ada atasan yang terisi');
+  eq((await db.query(`select supervisor_id from public.employees where id = $1`, [spv])).rows[0].supervisor_id, kadep);
+  eq((await db.query(`select supervisor_id from public.employees where id = $1`, [opr])).rows[0].supervisor_id, null);
+  await as(db, adminId, `select public.undesignate_approver($1)`, [id]);
+  eq((await db.query(`select 1 from public.user_roles where user_id = $1 and role_code = 'DEPT_HEAD'`, [kadepUser])).rowCount, 0, 'peran dicabut');
+});
+await test('pembelian langsung departemen: approval departemen → PR Logistik → PO → terima tanpa masuk stok', async () => {
+  const lines = JSON.stringify([{ name: 'Kursi kantor ergonomis', uom: 'unit', qty: 2, est_price: 1500000, note: 'warna hitam' }]);
+  await expectError('42501', async () => as(db, opUser, `select public.pr_request($1, 'Kursi ruang plant', $2::jsonb)`, [PLT, lines]));
+  await expectError('22023', async () => as(db, pltStaff, `select public.pr_request($1, 'Tanpa barang', '[]'::jsonb)`, [PLT]));
+  await expectError('22023', async () => as(db, pltStaff, `select public.pr_request($1, 'Qty nol', $2::jsonb)`, [PLT, JSON.stringify([{ name: 'X', uom: 'pcs', qty: 0 }])]));
+  const pr = (await as(db, pltStaff, `select (p).* from public.pr_request($1, 'Kursi ruang plant', $2::jsonb, null, $3) p`, [PLT, lines, randomUUID()])).rows[0];
+  eq(pr.status, 'dept_review'); eq(pr.source, 'dept_direct'); eq(pr.department_id, PLT);
+  // belum bisa diputuskan Logistik sebelum departemen setuju; pemohon dan departemen lain tidak berwenang
+  await expectError('22023', async () => as(db, logHead, `select public.pr_decide($1, true)`, [pr.id]));
+  await expectError('42501', async () => as(db, pltStaff, `select public.pr_dept_decide($1, true)`, [pr.id]));
+  await expectError('42501', async () => as(db, logHead, `select public.pr_dept_decide($1, true)`, [pr.id]));
+  await expectError('22023', async () => as(db, spvPlt, `select public.pr_dept_decide($1, false, '')`, [pr.id]));
+  eq((await as(db, spvPlt, `select (p).status from public.pr_dept_decide($1, true) p`, [pr.id])).rows[0].status, 'submitted');
+  eq((await as(db, logHead, `select (p).status from public.pr_decide($1, true) p`, [pr.id])).rows[0].status, 'approved');
+  const pl = (await db.query(`select id, material_id, item_name from public.purchase_requisition_lines where pr_id = $1`, [pr.id])).rows[0];
+  eq(pl.material_id, null); eq(pl.item_name, 'Kursi kantor ergonomis');
+  await as(db, logStaff, `select public.quote_save($1, $2, 1400000) q`, [pl.id, sup.id]);
+  eq(Number((await as(db, logStaff, `select public.po_from_pr($1) n`, [pr.id])).rows[0].n), 1);
+  const po = (await db.query(`select * from public.purchase_orders where pr_id = $1`, [pr.id])).rows[0];
+  eq(po.status, 'issued'); eq(Number(po.total_value), 2800000);
+  const pol = (await db.query(`select id, item_name from public.purchase_order_lines where po_id = $1`, [po.id])).rows[0];
+  eq(pol.item_name, 'Kursi kantor ergonomis');
+  const before = Number((await db.query(`select count(*)::int c from public.stock_movements`)).rows[0].c);
+  await expectError('22023', async () => as(db, logStaff, `select public.goods_receive_po($1, $2::jsonb, 'SJ-KURSI')`, [po.id, JSON.stringify([{ line: pol.id, qty: 3 }])]));
+  eq((await as(db, logStaff, `select (o).status from public.goods_receive_po($1, $2::jsonb, 'SJ-KURSI') o`, [po.id, JSON.stringify([{ line: pol.id, qty: 2 }])])).rows[0].status, 'received');
+  eq(Number((await db.query(`select count(*)::int c from public.stock_movements`)).rows[0].c), before, 'tidak menambah stok');
+  eq((await db.query(`select qty::int q from public.po_direct_receipts where po_line_id = $1`, [pol.id])).rows[0].q, 2);
+  eq((await db.query(`select status from public.purchase_requisitions where id = $1`, [pr.id])).rows[0].status, 'closed');
+  eq((await as(db, staffId, `select source from public.pr_register where id = $1`, [pr.id])).rows[0].source, 'dept_direct');
+  // pemohon boleh membatalkan hanya sebelum diputuskan Logistik
+  const pr2 = (await as(db, pltStaff, `select (p).* from public.pr_request($1, 'Batal', $2::jsonb) p`, [PLT, lines])).rows[0];
+  await expectError('42501', async () => as(db, spvPlt, `select public.pr_request_cancel($1, 'x')`, [pr2.id]));
+  eq((await as(db, pltStaff, `select (p).status from public.pr_request_cancel($1, 'tidak jadi') p`, [pr2.id])).rows[0].status, 'cancelled');
+  // sumber PR dari jalur lama tetap terbaca
+  eq((await db.query(`select source from public.purchase_requisitions where id = $1`, [prShort.id])).rows[0].source, 'mr_shortage');
+});
 await test('anon tidak punya hak apa pun atas tabel/view public; fungsi anon hanya verify_document & feed_rows', async () => {
   eq((await db.query(`select count(*)::int c from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public'`)).rows[0].c, 0);
   const fn = (await db.query(`select string_agg(p.proname, ',' order by p.proname) s from pg_proc p join pg_namespace n on n.oid = p.pronamespace

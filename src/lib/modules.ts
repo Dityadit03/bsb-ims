@@ -35,6 +35,7 @@ export const NAV: NavGroup[] = [
     { href: '/data', label: 'Laporan & spreadsheet' },
     { href: '/data/impor', label: 'Impor data (Excel)' },
     { href: '/admin/pengguna', label: 'Pengguna & peran', perm: 'user.manage' },
+    { href: '/admin/alur-persetujuan', label: 'Alur persetujuan' },
     { href: '/audit', label: 'Audit trail', perm: 'audit.read' },
   ] },
 ];

@@ -76,26 +76,26 @@ export default async function CetakPage({ params }: { params: Promise<{ jenis: s
   } else if (jenis === 'pr') {
     const { data: pr } = await supabase.from('pr_register').select('*').eq('id', id).maybeSingle<Row>();
     if (!pr) notFound();
-    const { data: lines } = await supabase.from('purchase_requisition_lines').select('qty, note, materials(code, name, uom)').eq('pr_id', id)
-      .returns<{ qty: number; note: string | null; materials: { code: string; name: string; uom: string } }[]>();
+    const { data: lines } = await supabase.from('purchase_requisition_lines').select('qty, note, item_name, uom, materials(code, name, uom)').eq('pr_id', id)
+      .returns<{ qty: number; note: string | null; item_name: string | null; uom: string | null; materials: { code: string; name: string; uom: string } | null }[]>();
     back = `/logistik/pengadaan/${id}`;
     sheet = (
       <FormSheet title="Purchase Requisition" number={String(pr.pr_no)} subtitle="Logistik · Permintaan pembelian" printedBy={by} sign={['Pembuat', 'Dept Head', 'Purchasing', 'Disetujui PJO']}>
         <Grid>
           <Field label="Tanggal">{fmtDate(String(pr.created_at))}</Field><Field label="Pembuat">{pr.requester_name}</Field>
-          <Field label="Dari MR">{pr.mr_no}</Field><Field label="Dibutuhkan">{pr.need_date ? fmtDate(String(pr.need_date)) : null}</Field>
+          <Field label={pr.source === 'dept_direct' ? 'Departemen pemohon' : 'Dari MR'}>{pr.source === 'dept_direct' ? pr.department_code : pr.mr_no}</Field><Field label="Dibutuhkan">{pr.need_date ? fmtDate(String(pr.need_date)) : null}</Field>
         </Grid>
         <h2 className="mb-1 mt-4 text-xs font-bold uppercase tracking-wide text-neutral-600">Keperluan</h2>
         <p className="min-h-10 border border-neutral-400 p-2">{pr.purpose}</p>
         <h2 className="mb-1 mt-4 text-xs font-bold uppercase tracking-wide text-neutral-600">Barang yang dibeli</h2>
-        <Lines head={['No', 'Kode · Barang', 'Jumlah', 'Catatan']} rows={(lines ?? []).map((l, i) => [i + 1, `${l.materials.code} · ${l.materials.name}`, `${qty(l.qty)} ${l.materials.uom}`, l.note])} empty={6} />
+        <Lines head={['No', 'Kode · Barang', 'Jumlah', 'Catatan']} rows={(lines ?? []).map((l, i) => [i + 1, l.materials ? `${l.materials.code} · ${l.materials.name}` : l.item_name, `${qty(l.qty)} ${l.materials?.uom ?? l.uom}`, l.note])} empty={6} />
       </FormSheet>
     );
   } else if (jenis === 'po') {
     const { data: po } = await supabase.from('po_register').select('*').eq('id', id).maybeSingle<Row>();
     if (!po) notFound();
-    const { data: lines } = await supabase.from('purchase_order_lines').select('qty, unit_price, materials(code, name, uom)').eq('po_id', id)
-      .returns<{ qty: number; unit_price: number; materials: { code: string; name: string; uom: string } }[]>();
+    const { data: lines } = await supabase.from('purchase_order_lines').select('qty, unit_price, item_name, uom, materials(code, name, uom)').eq('po_id', id)
+      .returns<{ qty: number; unit_price: number; item_name: string | null; uom: string | null; materials: { code: string; name: string; uom: string } | null }[]>();
     back = `/logistik/pengadaan/${po.pr_id ?? ''}`;
     sheet = (
       <FormSheet title="Purchase Order" number={String(po.po_no)} subtitle="Logistik · Pesanan pembelian" printedBy={by} sign={['Dibuat oleh', 'Logistik / Purchasing', 'Disetujui PJO', 'Supplier']}>
@@ -104,7 +104,7 @@ export default async function CetakPage({ params }: { params: Promise<{ jenis: s
           <Field label="Estimasi tiba">{po.expected_date ? fmtDate(String(po.expected_date)) : null}</Field><Field label="Dibuat oleh">{po.creator_name}</Field>
         </Grid>
         <h2 className="mb-1 mt-4 text-xs font-bold uppercase tracking-wide text-neutral-600">Rincian pesanan</h2>
-        <Lines head={['No', 'Kode · Barang', 'Jumlah', 'Harga satuan', 'Total']} rows={(lines ?? []).map((l, i) => [i + 1, `${l.materials.code} · ${l.materials.name}`, `${qty(l.qty)} ${l.materials.uom}`, rp(l.unit_price), rp(l.qty * l.unit_price)])} empty={5} />
+        <Lines head={['No', 'Kode · Barang', 'Jumlah', 'Harga satuan', 'Total']} rows={(lines ?? []).map((l, i) => [i + 1, l.materials ? `${l.materials.code} · ${l.materials.name}` : l.item_name, `${qty(l.qty)} ${l.materials?.uom ?? l.uom}`, rp(l.unit_price), rp(l.qty * l.unit_price)])} empty={5} />
         <p className="mt-2 text-right text-sm font-bold">Total {rp(Number(po.total_value))}</p>
         {po.note && <p className="mt-2 text-xs"><span className="text-neutral-500">Catatan: </span>{po.note}</p>}
       </FormSheet>

@@ -145,6 +145,26 @@ export async function createPr(_: ActionState, f: FormData): Promise<ActionState
   redirect(`/logistik/pengadaan/${id}`);
 }
 
+// Pembelian langsung departemen (di luar stok gudang): dimulai dari approval departemen pemohon
+export async function requestPurchase(_: ActionState, f: FormData): Promise<ActionState> {
+  const lines = f.getAll('row').map(String).map(i => ({ name: str(f, `name_${i}`), uom: str(f, `uom_${i}`), qty: num(f, `qty_${i}`), est_price: num(f, `price_${i}`), note: str(f, `note_${i}`) }))
+    .filter(l => l.name || l.qty);
+  let id: string;
+  try {
+    id = (await rpc('pr_request', { p_department: str(f, 'department'), p_purpose: str(f, 'purpose'), p_lines: lines, p_need_date: str(f, 'need_date'), p_idempotency_key: str(f, 'idem') })).id;
+  } catch (e) { return { error: (e as Error).message }; }
+  redirect(`/logistik/pengadaan/${id}`);
+}
+
+export async function decidePrDept(_: ActionState, f: FormData) {
+  const approve = str(f, 'decision') === 'approve';
+  return run(prPath(f), approve ? 'Disetujui departemen' : 'Ditolak', () => rpc('pr_dept_decide', { p_pr: str(f, 'pr'), p_approve: approve, p_note: str(f, 'note') }));
+}
+
+export async function cancelPrRequest(_: ActionState, f: FormData) {
+  return run(prPath(f), 'Permintaan dibatalkan', () => rpc('pr_request_cancel', { p_pr: str(f, 'pr'), p_reason: str(f, 'reason') }));
+}
+
 const prPath = (f: FormData) => `/logistik/pengadaan/${str(f, 'pr')}`;
 
 export async function decidePr(_: ActionState, f: FormData) {

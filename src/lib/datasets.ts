@@ -1,7 +1,7 @@
 // Register yang bisa diekspor ke Excel/CSV, ditarik ke Google Sheets (feed) dan jenis data yang bisa diimpor.
 import { HAZARD_TYPE, INCIDENT_CLASS, OPEN_CLOSED, VALIDITY } from '@/lib/she';
 import { UNIT_STATUS, WO_STATUS, WO_TYPE } from '@/lib/plant';
-import { CATEGORY, MOVE, MR_STATUS, PO_STATUS, PR_STATUS, STAGE } from '@/lib/logistics';
+import { CATEGORY, MOVE, MR_STATUS, PO_STATUS, PR_SOURCE, PR_STATUS, STAGE } from '@/lib/logistics';
 import { ATT_STATUS, CARD_STATUS, CONTRACT, CONTRACT_STATUS, DAY_TYPE, EMPLOYMENT, LEAVE_STATUS, MOVE as MOVEMENT, OT_STATUS, RUN_KIND, RUN_STATUS, CLAIM_STATUS, ADV_STATUS, ADV_KIND, PAY_METHOD, REQ_STATUS, REQ_REASON, APP_STAGE, CAND_SOURCE, PERF_STATUS, ASSIGN_STATUS, COURSE_STATUS } from '@/lib/hrga';
 
 type Label = Record<string, string | [string, string]>;
@@ -74,7 +74,7 @@ export const DATASETS: Dataset[] = [
     ['qty_issued', 'Keluar'], ['stock_qty', 'Stok'], ['stage', 'Posisi', lbl(STAGE)], ['pr_no', 'PR'], ['po_no', 'PO'], ['supplier_name', 'Supplier'],
     ['qty_received', 'Diterima dari PO']] },
   { key: 'pr', label: 'Purchase requisition', group: 'Logistik', view: 'pr_register', order: 'created_at', desc: true, feed: true, columns: [
-    ['pr_no', 'No. PR'], ['created_at', 'Dibuat'], ['purpose', 'Keperluan'], ['mr_no', 'Dari MR'], ['requester_name', 'Pembuat'], ['need_date', 'Dibutuhkan'],
+    ['pr_no', 'No. PR'], ['created_at', 'Dibuat'], ['source', 'Asal', lbl(PR_SOURCE)], ['department_code', 'Dept pemohon'], ['purpose', 'Keperluan'], ['mr_no', 'Dari MR'], ['requester_name', 'Pembuat'], ['need_date', 'Dibutuhkan'],
     ['lines', 'Jumlah barang'], ['lines_quoted', 'Sudah ada supplier'], ['status', 'Status', lbl(PR_STATUS)]] },
   { key: 'po', label: 'Purchase order', group: 'Logistik', view: 'po_register', order: 'created_at', desc: true, feed: true, columns: [
     ['po_no', 'No. PO'], ['created_at', 'Dibuat'], ['supplier_code', 'Kode supplier'], ['supplier_name', 'Supplier'], ['pr_no', 'PR'],
