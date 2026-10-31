@@ -63,7 +63,7 @@ async function Requisitions({ rows: all, sp, supabase }: { rows: ReqRow[]; sp: R
   return (
     <>
       <Panel title="Permintaan tenaga kerja" sub="Alur: atasan departemen mengajukan → HRGA verifikasi terhadap MPP → PJO / manajemen menyetujui → rekrutmen dibuka"
-        action={<form className="flex gap-2"><select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-52`}><option value="">Semua status</option>
+        action={<form className="flex flex-wrap gap-2"><select aria-label="Status" name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-52`}><option value="">Semua status</option>
           {Object.entries(REQ_STATUS).map(([k, v]) => <option key={k} value={k}>{v[1]}</option>)}</select>
           <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button></form>}>
         {rows.length ? (
@@ -111,8 +111,8 @@ function Applicants({ rows: all, sp }: { rows: AppRow[]; sp: Record<string, stri
   const rows = stage === 'aktif' ? all.filter(a => STAGES.includes(a.stage)) : stage === 'all' ? all : all.filter(a => a.stage === stage);
   const pg = paginate(rows, sp.hal);
   return (
-    <Panel title="Pelamar" action={<form className="flex gap-2"><input type="hidden" name="tab" value="pelamar" />
-      <select name="stage" defaultValue={stage} className={`${input} max-w-48`}><option value="aktif">Dalam proses</option><option value="all">Semua</option>
+    <Panel title="Pelamar" action={<form className="flex flex-wrap gap-2"><input type="hidden" name="tab" value="pelamar" />
+      <select aria-label="Tahap" name="stage" defaultValue={stage} className={`${input} max-w-48`}><option value="aktif">Dalam proses</option><option value="all">Semua</option>
         {Object.entries(APP_STAGE).map(([k, v]) => <option key={k} value={k}>{v[1]}</option>)}</select>
       <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button></form>}>
       {rows.length ? (
@@ -151,7 +151,7 @@ async function Candidates({ sp, supabase }: { sp: Record<string, string | undefi
   return (
     <>
       <Panel title="Bank kandidat" sub="Data pribadi pelamar; hanya HRGA. Massal: Impor data → Bank kandidat."
-        action={<form className="flex gap-2"><input type="hidden" name="tab" value="kandidat" />
+        action={<form className="flex flex-wrap gap-2"><input type="hidden" name="tab" value="kandidat" />
           <input name="q" defaultValue={sp.q ?? ''} placeholder="Nama / NIK" className={`${input} max-w-48`} />
           <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Cari</button></form>}>
         {pg.rows.length ? (

@@ -82,7 +82,7 @@ export default async function MrDetail({ params }: { params: Promise<{ id: strin
                 <input name="note" className={input} placeholder="Catatan (opsional)" />
               </ActionForm>
               <div className="grid gap-3 border-t border-line pt-3 sm:grid-cols-2">
-                <ActionForm action={decideMr} label="Pending" hidden={{ id: r.id, decision: 'pending' }}>
+                <ActionForm action={decideMr} label="Tunda" hidden={{ id: r.id, decision: 'pending' }}>
                   <input name="note" required className={input} placeholder="Yang perlu dilengkapi peminta" />
                 </ActionForm>
                 <ActionForm action={decideMr} label="Tolak" hidden={{ id: r.id, decision: 'reject' }}>
@@ -170,6 +170,8 @@ export default async function MrDetail({ params }: { params: Promise<{ id: strin
             <dt>Diperiksa</dt><dd>{r.reviewer_name ?? '–'}{r.reviewed_at && <span className="block text-xs text-muted">{fmtDateTime(r.reviewed_at)}</span>}</dd>
           </dl>
           <div className="border-t border-line pt-3"><div className="mb-2 text-xs text-muted">Formulir MR fisik</div>
+            <Link href={`/cetak/mr/${r.id}`} target="_blank" className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm font-medium hover:border-accent hover:text-accent">Cetak formulir MR</Link>
+            <div className="h-2" />
             <DocScans table="material_requests" id={r.id} path={`/logistik/mr/${r.id}`} canUpload={mine || s.canIn('log.manage', 'LOG') || s.canIn('log.warehouse', 'LOG')} /></div>
         </Panel>
       </div>

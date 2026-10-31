@@ -26,7 +26,7 @@ export default async function GaPage({ searchParams }: { searchParams: Promise<R
     <>
       <PageHeader eyebrow="General Affairs" title="Permintaan GA" />
       <HrTabs active="/hrga/ga" />
-      <form className="flex gap-2">
+      <form className="flex flex-wrap gap-2">
         <label className="flex items-center gap-1 text-sm"><input type="checkbox" name="semua" value="1" defaultChecked={!!sp.semua} /> Tampilkan yang sudah selesai</label>
         <button className="text-sm text-accent">Saring</button>
       </form>

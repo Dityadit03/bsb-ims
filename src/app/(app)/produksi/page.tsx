@@ -54,7 +54,7 @@ export default async function ProduksiPage({ searchParams }: { searchParams: Pro
           </ActionForm>
         </Panel>
       )}
-      <form className="flex gap-2">
+      <form className="flex flex-wrap gap-2">
         <input type="month" name="bulan" defaultValue={month} className={`${input} !w-auto`} aria-label="Bulan" />
         <button className="text-sm text-accent">Tampilkan</button>
       </form>

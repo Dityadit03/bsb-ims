@@ -22,7 +22,7 @@ export default async function HazardDetail({ params }: { params: Promise<{ id: s
   const supabase = await createClient();
   const { data: h } = await supabase.from('she_hazard_register').select('*').eq('id', id).maybeSingle<Hazard>();
   if (!h) notFound();
-  const [tone, label] = h.is_overdue ? ['crit', 'Overdue'] as const : OPEN_CLOSED[h.status];
+  const [tone, label] = h.is_overdue ? ['crit', 'Terlambat'] as const : OPEN_CLOSED[h.status];
 
   return (
     <>
@@ -39,7 +39,7 @@ export default async function HazardDetail({ params }: { params: Promise<{ id: s
           </Panel>
           {h.status === 'open' && s.can('she.followup') && (
             <Panel title="Tutup hazard">
-              <ActionForm action={closeHazard} label="Tandai closed" primary hidden={{ id: h.id }}>
+              <ActionForm action={closeHazard} label="Tandai ditutup" primary hidden={{ id: h.id }}>
                 <label className="grid gap-1 text-sm">Tindakan perbaikan yang dilakukan<textarea name="note" required rows={3} className={input} /></label>
                 <Files label={h.risk_level === 'high' || h.risk_level === 'extreme' ? 'Foto bukti perbaikan (wajib)' : 'Foto bukti perbaikan'} />
                 <p className="text-xs text-muted">Hanya pengawas departemen {h.pic_department_code} yang bisa menutup.</p>

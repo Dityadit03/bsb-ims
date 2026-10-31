@@ -115,7 +115,7 @@ async function Kehadiran({ id, month: m, supabase }: { id: string; month?: strin
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <form className="flex gap-2"><input type="hidden" name="tab" value="absen" />
+        <form className="flex flex-wrap gap-2"><input type="hidden" name="tab" value="absen" />
           <input type="month" name="bln" defaultValue={month} className={`${input} !w-auto`} />
           <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Lihat</button></form>
         <Link href="/absen" className="rounded-lg bg-violet px-4 py-2 text-sm font-semibold text-white">Absen sekarang</Link>

@@ -41,15 +41,15 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
       </PageHeader>
       <form className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
         <input id="q" name="q" defaultValue={sp.q} placeholder="Cari judul atau nomor" className={input} />
-        <select id="jenis" name="jenis" defaultValue={sp.jenis ?? ''} className={input}>
+        <select aria-label="Jenis" id="jenis" name="jenis" defaultValue={sp.jenis ?? ''} className={input}>
           <option value="">Semua jenis</option>
           {(types ?? []).map(t => <option key={t.code} value={t.code}>{t.name}</option>)}
         </select>
-        <select id="dept" name="dept" defaultValue={sp.dept ?? ''} className={input}>
+        <select aria-label="Departemen" id="dept" name="dept" defaultValue={sp.dept ?? ''} className={input}>
           <option value="">Semua departemen</option>
           {(depts ?? []).map(d => <option key={d.code} value={d.code}>{d.code} · {d.name}</option>)}
         </select>
-        <select id="status" name="status" defaultValue={sp.status ?? ''} className={input}>
+        <select aria-label="Status" id="status" name="status" defaultValue={sp.status ?? ''} className={input}>
           <option value="">Semua status</option>
           {Object.entries(DOC_STATUS).map(([k, [, l]]) => <option key={k} value={k}>{l}</option>)}
         </select>

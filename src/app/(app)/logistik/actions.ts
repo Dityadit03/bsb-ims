@@ -98,7 +98,7 @@ export async function confirmIssue(_: ActionState, f: FormData) {
 export async function decideMr(_: ActionState, f: FormData) {
   const decision = str(f, 'decision') ?? 'approve';
   const lines = decision === 'approve' ? f.getAll('line').map(String).map(line => ({ line, qty: num(f, `qty_${line}`) ?? 0 })) : [];
-  const ok = { approve: 'MR disetujui', pending: 'MR di-pending', reject: 'MR ditolak' }[decision] ?? 'Tersimpan';
+  const ok = { approve: 'MR disetujui', pending: 'MR ditunda', reject: 'MR ditolak' }[decision] ?? 'Tersimpan';
   return run(`/logistik/mr/${str(f, 'id')}`, ok, () =>
     rpc('mr_decide', { p_mr: str(f, 'id'), p_decision: decision, p_note: str(f, 'note'), p_lines: lines }));
 }

@@ -41,12 +41,12 @@ export default async function LemburPage({ searchParams }: { searchParams: Promi
         <Stat label="Jam disetujui per dept" value={byDept.length ? byDept.map(([d, h]) => `${d} ${h}`).join(' · ') : '–'} />
       </div>
       <Panel title="Daftar SPL" action={
-        <form className="flex gap-2">
-          <input type="month" name="bln" defaultValue={month} className={`${input} !w-auto`} />
-          <select name="status" defaultValue={status} className={`${input} max-w-40`}>
+        <form className="flex flex-wrap gap-2">
+          <input aria-label="Periode" type="month" name="bln" defaultValue={month} className={`${input} !w-auto`} />
+          <select aria-label="Status" name="status" defaultValue={status} className={`${input} max-w-40`}>
             <option value="all">Semua</option><option value="submitted">Menunggu</option><option value="approved">Disetujui</option>
             <option value="rejected">Ditolak</option><option value="cancelled">Batal</option></select>
-          <select name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-32`}><option value="">Semua dept</option>{depts.map(d => <option key={d}>{d}</option>)}</select>
+          <select aria-label="Departemen" name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-32`}><option value="">Semua dept</option>{depts.map(d => <option key={d}>{d}</option>)}</select>
           <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button>
         </form>}>
         {rows.length ? <><OvertimeTable rows={pg.rows} canCancel={isHr} /><Pager {...pg} params={{ bln: month, status, dept: sp.dept }} /></>

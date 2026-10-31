@@ -24,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         role={role} unit={dept?.name ?? 'Semua departemen'} alerts={items} alertTotal={total} />
       <OfflineSync userId={s.profile.id} />
       <main className="min-w-0 px-4 pb-24 pt-6 sm:px-8 lg:pb-12 lg:pt-10">
-        <div className="mx-auto grid max-w-7xl gap-6">{children}</div>
+        <div className="mx-auto grid max-w-7xl gap-6 [&>*]:min-w-0">{children}</div>
       </main>
     </>
   );

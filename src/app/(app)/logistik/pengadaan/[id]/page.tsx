@@ -158,6 +158,8 @@ export default async function PrDetail({ params }: { params: Promise<{ id: strin
                   </ActionForm>
                 )}
                 <div className="border-t border-line pt-3"><div className="mb-2 text-xs text-muted">Formulir PO fisik</div>
+                  <Link href={`/cetak/po/${o.id}`} target="_blank" className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm font-medium hover:border-accent hover:text-accent">Cetak formulir PO</Link>
+                  <div className="h-2" />
                   <DocScans table="purchase_orders" id={o.id} path={`/logistik/pengadaan/${pr.id}`} canUpload={buyer} /></div>
               </Panel>
             );
@@ -172,6 +174,8 @@ export default async function PrDetail({ params }: { params: Promise<{ id: strin
             <dt>Keputusan</dt><dd>{pr.decided_at ? fmtDateTime(pr.decided_at) : '–'}{pr.decision_note && <span className="block text-xs text-muted">{pr.decision_note}</span>}</dd>
           </dl>
           <div className="border-t border-line pt-3"><div className="mb-2 text-xs text-muted">Formulir PR fisik</div>
+            <Link href={`/cetak/pr/${pr.id}`} target="_blank" className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm font-medium hover:border-accent hover:text-accent">Cetak formulir PR</Link>
+            <div className="h-2" />
             <DocScans table="purchase_requisitions" id={pr.id} path={`/logistik/pengadaan/${pr.id}`} canUpload={buyer} /></div>
         </Panel>
       </div>

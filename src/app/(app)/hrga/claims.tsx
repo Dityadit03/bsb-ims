@@ -37,7 +37,7 @@ function ClaimDecide({ r }: { r: ClaimRow }) {
             <summary className="cursor-pointer text-xs text-muted">Verifikasi payroll</summary>
             <ActionForm action={decideClaim} label="Setujui" primary hidden={{ id: r.id, approve: '1' }} className="mt-1 w-56">
               <input name="amount" inputMode="numeric" defaultValue={rp(r.amount)} aria-label="Nominal disetujui" className={input} />
-              <select name="pay_method" className={input}><option value="payroll">Bayar bersama gaji</option><option value="transfer">Transfer langsung</option></select>
+              <select aria-label="Cara bayar" name="pay_method" className={input}><option value="payroll">Bayar bersama gaji</option><option value="transfer">Transfer langsung</option></select>
               <input name="note" placeholder="Catatan (wajib bila nominal dikurangi)" className={input} />
             </ActionForm>
           </details>

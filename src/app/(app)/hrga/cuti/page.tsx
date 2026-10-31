@@ -52,11 +52,11 @@ export default async function CutiPage({ searchParams }: { searchParams: Promise
             <Stat label="Sedang cuti hari ini" value={onLeave.length} note={onLeave.slice(0, 3).map(r => r.full_name.split(' ')[0]).join(', ')} />
           </div>
           <Panel title="Daftar pengajuan" action={
-            <form className="flex gap-2">
-              <select name="status" defaultValue={status} className={`${input} max-w-44`}>
+            <form className="flex flex-wrap gap-2">
+              <select aria-label="Status" name="status" defaultValue={status} className={`${input} max-w-44`}>
                 <option value="open">Belum selesai</option><option value="approved">Disetujui</option><option value="rejected">Ditolak</option>
                 <option value="cancelled">Batal</option><option value="all">Semua</option></select>
-              <select name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-32`}><option value="">Semua dept</option>{depts.map(d => <option key={d}>{d}</option>)}</select>
+              <select aria-label="Departemen" name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-32`}><option value="">Semua dept</option>{depts.map(d => <option key={d}>{d}</option>)}</select>
               <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button>
             </form>}>
             {rows.length ? <><LeaveTable rows={pg.rows} cancel={isHr ? 'hr' : undefined} /><Pager {...pg} params={{ status, dept: sp.dept }} /></>

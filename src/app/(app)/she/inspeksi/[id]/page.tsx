@@ -37,7 +37,7 @@ export default async function InspectionDetail({ params }: { params: Promise<{ i
         <div className="grid min-w-0 content-start gap-4">
           {(findings ?? []).map(f => (
             <Panel key={f.id} title={`Temuan ${f.seq}`} action={<div className="flex gap-2"><Pill tone={RISK[f.risk_level][0]}>{RISK[f.risk_level][1]}</Pill>
-              <Pill tone={f.status === 'closed' ? 'ok' : f.is_overdue ? 'crit' : 'warn'}>{f.status === 'closed' ? 'Closed' : f.is_overdue ? 'Overdue' : 'Open'}</Pill></div>}>
+              <Pill tone={f.status === 'closed' ? 'ok' : f.is_overdue ? 'crit' : 'warn'}>{f.status === 'closed' ? 'Closed' : f.is_overdue ? 'Terlambat' : 'Open'}</Pill></div>}>
               <p className="text-sm">{f.description}</p>
               <p className="text-xs text-muted">PIC {f.pic_department_code} · due {fmtDate(f.due_date)}{f.pic_partner_name && f.status !== 'open' ? ` · mitra kerja ${f.pic_partner_name}` : ''}</p>
               {f.status === 'open' && <div className="text-sm"><div className="mb-1 text-xs text-muted">Mitra kerja pelaksana perbaikan</div>

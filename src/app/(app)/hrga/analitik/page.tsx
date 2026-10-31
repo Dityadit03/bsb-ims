@@ -33,9 +33,9 @@ export default async function AnalitikPage({ searchParams }: { searchParams: Pro
     supabase.rpc('hr_analytics', { p_months: months, p_dept: sp.dept || null }),
   ]);
   const filter = (
-    <form className="flex gap-2">
-      <select name="bln" defaultValue={String(months)} className={`${input} max-w-36`}>{[6, 12, 24].map(n => <option key={n} value={n}>{n} bulan</option>)}</select>
-      <select name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-36`}><option value="">Semua dept</option>{(depts ?? []).map(d => <option key={d.id} value={d.id}>{d.code}</option>)}</select>
+    <form className="flex flex-wrap gap-2">
+      <select aria-label="Periode" name="bln" defaultValue={String(months)} className={`${input} max-w-36`}>{[6, 12, 24].map(n => <option key={n} value={n}>{n} bulan</option>)}</select>
+      <select aria-label="Departemen" name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-36`}><option value="">Semua dept</option>{(depts ?? []).map(d => <option key={d.id} value={d.id}>{d.code}</option>)}</select>
       <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Terapkan</button>
     </form>
   );

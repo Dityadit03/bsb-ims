@@ -5,7 +5,7 @@ export const CAPA_STATUS: Record<string, [Tone, string]> = {
   open: ['warn', 'Terbuka'],
   in_progress: ['accent', 'Dikerjakan'],
   submitted: ['warn', 'Menunggu verifikasi'],
-  closed: ['ok', 'Closed'],
+  closed: ['ok', 'Ditutup'],
   cancelled: ['muted', 'Dibatalkan'],
 };
 

@@ -60,7 +60,7 @@ export default async function HazardPage({ searchParams }: { searchParams: Promi
       )}
       <form className="flex flex-wrap gap-2">
         <select name="status" defaultValue={sp.status ?? ''} className={`${input} !w-auto`} aria-label="Status">
-          <option value="">Open</option><option value="closed">Closed</option><option value="cancelled">Dibatalkan</option>
+          <option value="">Terbuka</option><option value="closed">Ditutup</option><option value="cancelled">Dibatalkan</option>
         </select>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="terlambat" value="1" defaultChecked={!!sp.terlambat} /> Lewat due date</label>
         <button className={btnGhost}>Saring</button>
@@ -78,7 +78,7 @@ export default async function HazardPage({ searchParams }: { searchParams: Promi
               <td><Pill tone={RISK[r.risk_level][0]}>{RISK[r.risk_level][1]}</Pill></td>
               <td className="font-mono text-xs">{r.pic_department_code}</td>
               <td className={`tabular whitespace-nowrap text-xs ${r.is_overdue ? 'font-medium text-crit' : ''}`}>{fmtDate(r.due_date)}</td>
-              <td><Pill tone={r.is_overdue ? 'crit' : OPEN_CLOSED[r.status][0]}>{r.is_overdue ? 'Overdue' : OPEN_CLOSED[r.status][1]}</Pill></td>
+              <td><Pill tone={r.is_overdue ? 'crit' : OPEN_CLOSED[r.status][0]}>{r.is_overdue ? 'Terlambat' : OPEN_CLOSED[r.status][1]}</Pill></td>
             </tr>
           ))}
         </Table>

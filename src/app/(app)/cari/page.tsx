@@ -49,7 +49,7 @@ export default async function Search({ searchParams }: { searchParams: Promise<{
   return (
     <>
       <PageHeader eyebrow="Pencarian" title={q ? `Hasil untuk "${q}"` : 'Cari di semua modul'} />
-      <form className="flex gap-2" role="search">
+      <form className="flex flex-wrap gap-2" role="search">
         <input name="q" type="search" defaultValue={q} autoFocus placeholder="Nomor dokumen, NRP, nama, no. unit, kode barang, MR/PR/PO…" className={input} />
         <button className={btnPrimary}>Cari</button>
       </form>

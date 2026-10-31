@@ -60,9 +60,9 @@ async function Daily({ date, sp, base, supabase }: { date: string; sp: Record<st
     <>
       <div className="flex flex-wrap items-center gap-2">
         <Link href={base({ tgl: addDays(date, -1) })} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:border-violet/60" aria-label="Hari sebelumnya">‹</Link>
-        <form className="flex gap-2"><input type="hidden" name="tab" value="harian" />
-          <input type="date" name="tgl" defaultValue={date} className={`${input} !w-auto`} />
-          <select name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-40`}><option value="">Semua dept</option>{depts.map(d => <option key={d}>{d}</option>)}</select>
+        <form className="flex flex-wrap gap-2"><input type="hidden" name="tab" value="harian" />
+          <input aria-label="Tanggal" type="date" name="tgl" defaultValue={date} className={`${input} !w-auto`} />
+          <select aria-label="Departemen" name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-40`}><option value="">Semua dept</option>{depts.map(d => <option key={d}>{d}</option>)}</select>
           <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Lihat</button></form>
         <Link href={base({ tgl: addDays(date, 1) })} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:border-violet/60" aria-label="Hari berikutnya">›</Link>
         <span className="text-sm text-muted">{fmtDate(date)}</span>
@@ -135,9 +135,9 @@ async function Monthly({ month, sp, supabase }: { month: string; sp: Record<stri
   return (
     <Panel title={`Rekap ${new Date(`${from}T00:00:00`).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`}
       sub="Dasar perhitungan payroll: hari hadir, alpa, cuti, dan total menit terlambat per karyawan"
-      action={<form className="flex gap-2"><input type="hidden" name="tab" value="rekap" />
-        <input type="month" name="bln" defaultValue={month} className={`${input} !w-auto`} />
-        <select name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-36`}><option value="">Semua dept</option>{depts.map(d => <option key={d}>{d}</option>)}</select>
+      action={<form className="flex flex-wrap gap-2"><input type="hidden" name="tab" value="rekap" />
+        <input aria-label="Periode" type="month" name="bln" defaultValue={month} className={`${input} !w-auto`} />
+        <select aria-label="Departemen" name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-36`}><option value="">Semua dept</option>{depts.map(d => <option key={d}>{d}</option>)}</select>
         <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Lihat</button></form>}>
       {rows.length ? (
         <>

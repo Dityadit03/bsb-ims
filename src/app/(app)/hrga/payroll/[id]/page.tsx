@@ -120,7 +120,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
 
       <Panel title="Slip per karyawan" action={
         <div className="flex flex-wrap gap-2">
-          <form className="flex gap-2">
+          <form className="flex flex-wrap gap-2">
             <input name="q" defaultValue={sp.q ?? ''} placeholder="Nama / NRP" className={`${input} max-w-40`} />
             <select name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-28`}><option value="">Semua dept</option>{(recap ?? []).map(r => <option key={r.department_code}>{r.department_code}</option>)}</select>
             <select name="f" defaultValue={sp.f ?? ''} className={`${input} max-w-36`}><option value="">Semua</option><option value="warn">Ada catatan</option>{run.parallel && <option value="diff">Beda dgn sistem lama</option>}</select>

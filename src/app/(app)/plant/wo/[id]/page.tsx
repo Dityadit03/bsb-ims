@@ -47,6 +47,7 @@ export default async function WoDetail({ params }: { params: Promise<{ id: strin
             {w.waiting_note && <p className="text-sm text-warn">Menunggu part: {w.waiting_note}</p>}
             {w.action_taken && <div className="rounded border border-line bg-ground p-3 text-sm"><div className="mb-1 text-xs text-muted">Tindakan · {fmtDateTime(w.completed_at)}</div>{w.action_taken}</div>}
             {w.cancel_reason && <p className="text-sm text-crit">Dibatalkan: {w.cancel_reason}</p>}
+            <Link href={`/cetak/wo/${w.id}`} target="_blank" className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm font-medium hover:border-accent hover:text-accent">Cetak formulir WO</Link>
             <DocScans table="work_orders" id={w.id} path={`/plant/wo/${w.id}`} canUpload={work} />
             {open && s.can('log.request') && <Link href={`/logistik/mr?wo=${w.id}`} className="text-sm text-accent hover:underline">Minta suku cadang (MR) →</Link>}
           </Panel>

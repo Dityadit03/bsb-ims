@@ -6,7 +6,7 @@ export const UNIT_STATUS: Record<string, [Tone, string]> = {
 };
 export const WO_TYPE: Record<string, string> = { breakdown: 'Breakdown', pm: 'Servis berkala (PM)', repair: 'Perbaikan terencana', inspection: 'Inspeksi' };
 export const WO_STATUS: Record<string, [Tone, string]> = {
-  open: ['warn', 'Open'], in_progress: ['accent', 'Dikerjakan'], waiting_part: ['warn', 'Tunggu part'], done: ['ok', 'Selesai'], cancelled: ['muted', 'Dibatalkan'],
+  open: ['warn', 'Terbuka'], in_progress: ['accent', 'Dikerjakan'], waiting_part: ['warn', 'Tunggu part'], done: ['ok', 'Selesai'], cancelled: ['muted', 'Dibatalkan'],
 };
 export const PRIORITY: Record<string, [Tone, string]> = {
   urgent: ['crit', 'Urgent'], high: ['crit', 'Tinggi'], medium: ['warn', 'Sedang'], low: ['muted', 'Rendah'],

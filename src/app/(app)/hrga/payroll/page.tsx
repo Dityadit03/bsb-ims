@@ -120,7 +120,7 @@ async function Structure({ sp, manage, comps, supabase }: { sp: Record<string, s
   return (
     <>
       <Panel title="Struktur gaji berlaku" sub={`${(data ?? []).length} karyawan BSB aktif (subkon tidak digaji BSB) · ${empty} belum punya gaji pokok`}
-        action={<form className="flex gap-2"><input type="hidden" name="tab" value="struktur" />
+        action={<form className="flex flex-wrap gap-2"><input type="hidden" name="tab" value="struktur" />
           <select name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-32`}><option value="">Semua dept</option>{depts.map(d => <option key={d}>{d}</option>)}</select>
           <select name="kosong" defaultValue={sp.kosong ?? ''} className={`${input} max-w-40`}><option value="">Semua</option><option value="1">Belum diisi</option></select>
           <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button></form>}>

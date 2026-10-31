@@ -97,7 +97,7 @@ export function ClockForm({ next, requirePhoto }: { next: 'in' | 'out'; requireP
       )}
 
       <div className="grid gap-2">
-        <input ref={fileRef} type="file" accept="image/*" capture="user" className="hidden" onChange={e => pick(e.target.files?.[0])} />
+        <input ref={fileRef} type="file" accept="image/*" capture="user" aria-label="Foto selfie" className="hidden" onChange={e => pick(e.target.files?.[0])} />
         {photo ? (
           <button type="button" onClick={() => fileRef.current?.click()} className="relative overflow-hidden rounded-xl border border-line">
             {/* eslint-disable-next-line @next/next/no-img-element */}

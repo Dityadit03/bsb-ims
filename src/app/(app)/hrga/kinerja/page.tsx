@@ -92,11 +92,11 @@ export default async function KinerjaPage({ searchParams }: { searchParams: Prom
             </Panel>
           </div>
           <Panel title="Peserta" action={
-            <form className="flex gap-2">
+            <form className="flex flex-wrap gap-2">
               <input type="hidden" name="siklus" value={cyc.id} />
-              <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-48`}><option value="">Semua status</option>
+              <select aria-label="Status" name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-48`}><option value="">Semua status</option>
                 {Object.entries(PERF_STATUS).map(([k, v]) => <option key={k} value={k}>{v[1]}</option>)}</select>
-              <select name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-32`}><option value="">Semua dept</option>
+              <select aria-label="Departemen" name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-32`}><option value="">Semua dept</option>
                 {[...new Set(all.map(r => r.department_code))].sort().map(d => <option key={d}>{d}</option>)}</select>
               <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button>
             </form>

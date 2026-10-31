@@ -43,7 +43,7 @@ export default async function FuelPage() {
   return (
     <>
       <PageHeader eyebrow="Logistik · SMKP 4.6" title="Stasiun BBM">
-        <span className="flex gap-3"><ExportLinks dataset="tangki_bbm" /><ExportLinks dataset="log_bbm" /><ExportLinks dataset="konsumsi_bbm" /></span>
+        <span className="flex flex-wrap gap-3"><ExportLinks dataset="tangki_bbm" /><ExportLinks dataset="log_bbm" /><ExportLinks dataset="konsumsi_bbm" /></span>
       </PageHeader>
       <LogTabs active="/logistik/bbm" />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

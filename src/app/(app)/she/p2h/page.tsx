@@ -78,7 +78,7 @@ export default async function P2hPage({ searchParams }: { searchParams: Promise<
         </Panel>
       )}
       <Panel title={`P2H ${fmtDate(date)}`} action={
-        <form className="flex gap-2"><input type="date" name="tanggal" defaultValue={date} className={input} aria-label="Tanggal" /><button className="text-sm text-accent">Tampilkan</button></form>}>
+        <form className="flex flex-wrap gap-2"><input type="date" name="tanggal" defaultValue={date} className={input} aria-label="Tanggal" /><button className="text-sm text-accent">Tampilkan</button></form>}>
         {rows?.length ? (
           <Table head={['Nomor', 'Shift', 'Unit', 'HM', 'Operator', 'Catatan', 'Kesimpulan']}>
             {rows.map(r => (

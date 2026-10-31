@@ -83,7 +83,7 @@ export default async function InspectionPage({ searchParams }: { searchParams: P
                 <td><Pill tone={RISK[f.risk_level][0]}>{RISK[f.risk_level][1]}</Pill></td>
                 <td className="font-mono text-xs">{f.pic_department_code}</td>
                 <td className={`tabular whitespace-nowrap text-xs ${f.is_overdue ? 'font-medium text-crit' : ''}`}>{fmtDate(f.due_date)}</td>
-                <td><Pill tone={f.is_overdue ? 'crit' : OPEN_CLOSED[f.status][0]}>{f.is_overdue ? 'Overdue' : 'Open'}</Pill></td>
+                <td><Pill tone={f.is_overdue ? 'crit' : OPEN_CLOSED[f.status][0]}>{f.is_overdue ? 'Terlambat' : 'Open'}</Pill></td>
               </tr>
             ))}
           </Table>

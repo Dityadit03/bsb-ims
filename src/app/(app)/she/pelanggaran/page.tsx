@@ -75,7 +75,7 @@ export default async function ViolationPage({ searchParams }: { searchParams: Pr
           <option value="">Semua jenis</option>{Object.entries(VIOLATION_TYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
         <select name="status" defaultValue={sp.status ?? ''} className={`${input} !w-auto`} aria-label="Status">
-          <option value="">Semua status</option><option value="open">Open</option><option value="closed">Closed</option>
+          <option value="">Semua status</option><option value="open">Terbuka</option><option value="closed">Ditutup</option>
         </select>
         <button className={btnGhost}>Saring</button>
       </form>

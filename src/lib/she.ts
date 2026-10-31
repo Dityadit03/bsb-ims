@@ -6,7 +6,7 @@ export const riskLevel = (score: number) => (score >= 20 ? 'extreme' : score >= 
 export const HAZARD_TYPE: Record<string, string> = { KTA: 'KTA · kondisi tidak aman', TTA: 'TTA · tindakan tidak aman' };
 
 export const OPEN_CLOSED: Record<string, [Tone, string]> = {
-  open: ['warn', 'Open'], closed: ['ok', 'Closed'], cancelled: ['muted', 'Dibatalkan'],
+  open: ['warn', 'Terbuka'], closed: ['ok', 'Ditutup'], cancelled: ['muted', 'Dibatalkan'],
 };
 
 export const INSPECTION_TYPE: Record<string, string> = {
@@ -29,7 +29,7 @@ export const INCIDENT_CLASS: Record<string, [Tone, string]> = {
 };
 
 export const INCIDENT_STATUS: Record<string, [Tone, string]> = {
-  reported: ['warn', 'Dilaporkan'], investigating: ['accent', 'Investigasi'], investigated: ['warn', 'Menunggu penutupan'], closed: ['ok', 'Closed'],
+  reported: ['warn', 'Dilaporkan'], investigating: ['accent', 'Investigasi'], investigated: ['warn', 'Menunggu penutupan'], closed: ['ok', 'Ditutup'],
 };
 
 export const RISK_STATUS: Record<string, [Tone, string]> = {

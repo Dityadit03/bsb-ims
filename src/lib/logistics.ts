@@ -5,7 +5,7 @@ export const CATEGORY: Record<string, string> = {
   spare_part: 'Suku cadang', tire: 'Ban', fuel: 'BBM', lubricant: 'Pelumas', consumable: 'Habis pakai', ppe: 'APD', other: 'Lainnya',
 };
 export const MR_STATUS: Record<string, [Tone, string]> = {
-  submitted: ['warn', 'Menunggu persetujuan'], pending: ['warn', 'Di-pending'], approved: ['accent', 'Disetujui'], partial: ['accent', 'Keluar sebagian'],
+  submitted: ['warn', 'Menunggu persetujuan'], pending: ['warn', 'Ditunda'], approved: ['accent', 'Disetujui'], partial: ['accent', 'Keluar sebagian'],
   issued: ['ok', 'Selesai dikeluarkan'], rejected: ['crit', 'Ditolak'], cancelled: ['muted', 'Dibatalkan'],
 };
 export const MOVE: Record<string, [Tone, string]> = {

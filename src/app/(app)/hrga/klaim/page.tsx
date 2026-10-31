@@ -52,11 +52,11 @@ export default async function KlaimPage({ searchParams }: { searchParams: Promis
 
 function Filter({ tab, sp, statuses, depts }: { tab: string; sp: Record<string, string | undefined>; statuses: Record<string, [string, string]>; depts: string[] }) {
   return (
-    <form className="flex gap-2">
+    <form className="flex flex-wrap gap-2">
       {tab !== 'klaim' && <input type="hidden" name="tab" value={tab} />}
-      <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-44`}><option value="">Semua status</option>
+      <select aria-label="Status" name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-44`}><option value="">Semua status</option>
         {Object.entries(statuses).map(([k, v]) => <option key={k} value={k}>{v[1]}</option>)}</select>
-      <select name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-32`}><option value="">Semua dept</option>{depts.map(d => <option key={d}>{d}</option>)}</select>
+      <select aria-label="Departemen" name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-32`}><option value="">Semua dept</option>{depts.map(d => <option key={d}>{d}</option>)}</select>
       <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button>
     </form>
   );
