@@ -2,6 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { uploadFormFiles } from '@/lib/attachments';
 
 export type ActionState = { error?: string; ok?: string };
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim() || null;
@@ -59,14 +60,38 @@ export async function opname(_: ActionState, f: FormData) {
 export async function createMr(_: ActionState, f: FormData): Promise<ActionState> {
   const lines = [1, 2, 3, 4, 5].map(i => ({ material: str(f, `material_${i}`), qty: num(f, `qty_${i}`), note: str(f, `note_${i}`) }))
     .filter(l => l.material && l.qty);
+  const special = [1, 2, 3].map(i => ({ name: str(f, `sp_name_${i}`), spec: str(f, `sp_spec_${i}`), part_no: str(f, `sp_part_${i}`), qty: num(f, `sp_qty_${i}`), uom: str(f, `sp_uom_${i}`) }))
+    .filter(x => x.name || x.qty);
   let id: string;
   try {
     id = (await rpc('mr_create', {
       p_department: str(f, 'department'), p_purpose: str(f, 'purpose'), p_lines: lines, p_need_date: str(f, 'need_date'),
-      p_wo: str(f, 'wo'), p_idempotency_key: str(f, 'idem'),
+      p_wo: str(f, 'wo'), p_idempotency_key: str(f, 'idem'), p_unit: str(f, 'unit'), p_special: special,
     })).id;
   } catch (e) { return { error: (e as Error).message }; }
   redirect(`/logistik/mr/${id}`);
+}
+
+// Logistik mengaitkan part khusus ke barang katalog (kosongkan barang = tolak, wajib alasan)
+export async function resolveSpecial(_: ActionState, f: FormData) {
+  return run(`/logistik/mr/${str(f, 'mr')}`, 'Part khusus diproses', () =>
+    rpc('mr_special_resolve', { p_item: str(f, 'id'), p_material: str(f, 'material'), p_note: str(f, 'note') }));
+}
+
+// Foto/PDF formulir fisik yang sudah ditandatangani (WO, MR, PR, PO)
+export async function attachDoc(_: ActionState, f: FormData) {
+  return run(str(f, 'path') ?? '/logistik', 'Berkas diunggah', async () => {
+    const supabase = await createClient();
+    const { data: auth } = await supabase.auth.getUser();
+    const ids = await uploadFormFiles(supabase, auth.user!.id, 'dokumen', f.getAll('files'));
+    const { error } = await supabase.rpc('doc_attach', { p_table: str(f, 'table'), p_id: str(f, 'id'), p_attachments: ids });
+    if (error) throw new Error(error.message);
+  });
+}
+
+export async function confirmIssue(_: ActionState, f: FormData) {
+  return run(`/logistik/mr/${str(f, 'id')}`, 'Penerimaan barang dikonfirmasi', () =>
+    rpc('goods_issue_confirm', { p_mr: str(f, 'id'), p_note: str(f, 'note') }));
 }
 
 // Approval ala Syshab: setujui (jumlah per baris bisa dikurangi, 0 = baris ditolak), pending atau tolak dengan catatan

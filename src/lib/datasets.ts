@@ -16,11 +16,11 @@ export const DATASETS: Dataset[] = [
   { key: 'hazard', label: 'Laporan hazard', group: 'SHE', view: 'she_hazard_register', order: 'created_at', desc: true, feed: true, columns: [
     ['hazard_no', 'No. hazard'], ['reported_on', 'Tanggal'], ['department_code', 'Dept'], ['work_area_name', 'Area'], ['location_note', 'Lokasi'],
     ['hazard_type', 'Jenis', lbl(HAZARD_TYPE)], ['description', 'Uraian'], ['recommendation', 'Rekomendasi'], ['risk_level', 'Risiko'],
-    ['pic_department_code', 'Dept PIC'], ['due_date', 'Batas waktu'], ['status', 'Status', lbl(OPEN_CLOSED)], ['is_overdue', 'Terlambat', yn],
+    ['pic_department_code', 'Dept PIC'], ['pic_partner_name', 'Mitra kerja PIC'], ['due_date', 'Batas waktu'], ['status', 'Status', lbl(OPEN_CLOSED)], ['is_overdue', 'Terlambat', yn],
     ['reporter_name', 'Pelapor'], ['closed_at', 'Ditutup']] },
   { key: 'temuan', label: 'Temuan inspeksi', group: 'SHE', view: 'she_finding_register', order: 'inspected_on', desc: true, feed: true, columns: [
     ['inspection_no', 'No. inspeksi'], ['inspected_on', 'Tanggal'], ['inspection_type', 'Jenis'], ['object', 'Objek'], ['seq', 'No.'],
-    ['description', 'Temuan'], ['risk_level', 'Risiko'], ['recommendation', 'Rekomendasi'], ['pic_department_code', 'Dept PIC'],
+    ['description', 'Temuan'], ['risk_level', 'Risiko'], ['recommendation', 'Rekomendasi'], ['pic_department_code', 'Dept PIC'], ['pic_partner_name', 'Mitra kerja PIC'],
     ['due_date', 'Batas waktu'], ['status', 'Status', lbl(OPEN_CLOSED)], ['is_overdue', 'Terlambat', yn]] },
   { key: 'insiden', label: 'Insiden', group: 'SHE', view: 'incident_register', order: 'occurred_at', desc: true, feed: true, columns: [
     ['incident_no', 'No. insiden'], ['occurred_at', 'Waktu kejadian'], ['department_code', 'Dept'], ['work_area_name', 'Area'],
@@ -62,8 +62,12 @@ export const DATASETS: Dataset[] = [
     ['movement_no', 'No. dokumen'], ['moved_at', 'Waktu'], ['movement_type', 'Jenis', lbl(MOVE)], ['material_code', 'Kode barang'], ['material_name', 'Barang'],
     ['qty', 'Jumlah'], ['uom', 'Satuan'], ['unit_cost', 'Harga'], ['value', 'Nilai'], ['supplier_name', 'Supplier'], ['doc_ref', 'Surat jalan'],
     ['mr_no', 'MR'], ['wo_no', 'WO'], ['unit_no', 'Unit'], ['hour_meter', 'HM'], ['moved_by_name', 'Petugas'], ['note', 'Catatan']] },
+  { key: 'pengeluaran', label: 'Pengeluaran gudang ke plant', group: 'Logistik', view: 'stock_issue_report', order: 'moved_at', desc: true, feed: false, columns: [
+    ['movement_no', 'No. GI'], ['moved_at', 'Waktu'], ['mr_no', 'MR'], ['department_code', 'Dept peminta'], ['material_code', 'Kode barang'], ['material_name', 'Barang'],
+    ['qty', 'Jumlah'], ['uom', 'Satuan'], ['unit_cost', 'Harga'], ['value', 'Nilai'], ['unit_no', 'Unit'], ['wo_no', 'WO'], ['requester_name', 'Peminta'],
+    ['issued_by_name', 'Petugas gudang'], ['received', 'Diterima', yn], ['received_by_name', 'Penerima'], ['received_at', 'Waktu terima'], ['receive_note', 'Catatan terima']] },
   { key: 'mr', label: 'Material request', group: 'Logistik', view: 'mr_register', order: 'created_at', desc: true, feed: true, columns: [
-    ['mr_no', 'No. MR'], ['created_at', 'Dibuat'], ['department_code', 'Dept'], ['purpose', 'Keperluan'], ['wo_no', 'WO'], ['requester_name', 'Peminta'],
+    ['mr_no', 'No. MR'], ['created_at', 'Dibuat'], ['department_code', 'Dept'], ['purpose', 'Keperluan'], ['unit_no', 'Unit'], ['wo_no', 'WO'], ['requester_name', 'Peminta'],
     ['total_value', 'Nilai'], ['status', 'Status', lbl(MR_STATUS)], ['reviewer_name', 'Diperiksa'], ['review_note', 'Catatan']] },
   { key: 'tracking', label: 'Tracking MR → PR → PO', group: 'Logistik', view: 'mr_tracking', order: 'mr_no', desc: true, feed: true, columns: [
     ['mr_no', 'No. MR'], ['material_code', 'Kode'], ['material_name', 'Barang'], ['qty', 'Diminta'], ['qty_approved', 'Disetujui'],

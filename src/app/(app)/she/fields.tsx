@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { DropZone } from '@/components/drop-zone';
 import { Tabs } from '@/components/tabs';
+import { ActionForm } from '@/components/action-form';
 import { input } from '@/components/ui';
+import { setPicPartner } from './actions';
 import { RISK } from '@/lib/compliance';
 import { createClient } from '@/lib/supabase/server';
 
@@ -111,5 +113,23 @@ export async function LinkedCapa({ table, id, sourceType, refNo, clauseCode, can
       ) : <p className="text-sm text-muted">Belum ada action plan.</p>}
       {canCreate && <Link href={`/capa/baru?${qs}`} className="text-sm text-accent hover:underline">+ Buat action plan dari rekaman ini</Link>}
     </div>
+  );
+}
+
+// PIC perbaikan dari mitra kerja (kontraktor). Tampil sebagai teks bila tidak boleh diubah.
+export async function PicPartner({ table, id, path, current, currentId, canEdit }: {
+  table: string; id: string; path: string; current: string | null; currentId: string | null; canEdit: boolean;
+}) {
+  if (!canEdit) return <span>{current ?? '–'}</span>;
+  const supabase = await createClient();
+  const { data: partners } = await supabase.from('partners').select('id, name').eq('active', true).order('name');
+  return (
+    <ActionForm action={setPicPartner} label="Simpan" hidden={{ table, id, path }}>
+      <select name="partner" defaultValue={currentId ?? ''} className={input} aria-label="Mitra kerja">
+        <option value="">– tanpa mitra kerja</option>
+        {(partners ?? []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+      </select>
+      <input name="new" className={input} placeholder="atau tambah mitra baru" />
+    </ActionForm>
   );
 }

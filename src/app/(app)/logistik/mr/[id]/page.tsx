@@ -7,11 +7,14 @@ import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { fmtDate, fmtDateTime } from '@/lib/documents';
 import { MR_STATUS, STAGE, qty, rp } from '@/lib/logistics';
-import { cancelMr, decideMr, issueGoods, prFromMr } from '../../actions';
+import { DocScans } from '@/components/doc-scans';
+import { cancelMr, confirmIssue, decideMr, issueGoods, prFromMr, resolveSpecial } from '../../actions';
 
 type Mr = { id: string; mr_no: string; status: string; purpose: string; need_date: string | null; total_value: number; created_at: string;
   department_code: string; requested_by: string; requester_name: string; wo_id: string | null; wo_no: string | null;
-  reviewed_at: string | null; reviewer_name: string | null; review_note: string | null };
+  reviewed_at: string | null; reviewer_name: string | null; review_note: string | null; unit_no: string | null; special_open: number };
+type Special = { id: string; name: string; spec: string | null; part_no: string | null; qty: number; uom: string; status: string; resolve_note: string | null };
+type Issued = { id: string; received: boolean; received_by_name: string | null; received_at: string | null };
 type Line = { mr_line_id: string; material_code: string; material_name: string; uom: string; qty: number; qty_approved: number | null;
   qty_issued: number; qty_open: number; stock_qty: number; stage: string; pr_id: string | null; pr_no: string | null; po_no: string | null; supplier_name: string | null };
 
@@ -21,10 +24,13 @@ export default async function MrDetail({ params }: { params: Promise<{ id: strin
   const supabase = await createClient();
   const { data: r } = await supabase.from('mr_register').select('*').eq('id', id).maybeSingle<Mr>();
   if (!r) notFound();
-  const [{ data: lines }, { data: notes }, { data: moves }] = await Promise.all([
+  const [{ data: lines }, { data: notes }, { data: moves }, { data: specials }, { data: materials }, { data: issued }] = await Promise.all([
     supabase.from('mr_tracking').select('*').eq('mr_id', id).order('material_code').returns<Line[]>(),
     supabase.from('material_request_lines').select('id, note').eq('mr_id', id),
     supabase.from('stock_ledger').select('id, movement_no, moved_at, material_code, qty, moved_by_name').eq('mr_id', id).order('moved_at'),
+    supabase.from('mr_special_items').select('id, name, spec, part_no, qty, uom, status, resolve_note').eq('mr_id', id).order('created_at').returns<Special[]>(),
+    s.can('log.manage') ? supabase.from('materials').select('id, code, name').eq('active', true).order('code') : Promise.resolve({ data: [] as { id: string; code: string; name: string }[] }),
+    supabase.from('stock_issue_report').select('id, received, received_by_name, received_at').eq('mr_id', id).returns<Issued[]>(),
   ]);
   const mine = r.requested_by === s.profile.id;
   const note = new Map((notes ?? []).map(n => [n.id as string, n.note as string | null]));
@@ -33,6 +39,9 @@ export default async function MrDetail({ params }: { params: Promise<{ id: strin
   const issue = open && s.canIn('log.warehouse', 'LOG');
   const short = open && s.canIn('log.purchase', 'LOG') && (lines ?? []).some(l => l.stage === 'short');
   const prs = [...new Map((lines ?? []).filter(l => l.pr_id).map(l => [l.pr_id!, l.pr_no!])).entries()];
+  const resolveOpen = ['submitted', 'pending'].includes(r.status) && s.canIn('log.manage', 'LOG');
+  const pendingReceipt = (issued ?? []).filter(x => !x.received).length;
+  const canConfirm = pendingReceipt > 0 && (mine || s.can('log.request')) && !s.canIn('log.warehouse', 'LOG');
   const cancel = ['submitted', 'approved'].includes(r.status) && (mine || s.canIn('log.manage', 'LOG'));
 
   return (
@@ -104,6 +113,37 @@ export default async function MrDetail({ params }: { params: Promise<{ id: strin
               </ActionForm>
             </Panel>
           )}
+          {specials?.length ? (
+            <Panel title="Permintaan part khusus (di luar katalog)">
+              <ul className="grid gap-3">
+                {specials.map(x => (
+                  <li key={x.id} className="grid gap-2 border-b border-line pb-3 text-sm last:border-0">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span><b>{x.name}</b> · {qty(x.qty)} {x.uom}{x.part_no && <span className="font-mono text-xs"> · {x.part_no}</span>}</span>
+                      <Pill tone={x.status === 'requested' ? 'warn' : x.status === 'registered' ? 'ok' : 'crit'}>{{ requested: 'Menunggu logistik', registered: 'Didaftarkan', rejected: 'Ditolak' }[x.status]}</Pill>
+                    </div>
+                    {x.spec && <p className="text-xs text-muted">{x.spec}</p>}
+                    {x.resolve_note && <p className="text-xs text-muted">Logistik: {x.resolve_note}</p>}
+                    {x.status === 'requested' && resolveOpen && (
+                      <ActionForm action={resolveSpecial} label="Proses" hidden={{ id: x.id, mr: r.id }}>
+                        <select name="material" className={input}><option value="">Tolak (isi alasan)</option>
+                          {(materials ?? []).map(m => <option key={m.id} value={m.id}>{m.code} · {m.name}</option>)}</select>
+                        <input name="note" className={input} placeholder="Catatan / alasan penolakan" />
+                        <p className="text-xs text-muted">Pilih barang katalog (daftarkan dulu di menu Stok bila belum ada) agar masuk baris MR dan bisa disetujui.</p>
+                      </ActionForm>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          ) : null}
+          {canConfirm && (
+            <Panel title="Konfirmasi penerimaan di plant">
+              <ActionForm action={confirmIssue} label={`Konfirmasi diterima (${pendingReceipt} pengeluaran)`} primary hidden={{ id: r.id }}>
+                <input name="note" className={input} placeholder="Catatan (mis. jumlah sesuai, kondisi baik)" />
+              </ActionForm>
+            </Panel>
+          )}
           {moves?.length ? (
             <Panel title="Riwayat pengeluaran">
               <ul className="grid gap-1 text-sm">{moves.map(m => <li key={m.id} className="flex justify-between gap-2 border-b border-line py-1">
@@ -123,11 +163,14 @@ export default async function MrDetail({ params }: { params: Promise<{ id: strin
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm [&_dt]:text-muted">
             <dt>Peminta</dt><dd>{r.requester_name}<span className="block text-xs text-muted">{fmtDateTime(r.created_at)}</span></dd>
             <dt>Dibutuhkan</dt><dd>{fmtDate(r.need_date)}</dd>
+            <dt>Unit</dt><dd className="font-mono">{r.unit_no ?? '–'}</dd>
             <dt>Work order</dt><dd>{r.wo_id ? <Link href={`/plant/wo/${r.wo_id}`} className="font-mono text-accent">{r.wo_no}</Link> : '–'}</dd>
             <dt>Nilai</dt><dd className="tabular">{rp(r.total_value)}</dd>
             <dt>Pembelian</dt><dd>{prs.length ? prs.map(([pid, no]) => <Link key={pid} href={`/logistik/pengadaan/${pid}`} className="block font-mono text-accent">{no}</Link>) : '–'}</dd>
             <dt>Diperiksa</dt><dd>{r.reviewer_name ?? '–'}{r.reviewed_at && <span className="block text-xs text-muted">{fmtDateTime(r.reviewed_at)}</span>}</dd>
           </dl>
+          <div className="border-t border-line pt-3"><div className="mb-2 text-xs text-muted">Formulir MR fisik</div>
+            <DocScans table="material_requests" id={r.id} path={`/logistik/mr/${r.id}`} canUpload={mine || s.canIn('log.manage', 'LOG') || s.canIn('log.warehouse', 'LOG')} /></div>
         </Panel>
       </div>
     </>

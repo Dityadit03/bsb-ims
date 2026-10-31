@@ -2188,6 +2188,48 @@ await test('toolbox talk & serah terima shift: izin, peserta valid, penerima ora
   await expectError('23505', async () => as(db, spvHse, `select public.handover_ack($1)`, [h.id]));
   eq((await as(db, staffId, `select received_by from public.shift_handovers where id = $1`, [h.id])).rows[0].received_by, spvHse);
 });
+await test('MR: unit & part khusus diproses logistik sebelum disetujui; lampiran fisik; konfirmasi penerimaan; mitra kerja PIC', async () => {
+  const sl = JSON.stringify([{ name: 'Seal hub khusus', spec: 'OD 120', part_no: 'XYZ-1', qty: 2 }, { name: 'Bracket custom', qty: 1 }]);
+  await expectError('22023', async () => as(db, pltStaff, `select public.mr_create($1, 'Part khusus', '[]'::jsonb, null, null, null, null, $2::jsonb)`, [PLT, sl]));
+  const m = (await as(db, pltStaff, `select (r).* from public.mr_create($1, 'Part khusus DT-21', '[]'::jsonb, null, null, null, $2, $3::jsonb) r`, [PLT, unit.id, sl])).rows[0];
+  eq(m.unit_id, unit.id);
+  eq((await as(db, pltStaff, `select unit_no, special_items::int si, special_open::int so from public.mr_register where id = $1`, [m.id])).rows[0].unit_no, 'DT-21');
+  const items = (await db.query(`select id from public.mr_special_items where mr_id = $1 order by name`, [m.id])).rows;
+  await expectError('42501', async () => as(db, pltStaff, `select public.mr_special_resolve($1, $2)`, [items[0].id, sp.id]));
+  await expectError('22023', async () => as(db, logHead, `select public.mr_special_resolve($1, null, '')`, [items[0].id]));
+  await as(db, logHead, `select public.mr_special_resolve($1, $2, 'Terdaftar')`, [items[1].id, sp.id]);
+  await expectError('22023', async () => as(db, dhPlt, `select public.mr_decide($1, 'approve')`, [m.id]));
+  await as(db, logHead, `select public.mr_special_resolve($1, null, 'Tidak diperlukan')`, [items[0].id]);
+  await expectError('22023', async () => as(db, logHead, `select public.mr_special_resolve($1, null, 'x')`, [items[0].id]));
+  eq((await as(db, dhPlt, `select (r).status from public.mr_decide($1, 'approve') r`, [m.id])).rows[0].status, 'approved');
+  eq((await db.query(`select count(*)::int c from public.material_request_lines where mr_id = $1`, [m.id])).rows[0].c, 1);
+  // lampiran formulir fisik
+  const a1 = await upload(pltStaff), a2 = await upload(ownerId);
+  await expectError('22023', async () => as(db, pltStaff, `select public.doc_attach('material_requests', $1, $2)`, [m.id, [a2.id]]));
+  await expectError('22023', async () => as(db, pltStaff, `select public.doc_attach('documents', $1, $2)`, [m.id, [a1.id]]));
+  await expectError('42501', async () => as(db, spvHse, `select public.doc_attach('material_requests', $1, $2)`, [m.id, [(await upload(spvHse)).id]]));
+  eq((await as(db, pltStaff, `select public.doc_attach('material_requests', $1, $2) n`, [m.id, [a1.id]])).rows[0].n, 1);
+  eq((await db.query(`select owner_table from public.attachments where id = $1`, [a1.id])).rows[0].owner_table, 'material_requests');
+  // konfirmasi penerimaan di plant
+  await as(db, logStaff, `select public.goods_receive($1, $2, 5, 600000, 'SJ-KONF')`, [sp.id, sup.id]);
+  const ln = (await db.query(`select id from public.material_request_lines where mr_id = $1`, [m.id])).rows[0].id;
+  await as(db, logStaff, `select public.goods_issue($1, $2::jsonb)`, [m.id, JSON.stringify([{ line: ln, qty: 1 }])]);
+  await expectError('42501', async () => as(db, logStaff, `select public.goods_issue_confirm($1)`, [m.id]));
+  await expectError('42501', async () => as(db, spvHse, `select public.goods_issue_confirm($1)`, [m.id]));
+  eq((await as(db, pltStaff, `select not received r from public.stock_issue_report where mr_id = $1`, [m.id])).rows[0].r, true);
+  eq((await as(db, pltStaff, `select public.goods_issue_confirm($1, 'Lengkap') n`, [m.id])).rows[0].n, 1);
+  await expectError('22023', async () => as(db, pltStaff, `select public.goods_issue_confirm($1)`, [m.id]));
+  const rep = (await as(db, pltStaff, `select received, unit_no, received_by_name, qty::int q from public.stock_issue_report where mr_id = $1`, [m.id])).rows[0];
+  eq(rep.received, true); eq(rep.unit_no, 'DT-21'); eq(rep.q, 1);
+  // mitra kerja sebagai PIC perbaikan
+  await expectError('42501', async () => as(db, staffId, `select public.partner_save('PT Mitra Las')`));
+  const pt = (await as(db, spvPlt, `select (p).* from public.partner_save('PT Mitra Las') p`)).rows[0];
+  await expectError('23505', async () => as(db, spvPlt, `select public.partner_save('pt mitra las')`));
+  await expectError('42501', async () => as(db, spvHse, `select public.set_pic_partner('hazard_reports', $1, $2)`, [hz.id, pt.id]));
+  await as(db, spvPlt, `select public.set_pic_partner('hazard_reports', $1, $2)`, [hz.id, pt.id]);
+  eq((await as(db, spvPlt, `select pic_partner_name from public.she_hazard_register where id = $1`, [hz.id])).rows[0].pic_partner_name, 'PT Mitra Las');
+  await expectError('22023', async () => as(db, spvPlt, `select public.set_pic_partner('hazard_reports', $1, gen_random_uuid())`, [hz.id]));
+});
 await test('pengguna tanpa audit.read tidak melihat audit log', async () => {
   eq((await as(db, staffId, `select 1 from public.audit_logs`)).rowCount, 0);
 });

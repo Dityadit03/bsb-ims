@@ -7,14 +7,14 @@ import { RISK } from '@/lib/compliance';
 import { fmtDate, fmtDateTime } from '@/lib/documents';
 import { INSPECTION_TYPE } from '@/lib/she';
 import { closeFinding } from '../../actions';
-import { AttachmentList, Files, LinkedCapa } from '../../fields';
+import { PicPartner, AttachmentList, Files, LinkedCapa } from '../../fields';
 
 type Insp = {
   id: string; inspection_no: string; inspected_on: string; inspection_type: string; object: string; note: string | null;
   inspector: { full_name: string | null } | null; area: { name: string } | null; dept: { code: string } | null;
 };
 type Finding = {
-  id: string; seq: number; description: string; risk_level: string; pic_department_code: string; due_date: string; status: string;
+  id: string; seq: number; description: string; risk_level: string; pic_department_code: string; pic_partner_id: string | null; pic_partner_name: string | null; due_date: string; status: string;
   is_overdue: boolean; close_note: string | null; closed_at: string | null;
 };
 
@@ -39,7 +39,9 @@ export default async function InspectionDetail({ params }: { params: Promise<{ i
             <Panel key={f.id} title={`Temuan ${f.seq}`} action={<div className="flex gap-2"><Pill tone={RISK[f.risk_level][0]}>{RISK[f.risk_level][1]}</Pill>
               <Pill tone={f.status === 'closed' ? 'ok' : f.is_overdue ? 'crit' : 'warn'}>{f.status === 'closed' ? 'Closed' : f.is_overdue ? 'Overdue' : 'Open'}</Pill></div>}>
               <p className="text-sm">{f.description}</p>
-              <p className="text-xs text-muted">PIC {f.pic_department_code} · due {fmtDate(f.due_date)}</p>
+              <p className="text-xs text-muted">PIC {f.pic_department_code} · due {fmtDate(f.due_date)}{f.pic_partner_name && f.status !== 'open' ? ` · mitra kerja ${f.pic_partner_name}` : ''}</p>
+              {f.status === 'open' && <div className="text-sm"><div className="mb-1 text-xs text-muted">Mitra kerja pelaksana perbaikan</div>
+                <PicPartner table="inspection_findings" id={f.id} path={`/she/inspeksi/${i.id}`} current={f.pic_partner_name} currentId={f.pic_partner_id} canEdit={s.can('she.followup')} /></div>}
               <AttachmentList table="inspection_findings" ids={[f.id]} />
               {f.close_note && <div className="rounded border border-line bg-ground p-3 text-sm"><div className="mb-1 text-xs text-muted">Perbaikan · {fmtDateTime(f.closed_at)}</div>{f.close_note}</div>}
               {f.status === 'open' && s.can('she.followup') && (

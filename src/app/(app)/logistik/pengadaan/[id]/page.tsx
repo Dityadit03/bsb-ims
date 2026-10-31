@@ -7,6 +7,7 @@ import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { fmtDate, fmtDateTime } from '@/lib/documents';
 import { GRADE, PO_STATUS, PR_STATUS, qty, rp } from '@/lib/logistics';
+import { DocScans } from '@/components/doc-scans';
 import { approvePo, createPo, decidePr, receivePo, saveQuote, selectQuote } from '../../actions';
 
 type Pr = { id: string; pr_no: string; status: string; purpose: string; need_date: string | null; created_at: string; mr_id: string | null;
@@ -156,6 +157,8 @@ export default async function PrDetail({ params }: { params: Promise<{ id: strin
                     </div>
                   </ActionForm>
                 )}
+                <div className="border-t border-line pt-3"><div className="mb-2 text-xs text-muted">Formulir PO fisik</div>
+                  <DocScans table="purchase_orders" id={o.id} path={`/logistik/pengadaan/${pr.id}`} canUpload={buyer} /></div>
               </Panel>
             );
           })}
@@ -168,6 +171,8 @@ export default async function PrDetail({ params }: { params: Promise<{ id: strin
             <dt>Dibutuhkan</dt><dd>{fmtDate(pr.need_date)}</dd>
             <dt>Keputusan</dt><dd>{pr.decided_at ? fmtDateTime(pr.decided_at) : '–'}{pr.decision_note && <span className="block text-xs text-muted">{pr.decision_note}</span>}</dd>
           </dl>
+          <div className="border-t border-line pt-3"><div className="mb-2 text-xs text-muted">Formulir PR fisik</div>
+            <DocScans table="purchase_requisitions" id={pr.id} path={`/logistik/pengadaan/${pr.id}`} canUpload={buyer} /></div>
         </Panel>
       </div>
     </>

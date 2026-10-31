@@ -14,7 +14,7 @@ import { DeptSelect, sheMasters } from '../../she/fields';
 export const metadata = { title: 'Material request' };
 
 type Row = { id: string; mr_no: string; status: string; purpose: string; total_value: number; created_at: string; department_code: string;
-  requester_name: string; wo_id: string | null; wo_no: string | null; lines: number };
+  requester_name: string; wo_id: string | null; wo_no: string | null; lines: number; unit_no: string | null; special_open: number };
 
 export default async function MrPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const s = await getSession();
@@ -22,10 +22,11 @@ export default async function MrPage({ searchParams }: { searchParams: Promise<R
   const supabase = await createClient();
   let q = supabase.from('mr_register').select('*').order('created_at', { ascending: false }).limit(300);
   if (sp.status) q = q.eq('status', sp.status); else if (!sp.semua) q = q.eq('is_open', true);
-  const [{ data: rows }, { depts }, { data: materials }, { data: wos }] = await Promise.all([
+  const [{ data: rows }, { depts }, { data: materials }, { data: wos }, { data: units }] = await Promise.all([
     q.returns<Row[]>(), sheMasters(),
     supabase.from('material_stock').select('id, code, name, uom, stock_qty').eq('active', true).order('code'),
-    supabase.from('work_order_register').select('id, wo_no, unit_no, description').eq('is_open', true).order('reported_at', { ascending: false }),
+    supabase.from('work_order_register').select('id, wo_no, unit_no, unit_id, description').eq('is_open', true).order('reported_at', { ascending: false }),
+    supabase.from('units').select('id, unit_no').neq('status', 'retired').order('unit_no'),
   ]);
 
   return (
@@ -39,13 +40,14 @@ export default async function MrPage({ searchParams }: { searchParams: Promise<R
         <button className="text-sm text-accent">Saring</button>
       </form>
       {rows?.length ? (
-        <Table head={['Nomor', 'Dept', 'Keperluan', 'WO', 'Peminta', 'Nilai', 'Status']}>
+        <Table head={['Nomor', 'Dept', 'Keperluan', 'Unit', 'WO', 'Peminta', 'Nilai', 'Status']}>
           {rows.map(r => (
             <tr key={r.id}>
               <td className="whitespace-nowrap font-mono text-xs"><Link href={`/logistik/mr/${r.id}`} className="font-medium hover:text-accent">{r.mr_no}</Link>
                 <div className="text-muted">{fmtDateTime(r.created_at)}</div></td>
               <td className="text-xs">{r.department_code}</td>
-              <td className="min-w-56 text-sm"><Link href={`/logistik/mr/${r.id}`} className="hover:text-accent">{r.purpose}</Link><div className="text-xs text-muted">{r.lines} barang</div></td>
+              <td className="min-w-56 text-sm"><Link href={`/logistik/mr/${r.id}`} className="hover:text-accent">{r.purpose}</Link><div className="text-xs text-muted">{r.lines} barang{r.special_open > 0 && ` · ${r.special_open} part khusus menunggu`}</div></td>
+              <td className="font-mono text-xs">{r.unit_no ?? '–'}</td>
               <td className="font-mono text-xs">{r.wo_id ? <Link href={`/plant/wo/${r.wo_id}`} className="hover:text-accent">{r.wo_no}</Link> : '–'}</td>
               <td className="text-xs">{r.requester_name}</td>
               <td className="tabular text-xs">{rp(r.total_value)}</td>
@@ -62,6 +64,9 @@ export default async function MrPage({ searchParams }: { searchParams: Promise<R
               <label className="grid gap-1 text-sm">Work order (wajib untuk suku cadang & ban)
                 <select name="wo" className={input} defaultValue={sp.wo ?? ''}><option value="">–</option>
                   {(wos ?? []).map(w => <option key={w.id} value={w.id}>{w.wo_no} · {w.unit_no}</option>)}</select></label>
+              <label className="grid gap-1 text-sm">Unit yang diperbaiki
+                <select name="unit" className={input} defaultValue={(wos ?? []).find(w => w.id === sp.wo)?.unit_id ?? ''}><option value="">– (otomatis dari WO)</option>
+                  {(units ?? []).map(u => <option key={u.id} value={u.id}>{u.unit_no}</option>)}</select></label>
               <label className="grid gap-1 text-sm">Dibutuhkan tanggal<input type="date" name="need_date" className={input} /></label>
             </div>
             <label className="grid gap-1 text-sm">Keperluan<input name="purpose" required className={input} /></label>
@@ -77,6 +82,21 @@ export default async function MrPage({ searchParams }: { searchParams: Promise<R
                 </div>
               ))}
             </div>
+            <details className="rounded-lg border border-line p-3">
+              <summary className="cursor-pointer text-sm font-medium">Part khusus (tidak ada di katalog)</summary>
+              <p className="my-2 text-xs text-muted">Unit wajib diisi. Logistik akan mendaftarkan atau menolak part ini sebelum MR bisa disetujui.</p>
+              <div className="grid gap-2">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="grid gap-2 sm:grid-cols-[2fr_2fr_1fr_1fr_5rem]">
+                    <input name={`sp_name_${i}`} className={input} placeholder="Nama part" />
+                    <input name={`sp_spec_${i}`} className={input} placeholder="Spesifikasi / keterangan" />
+                    <input name={`sp_part_${i}`} className={input} placeholder="No. part" />
+                    <input type="number" name={`sp_qty_${i}`} min={0.01} step="0.01" className={input} placeholder="Jumlah" />
+                    <input name={`sp_uom_${i}`} className={input} placeholder="pcs" />
+                  </div>
+                ))}
+              </div>
+            </details>
             <p className="text-xs text-muted">MR disetujui atasan departemen. Nilai di atas batas wajib disetujui Dept Head / PJO.</p>
           </ActionForm>
         </Panel>

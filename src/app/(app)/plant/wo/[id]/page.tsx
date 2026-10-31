@@ -8,7 +8,8 @@ import { fmtDateTime } from '@/lib/documents';
 import { DOWNTIME, PRIORITY, WO_STATUS, WO_TYPE, rp } from '@/lib/plant';
 import { MR_STATUS, qty } from '@/lib/logistics';
 import { cancelWo, completeWo, setWoCosting, startWo, waitPart } from '../../actions';
-import { AttachmentList, Files } from '../../../she/fields';
+import { DocScans } from '@/components/doc-scans';
+import { Files } from '../../../she/fields';
 
 type Wo = {
   id: string; wo_no: string; unit_id: string; unit_no: string; wo_type: string; priority: string; description: string; status: string;
@@ -46,7 +47,7 @@ export default async function WoDetail({ params }: { params: Promise<{ id: strin
             {w.waiting_note && <p className="text-sm text-warn">Menunggu part: {w.waiting_note}</p>}
             {w.action_taken && <div className="rounded border border-line bg-ground p-3 text-sm"><div className="mb-1 text-xs text-muted">Tindakan · {fmtDateTime(w.completed_at)}</div>{w.action_taken}</div>}
             {w.cancel_reason && <p className="text-sm text-crit">Dibatalkan: {w.cancel_reason}</p>}
-            <AttachmentList table="work_orders" ids={[w.id]} />
+            <DocScans table="work_orders" id={w.id} path={`/plant/wo/${w.id}`} canUpload={work} />
             {open && s.can('log.request') && <Link href={`/logistik/mr?wo=${w.id}`} className="text-sm text-accent hover:underline">Minta suku cadang (MR) →</Link>}
           </Panel>
           {work && (w.status === 'open' || w.status === 'waiting_part') && (

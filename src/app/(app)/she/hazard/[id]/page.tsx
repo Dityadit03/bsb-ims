@@ -7,12 +7,12 @@ import { RISK } from '@/lib/compliance';
 import { fmtDate, fmtDateTime } from '@/lib/documents';
 import { HAZARD_TYPE, OPEN_CLOSED } from '@/lib/she';
 import { closeHazard } from '../../actions';
-import { AttachmentList, Files, LinkedCapa } from '../../fields';
+import { PicPartner, AttachmentList, Files, LinkedCapa } from '../../fields';
 
 type Hazard = {
   id: string; hazard_no: string; reported_on: string; hazard_type: string; description: string; recommendation: string | null;
   risk_level: string; status: string; due_date: string; is_overdue: boolean; work_area_name: string | null; location_note: string | null;
-  department_code: string; pic_department_code: string; pic_department_id: string; reporter_name: string | null;
+  department_code: string; pic_department_code: string; pic_department_id: string; pic_partner_id: string | null; pic_partner_name: string | null; reporter_name: string | null;
   close_note: string | null; closed_at: string | null;
 };
 
@@ -56,6 +56,7 @@ export default async function HazardDetail({ params }: { params: Promise<{ id: s
             <dt>Pelapor</dt><dd>{h.reporter_name} · {h.department_code}</dd>
             <dt>Lokasi</dt><dd>{h.work_area_name ?? '–'}{h.location_note ? ` · ${h.location_note}` : ''}</dd>
             <dt>PIC</dt><dd>{h.pic_department_code}</dd>
+            <dt>Mitra kerja</dt><dd><PicPartner table="hazard_reports" id={h.id} path={`/she/hazard/${h.id}`} current={h.pic_partner_name} currentId={h.pic_partner_id} canEdit={h.status === 'open' && s.can('she.followup')} /></dd>
             <dt>Due date</dt><dd className={h.is_overdue ? 'font-medium text-crit' : ''}>{fmtDate(h.due_date)}</dd>
           </dl>
         </Panel>

@@ -184,3 +184,15 @@ export async function retireRisk(_: ActionState, f: FormData) {
   return run(`/she/risiko/${str(f, 'id')}`, 'Risiko dinonaktifkan', () => call('risk_retire', { p_id: str(f, 'id'), p_reason: str(f, 'reason') }));
 }
 
+
+// Mitra kerja pelaksana perbaikan (PIC departemen tetap penanggung jawab). Nama baru di kolom 'new' otomatis didaftarkan.
+export async function setPicPartner(_: ActionState, f: FormData): Promise<ActionState> {
+  try {
+    let partner = str(f, 'partner');
+    const fresh = str(f, 'new');
+    if (fresh) partner = (await call('partner_save', { p_name: fresh })).id;
+    await call('set_pic_partner', { p_table: str(f, 'table'), p_id: str(f, 'id'), p_partner: partner });
+  } catch (e) { return { error: (e as Error).message }; }
+  revalidatePath(str(f, 'path') ?? '/she');
+  return { ok: 'PIC mitra kerja disimpan' };
+}
