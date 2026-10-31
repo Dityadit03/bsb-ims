@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Icon } from '@/components/icon';
 import { AreaChart, GroupedBars } from '@/components/charts';
 import { Panel, Stat, btnGhost, btnPrimary } from '@/components/ui';
 import { getSession } from '@/lib/session';
@@ -82,9 +83,9 @@ export default async function HomePage() {
 
       {s.can('she.report') && (
         <nav aria-label="Aksi cepat" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {([['/she/p2h', 'P2H unit', '🚛'], ['/absen', 'Absen', '🕒'], ['/she/hazard', 'Lapor hazard', '⚠️'], ['/tugas', 'Tugas saya', '✅'], ['/she/toolbox', 'Toolbox talk', '🦺'], ['/she/serah-terima', 'Serah terima', '🔁']] as const).map(([href, label, icon]) => (
+          {([['/she/p2h', 'P2H unit', 'truck'], ['/absen', 'Absen', 'clock'], ['/she/hazard', 'Lapor hazard', 'alert'], ['/tugas', 'Tugas saya', 'check'], ['/she/toolbox', 'Toolbox talk', 'helmet'], ['/she/serah-terima', 'Serah terima', 'swap']] as const).map(([href, label, icon]) => (
             <Link key={href} href={href} className="flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl border border-line bg-panel p-3 text-center text-base font-semibold transition-colors hover:border-violet/60 active:bg-accent-soft">
-              <span aria-hidden className="text-2xl">{icon}</span>{label}
+              <Icon name={icon} size={26} className="text-accent" />{label}
             </Link>
           ))}
         </nav>

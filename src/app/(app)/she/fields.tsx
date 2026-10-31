@@ -1,3 +1,4 @@
+import { Icon } from '@/components/icon';
 import Link from 'next/link';
 import { DropZone } from '@/components/drop-zone';
 import { Tabs } from '@/components/tabs';
@@ -89,7 +90,7 @@ export async function AttachmentList({ table, ids }: { table: string; ids: strin
   if (!data?.length) return null;
   return (
     <ul className="flex flex-wrap gap-2 text-xs">
-      {data.map(a => <li key={a.id}><a href={`/api/lampiran/${a.id}`} target="_blank" className="rounded border border-line px-2 py-1 font-mono hover:border-accent">📎 {a.file_name}</a></li>)}
+      {data.map(a => <li key={a.id}><a href={`/api/lampiran/${a.id}`} target="_blank" className="rounded border border-line px-2 py-1 font-mono hover:border-accent"><Icon name="clip" size={14} className="mr-1 inline" />{a.file_name}</a></li>)}
     </ul>
   );
 }

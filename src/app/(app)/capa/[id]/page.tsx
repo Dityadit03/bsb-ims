@@ -1,3 +1,4 @@
+import { Icon } from '@/components/icon';
 import Link from 'next/link';
 import { DropZone } from '@/components/drop-zone';
 import { notFound } from 'next/navigation';
@@ -52,7 +53,7 @@ export default async function CapaDetail({ params }: { params: Promise<{ id: str
             {a.completion_note && <div className="rounded border border-line bg-ground p-3 text-sm"><div className="mb-1 text-xs text-muted">Laporan penyelesaian PIC</div>{a.completion_note}</div>}
             {evidence?.length ? (
               <ul className="grid gap-1 text-sm">
-                {evidence.map(e => <li key={e.id} className="font-mono text-xs">📎 {e.attachments?.file_name} · {fmtDateTime(e.submitted_at)}</li>)}
+                {evidence.map(e => <li key={e.id} className="font-mono text-xs"><Icon name="clip" size={14} className="mr-1 inline" />{e.attachments?.file_name} · {fmtDateTime(e.submitted_at)}</li>)}
               </ul>
             ) : null}
             {a.cancel_reason && <p className="text-sm text-crit">Dibatalkan: {a.cancel_reason}</p>}

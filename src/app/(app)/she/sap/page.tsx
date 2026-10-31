@@ -1,3 +1,4 @@
+import { Icon } from '@/components/icon';
 import Link from 'next/link';
 import { Fragment } from 'react';
 import { ExportLinks } from '@/components/export-links';
@@ -139,8 +140,8 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
       <div className="flex flex-wrap items-center gap-2">
         <WeekPicker weeks={weekOptions} value={ws} base={`/she/sap?tab=${tab}`} />
         {!running && <Link href={`/she/sap?tab=${tab}`} className="rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm font-semibold shadow-soft hover:border-violet/60">Minggu ini</Link>}
-        <span className="rounded-xl bg-line/50 px-3 py-2.5 text-sm text-muted">📅 MTD {monthLabel}</span>
-        {locked && <span className="rounded-xl bg-line/50 px-3 py-2.5 text-sm text-muted">🔒 Terkunci</span>}
+        <span className="rounded-xl bg-line/50 px-3 py-2.5 text-sm text-muted"><Icon name="calendar" size={16} className="mr-1.5 inline" />MTD {monthLabel}</span>
+        {locked && <span className="rounded-xl bg-line/50 px-3 py-2.5 text-sm text-muted"><Icon name="lock" size={16} className="mr-1.5 inline" />Terkunci</span>}
         <Link href="/data" className="ml-auto rounded-xl border border-ok/40 bg-ok/8 px-3.5 py-2.5 text-sm font-semibold text-ok hover:bg-ok/15">
           ▦ Tarik data per minggu (Sheet) ↗
         </Link>

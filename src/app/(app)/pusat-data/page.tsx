@@ -1,3 +1,4 @@
+import { Icon, type IconName } from '@/components/icon';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, btnGhost, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
@@ -8,8 +9,8 @@ export const metadata = { title: 'Pusat Data SHE' };
 
 type Link = { id: string; code: string; page: string; section: string; kind: string; title: string; description: string | null; url: string | null; sort_order: number };
 
-const KIND: Record<string, [string, string]> = {
-  folder: ['📁', 'Folder'], sheet: ['📊', 'Database'], doc: ['📄', 'Dokumen'], form: ['📝', 'Formulir'], file: ['📎', 'Berkas'], link: ['🔗', 'Tautan'],
+const KIND: Record<string, [IconName, string]> = {
+  folder: ['folder', 'Folder'], sheet: ['doc', 'Database'], doc: ['doc', 'Dokumen'], form: ['doc', 'Formulir'], file: ['clip', 'Berkas'], link: ['link', 'Tautan'],
 };
 
 export default async function DataCenterPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -49,7 +50,7 @@ export default async function DataCenterPage({ searchParams }: { searchParams: P
                     <li key={l.id}>
                       <a href={l.url ?? undefined} target="_blank" rel="noopener noreferrer"
                         className={`flex gap-2 rounded-lg px-2 py-1.5 text-sm ${l.url ? 'hover:bg-accent-soft' : 'pointer-events-none opacity-60'}`}>
-                        <span aria-hidden>{KIND[l.kind]?.[0]}</span>
+                        <Icon name={KIND[l.kind]?.[0] ?? 'doc'} size={18} className="inline" />
                         <span className="min-w-0"><span className="font-medium">{l.title}</span>
                           {l.description && <span className="block text-xs text-muted">{l.description}</span>}
                           {!l.url && <span className="block text-xs text-muted">Tautan belum diisi</span>}</span>

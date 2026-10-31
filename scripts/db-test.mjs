@@ -2230,6 +2230,12 @@ await test('MR: unit & part khusus diproses logistik sebelum disetujui; lampiran
   eq((await as(db, spvPlt, `select pic_partner_name from public.she_hazard_register where id = $1`, [hz.id])).rows[0].pic_partner_name, 'PT Mitra Las');
   await expectError('22023', async () => as(db, spvPlt, `select public.set_pic_partner('hazard_reports', $1, gen_random_uuid())`, [hz.id]));
 });
+await test('anon tidak punya hak apa pun atas tabel/view public; fungsi anon hanya verify_document & feed_rows', async () => {
+  eq((await db.query(`select count(*)::int c from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public'`)).rows[0].c, 0);
+  const fn = (await db.query(`select string_agg(p.proname, ',' order by p.proname) s from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')`)).rows[0].s;
+  eq(fn, 'feed_rows,verify_document');
+});
 await test('pengguna tanpa audit.read tidak melihat audit log', async () => {
   eq((await as(db, staffId, `select 1 from public.audit_logs`)).rowCount, 0);
 });

@@ -1,10 +1,11 @@
 'use client';
+import { Icon } from '@/components/icon';
 
 // Kesalahan di halaman mana pun: pesan jelas dan tombol coba lagi (sinyal site sering putus di tengah memuat).
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <main className="mx-auto grid min-h-[60dvh] max-w-md content-center gap-4 px-6 text-center">
-      <div aria-hidden className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-crit/10 text-2xl">⚠️</div>
+      <div aria-hidden className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-crit/10 text-crit"><Icon name="alert" size={28} /></div>
       <h1 className="text-lg font-bold">Halaman gagal dimuat</h1>
       <p className="text-sm text-muted">Biasanya karena sinyal terputus. Data yang sudah Anda kirim tidak hilang.</p>
       <div className="grid gap-2">

@@ -1,4 +1,5 @@
 'use client';
+import { Icon } from '@/components/icon';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { clock } from '../hrga/waktu-actions';
 import { shrinkImage } from '@/lib/image';
@@ -106,7 +107,7 @@ export function ClockForm({ next, requirePhoto }: { next: 'in' | 'out'; requireP
         ) : (
           <button type="button" onClick={() => fileRef.current?.click()}
             className="grid h-40 place-items-center rounded-xl border-2 border-dashed border-line text-sm text-muted hover:border-violet/60">
-            <span><span aria-hidden className="block text-center text-3xl">📷</span>Ambil selfie{requirePhoto ? '' : ' (opsional)'}</span>
+            <span><Icon name="camera" size={30} className="mx-auto mb-1" />Ambil selfie{requirePhoto ? '' : ' (opsional)'}</span>
           </button>
         )}
       </div>

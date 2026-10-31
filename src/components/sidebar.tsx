@@ -1,4 +1,5 @@
 'use client';
+import { Icon as LineIcon } from '@/components/icon';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -9,7 +10,7 @@ import { PushToggle, WhatsappToggle } from './push-toggle';
 import { forgetDevice } from '@/lib/push';
 
 // Aksi yang paling sering dipakai di lapangan, selalu terlihat di bawah layar HP
-const QUICK = [['/', 'Beranda', '⌂'], ['/absen', 'Absen', '◉'], ['/she/p2h', 'P2H', '✓'], ['/she/hazard', 'Hazard', '⚠'], ['/tugas', 'Tugas', '✉']] as const;
+const QUICK = [['/', 'Beranda', 'home'], ['/absen', 'Absen', 'clock'], ['/she/p2h', 'P2H', 'truck'], ['/she/hazard', 'Hazard', 'alert'], ['/tugas', 'Tugas', 'check']] as const;
 
 const Icon = ({ d, className = 'size-5' }: { d: string; className?: string }) => (
   <svg aria-hidden viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
@@ -146,7 +147,7 @@ export function Sidebar({ permissions, name, email, role, unit, alerts, alertTot
                       </Link>
                     </li>
                   ))}
-                  {!alerts.length && <li className="py-6 text-center text-sm text-muted">Tidak ada peringatan 👍</li>}
+                  {!alerts.length && <li className="py-6 text-center text-sm text-muted">Tidak ada peringatan</li>}
                 </ul>
               </div>
             )}
@@ -262,12 +263,12 @@ export function Sidebar({ permissions, name, email, role, unit, alerts, alertTot
           const active = href === '/' ? path === '/' : path.startsWith(href);
           return (
             <Link key={href} href={href} className={`flex flex-col items-center gap-0.5 py-2 ${active ? 'font-semibold text-violet' : 'text-muted'}`}>
-              <span aria-hidden className="text-lg leading-none">{icon}</span>{label}
+              <LineIcon name={icon} size={20} />{label}
             </Link>
           );
         })}
         <button onClick={() => setOpen(true)} className="flex flex-col items-center gap-0.5 py-2 text-muted" aria-controls="nav" aria-expanded={open}>
-          <span aria-hidden className="text-lg leading-none">☰</span>Menu
+          <LineIcon name="menu" size={20} />Menu
         </button>
       </nav>
     </>
