@@ -2290,6 +2290,18 @@ await test('pembelian langsung departemen: approval departemen â†’ PR Logistik â
   // sumber PR dari jalur lama tetap terbaca
   eq((await db.query(`select source from public.purchase_requisitions where id = $1`, [prShort.id])).rows[0].source, 'mr_shortage');
 });
+await test('foto temuan dan perbaikan hazard terpisah per tahap dan muncul di register (untuk tautan Excel)', async () => {
+  const foto = await upload(ownerId);
+  const h = (await as(db, ownerId, HZ_SQL, [today, HSE, PLT, await due(3), area, 'high', [foto.id]])).rows[0];
+  eq((await db.query(`select phase from public.attachments where id = $1`, [foto.id])).rows[0].phase, 'temuan');
+  let r = (await as(db, ownerId, `select photo_temuan, photo_temuan_count n, photo_perbaikan, photo_perbaikan_count m from public.she_hazard_register where id = $1`, [h.id])).rows[0];
+  eq(r.photo_temuan[0], foto.id); eq(r.n, 1); eq(r.photo_perbaikan, null); eq(r.m, 0);
+  const bukti = await upload(spvPlt);
+  await as(db, spvPlt, `select public.hazard_close($1, 'Rambu dipasang ulang', $2)`, [h.id, [bukti.id]]);
+  eq((await db.query(`select phase from public.attachments where id = $1`, [bukti.id])).rows[0].phase, 'perbaikan');
+  r = (await as(db, ownerId, `select photo_temuan_count n, photo_perbaikan, photo_perbaikan_count m from public.she_hazard_register where id = $1`, [h.id])).rows[0];
+  eq(r.n, 1); eq(r.photo_perbaikan[0], bukti.id); eq(r.m, 1);
+});
 await test('anon tidak punya hak apa pun atas tabel/view public; fungsi anon hanya verify_document & feed_rows', async () => {
   eq((await db.query(`select count(*)::int c from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public'`)).rows[0].c, 0);
   const fn = (await db.query(`select string_agg(p.proname, ',' order by p.proname) s from pg_proc p join pg_namespace n on n.oid = p.pronamespace

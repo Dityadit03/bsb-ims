@@ -1,4 +1,5 @@
 // Register yang bisa diekspor ke Excel/CSV, ditarik ke Google Sheets (feed) dan jenis data yang bisa diimpor.
+import { env } from '@/lib/env';
 import { HAZARD_TYPE, INCIDENT_CLASS, OPEN_CLOSED, VALIDITY } from '@/lib/she';
 import { UNIT_STATUS, WO_STATUS, WO_TYPE } from '@/lib/plant';
 import { CATEGORY, MOVE, MR_STATUS, PO_STATUS, PR_SOURCE, PR_STATUS, STAGE } from '@/lib/logistics';
@@ -7,6 +8,13 @@ import { ATT_STATUS, CARD_STATUS, CONTRACT, CONTRACT_STATUS, DAY_TYPE, EMPLOYMEN
 type Label = Record<string, string | [string, string]>;
 const lbl = (m: Label) => (v: unknown) => { const x = m[String(v)]; return x == null ? v : Array.isArray(x) ? x[1] : x; };
 const yn = (v: unknown) => (v == null ? '' : v ? 'Ya' : 'Tidak');
+
+// Foto di Excel/Sheets berupa tautan (ringan); membuka tautan butuh login aplikasi. Maksimum 3 foto pertama per tahap + jumlah total.
+const photoUrl = (n: number) => (v: unknown) => { const id = Array.isArray(v) ? v[n] : null; return id ? `${env.appUrl}/api/lampiran/${id}` : ''; };
+const photoCols = (phase: 'temuan' | 'perbaikan'): Column[] => [
+  [`photo_${phase}`, `Foto ${phase} 1`, photoUrl(0)], [`photo_${phase}`, `Foto ${phase} 2`, photoUrl(1)], [`photo_${phase}`, `Foto ${phase} 3`, photoUrl(2)],
+  [`photo_${phase}_count`, `Jumlah foto ${phase}`],
+];
 
 export type Column = [key: string, header: string, fmt?: (v: unknown) => unknown];
 export type Dataset = { key: string; label: string; group: string; view: string; order: string; desc?: boolean; feed: boolean; filter?: [param: string, column: string]; columns: Column[] };
@@ -17,11 +25,22 @@ export const DATASETS: Dataset[] = [
     ['hazard_no', 'No. hazard'], ['reported_on', 'Tanggal'], ['department_code', 'Dept'], ['work_area_name', 'Area'], ['location_note', 'Lokasi'],
     ['hazard_type', 'Jenis', lbl(HAZARD_TYPE)], ['description', 'Uraian'], ['recommendation', 'Rekomendasi'], ['risk_level', 'Risiko'],
     ['pic_department_code', 'Dept PIC'], ['pic_partner_name', 'Mitra kerja PIC'], ['due_date', 'Batas waktu'], ['status', 'Status', lbl(OPEN_CLOSED)], ['is_overdue', 'Terlambat', yn],
-    ['reporter_name', 'Pelapor'], ['closed_at', 'Ditutup']] },
+    ['reporter_name', 'Pelapor'], ['close_note', 'Tindakan perbaikan'], ['closed_at', 'Ditutup'],
+    ...photoCols('temuan'), ...photoCols('perbaikan')] },
   { key: 'temuan', label: 'Temuan inspeksi', group: 'SHE', view: 'she_finding_register', order: 'inspected_on', desc: true, feed: true, columns: [
     ['inspection_no', 'No. inspeksi'], ['inspected_on', 'Tanggal'], ['inspection_type', 'Jenis'], ['object', 'Objek'], ['seq', 'No.'],
     ['description', 'Temuan'], ['risk_level', 'Risiko'], ['recommendation', 'Rekomendasi'], ['pic_department_code', 'Dept PIC'], ['pic_partner_name', 'Mitra kerja PIC'],
-    ['due_date', 'Batas waktu'], ['status', 'Status', lbl(OPEN_CLOSED)], ['is_overdue', 'Terlambat', yn]] },
+    ['due_date', 'Batas waktu'], ['status', 'Status', lbl(OPEN_CLOSED)], ['is_overdue', 'Terlambat', yn], ['close_note', 'Tindakan perbaikan'], ['closed_at', 'Ditutup'],
+    ...photoCols('temuan'), ...photoCols('perbaikan')] },
+  { key: 'observasi', label: 'Observasi keselamatan', group: 'SHE', view: 'she_observation_register', order: 'observed_on', desc: true, feed: true, columns: [
+    ['obs_no', 'No. observasi'], ['observed_on', 'Tanggal'], ['department_code', 'Dept'], ['work_area_name', 'Area'], ['activity', 'Aktivitas'],
+    ['worker_name', 'Pekerja'], ['worker_count', 'Jumlah pekerja'], ['result', 'Hasil', v => (v === 'safe' ? 'Aman' : v === 'unsafe' ? 'Tidak aman' : v)],
+    ['unsafe_behaviour', 'Perilaku tidak aman'], ['coaching', 'Pembinaan'], ['status', 'Status', lbl(OPEN_CLOSED)], ['observer_name', 'Observer'], ['closed_at', 'Ditutup'],
+    ...photoCols('temuan')] },
+  { key: 'inspeksi', label: 'Inspeksi', group: 'SHE', view: 'she_inspection_register', order: 'inspected_on', desc: true, feed: true, columns: [
+    ['inspection_no', 'No. inspeksi'], ['inspected_on', 'Tanggal'], ['inspection_type', 'Jenis'], ['department_code', 'Dept'], ['work_area_name', 'Area'],
+    ['object', 'Objek'], ['note', 'Catatan'], ['inspector_name', 'Inspektor'], ['findings', 'Jumlah temuan'], ['findings_open', 'Temuan terbuka'],
+    ...photoCols('temuan')] },
   { key: 'insiden', label: 'Insiden', group: 'SHE', view: 'incident_register', order: 'occurred_at', desc: true, feed: true, columns: [
     ['incident_no', 'No. insiden'], ['occurred_at', 'Waktu kejadian'], ['department_code', 'Dept'], ['work_area_name', 'Area'],
     ['classification', 'Klasifikasi', lbl(INCIDENT_CLASS)], ['unit_no', 'Unit'], ['chronology', 'Kronologi'], ['immediate_action', 'Tindakan segera'],
@@ -29,7 +48,8 @@ export const DATASETS: Dataset[] = [
   { key: 'capa', label: 'Action plan (CAPA)', group: 'SMKP', view: 'capa_register', order: 'created_at', desc: true, feed: true, columns: [
     ['action_no', 'No. CAPA'], ['title', 'Judul'], ['source_type', 'Sumber'], ['source_ref', 'Referensi'], ['clause_code', 'Klausul'],
     ['department_code', 'Dept'], ['pic_name', 'PIC'], ['verifier_name', 'Verifikator'], ['risk_level', 'Risiko'], ['due_date', 'Batas waktu'],
-    ['status', 'Status'], ['is_overdue', 'Terlambat', yn], ['closed_at', 'Ditutup']] },
+    ['status', 'Status'], ['is_overdue', 'Terlambat', yn], ['completion_note', 'Tindakan penyelesaian'], ['closed_at', 'Ditutup'],
+    ...photoCols('temuan'), ...photoCols('perbaikan')] },
   { key: 'risiko', label: 'Risk register', group: 'SHE', view: 'risk_register_view', order: 'risk_no', feed: true, columns: [
     ['risk_no', 'No.'], ['revision', 'Rev'], ['department_code', 'Dept'], ['work_area_name', 'Area'], ['activity', 'Aktivitas'], ['hazard', 'Bahaya'],
     ['risk', 'Risiko'], ['existing_controls', 'Pengendalian'], ['initial_score', 'Skor awal'], ['initial_level', 'Tingkat awal'],

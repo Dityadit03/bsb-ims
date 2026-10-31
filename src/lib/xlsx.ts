@@ -66,6 +66,10 @@ function sheetXml(rows: Cell[][]) {
     if (v == null || v === '') return ri === 0 ? `<c r="${ref}"${s}/>` : '';
     if (typeof v === 'number' && Number.isFinite(v)) return `<c r="${ref}"${s}><v>${v}</v></c>`;
     if (typeof v === 'boolean') return `<c r="${ref}"${s} t="b"><v>${v ? 1 : 0}</v></c>`;
+    // tautan foto aplikasi menjadi sel yang bisa diklik (rumus HYPERLINK), teks tampil "Buka foto"
+    if (ri > 0 && typeof v === 'string' && /^https:\/\/[^\s"]+\/api\/lampiran\/[0-9a-f-]{36}$/.test(v)) {
+      return `<c r="${ref}" t="str"><f>HYPERLINK("${esc(v)}","Buka foto")</f><v>Buka foto</v></c>`;
+    }
     return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${esc(String(v))}</t></is></c>`;
   }).join('')}</row>`).join('');
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
