@@ -2302,6 +2302,16 @@ await test('foto temuan dan perbaikan hazard terpisah per tahap dan muncul di re
   r = (await as(db, ownerId, `select photo_temuan_count n, photo_perbaikan, photo_perbaikan_count m from public.she_hazard_register where id = $1`, [h.id])).rows[0];
   eq(r.n, 1); eq(r.photo_perbaikan[0], bukti.id); eq(r.m, 1);
 });
+await test('OWASP: klien tidak bisa mengikat lampiran ke rekaman orang lain atau mencatat jenis berkas berbahaya; tabel penunjukan tertutup', async () => {
+  const ins = (mime, owner) => as(db, staffId, `insert into public.attachments(storage_path, file_name, mime_type, size_bytes, sha256, owner_table, owner_id)
+    values ($1, 'a.bin', $2, 10, repeat('b', 64), $3, $4)`, [`drafts/${staffId}/${randomUUID()}`, mime, owner ? 'hazard_reports' : null, owner ? hz.id : null]);
+  await expectError('42501', async () => ins('text/html', false));
+  await expectError('42501', async () => ins('image/svg+xml', false));
+  await expectError('42501', async () => ins('application/pdf', true));
+  eq((await ins('application/pdf', false)).rowCount, 1);
+  await expectError('42501', async () => as(db, adminId, `insert into public.approver_designations(employee_id, role_code) values (gen_random_uuid(), 'PJO')`));
+  eq((await db.query(`select count(*)::int c from information_schema.role_table_grants where grantee = 'authenticated' and table_name = 'approver_designations' and privilege_type <> 'SELECT'`)).rows[0].c, 0);
+});
 await test('anon tidak punya hak apa pun atas tabel/view public; fungsi anon hanya verify_document & feed_rows', async () => {
   eq((await db.query(`select count(*)::int c from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public'`)).rows[0].c, 0);
   const fn = (await db.query(`select string_agg(p.proname, ',' order by p.proname) s from pg_proc p join pg_namespace n on n.oid = p.pronamespace

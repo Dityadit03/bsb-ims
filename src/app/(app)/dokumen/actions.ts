@@ -32,7 +32,7 @@ export async function uploadDraft(_: ActionState, form: FormData): Promise<Actio
   const bytes = new Uint8Array(await file.arrayBuffer());
   try {
     const safe = file.name.replace(/[^\w.-]+/g, '_').slice(-80);
-    const att = await uploadAttachment(supabase, `drafts/${auth.user!.id}/${crypto.randomUUID()}-${safe}`, bytes, file.name, file.type || 'application/octet-stream');
+    const att = await uploadAttachment(supabase, `drafts/${auth.user!.id}/${crypto.randomUUID()}-${safe}`, bytes, file.name);
     const { error } = await supabase.rpc('document_attach_draft', { p_version: str(form, 'version'), p_attachment: att.id });
     if (error) return { error: error.message };
   } catch (e) { return { error: (e as Error).message }; }
