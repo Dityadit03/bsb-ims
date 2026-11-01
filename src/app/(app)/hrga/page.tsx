@@ -33,7 +33,7 @@ export default async function HrgaPage({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHeader eyebrow="SMKP 3.5 · Kompetensi, pendidikan & pelatihan" title="HRGA"><ExportLinks dataset="karyawan" />{s.canIn('hr.manage', 'HRGA') && <ExportLinks dataset="profil_karyawan" />}</PageHeader>
+      <PageHeader eyebrow="SMKP 3.5 · Kompetensi, pendidikan & pelatihan" title="HRGA"><ExportLinks dataset="karyawan" label="Karyawan" />{s.canIn('hr.manage', 'HRGA') && <ExportLinks dataset="profil_karyawan" label="Profil" />}</PageHeader>
       <HrTabs active="/hrga" />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label={sp.keluar ? 'Karyawan keluar' : 'Karyawan aktif'} value={all.length} />

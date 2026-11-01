@@ -38,7 +38,7 @@ export default async function ComponentsPage({ searchParams }: { searchParams: P
   return (
     <>
       <PageHeader eyebrow="SMKP 4.4 · Sarana & peralatan" title="Umur komponen">
-        <span className="flex gap-3"><ExportLinks dataset="komponen" /><ExportLinks dataset="riwayat_komponen" /></span>
+        <span className="flex gap-3"><ExportLinks dataset="komponen" label="Komponen" /><ExportLinks dataset="riwayat_komponen" label="Riwayat" /></span>
       </PageHeader>
       <PlantTabs active="/plant/komponen" />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

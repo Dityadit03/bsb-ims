@@ -35,7 +35,7 @@ export default async function ReliabilityPage() {
   return (
     <>
       <PageHeader eyebrow="SMKP 4.4 · Sarana & peralatan" title="Keandalan & biaya unit">
-        <span className="flex gap-3"><ExportLinks dataset="keandalan" /><ExportLinks dataset="biaya_unit" /></span>
+        <span className="flex gap-3"><ExportLinks dataset="keandalan" label="Keandalan" /><ExportLinks dataset="biaya_unit" label="Biaya" /></span>
       </PageHeader>
       <PlantTabs active="/plant/keandalan" />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
