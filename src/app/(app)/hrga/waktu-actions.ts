@@ -59,10 +59,10 @@ export async function clock(_: ActionState, f: FormData): Promise<ActionState> {
 }
 
 export async function manualAttendance(_: ActionState, f: FormData) {
-  // input datetime-local berisi jam site; tambahkan offset WITA
+  // input datetime-local berisi jam site; tambahkan offset WIB
   const at = str(f, 'at');
   return run(['/hrga/absensi'], 'Koreksi absen dicatat', async () => rpc('attendance_manual', {
-    p_employee: await emp(f), p_at: at ? `${at}:00+08:00` : null, p_kind: str(f, 'kind'), p_note: str(f, 'note'),
+    p_employee: await emp(f), p_at: at ? `${at}:00+07:00` : null, p_kind: str(f, 'kind'), p_note: str(f, 'note'),
   }));
 }
 

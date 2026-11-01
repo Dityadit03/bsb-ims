@@ -49,7 +49,7 @@ export function OfflineSync({ userId }: { userId: string }) {
               <li key={i.id} className="rounded-lg border border-line p-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="min-w-0 truncate font-medium">{i.label}</span>
-                  <span className="shrink-0 text-xs text-muted">{new Date(i.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="shrink-0 text-xs text-muted">{new Date(i.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })}</span>
                 </div>
                 {i.error && <p className="mt-1 text-xs text-crit">{i.tries >= MAX_TRIES ? 'Ditolak server' : 'Gagal, dicoba lagi'}: {i.error}</p>}
                 {i.error && i.tries >= MAX_TRIES && (

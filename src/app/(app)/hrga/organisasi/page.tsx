@@ -31,7 +31,7 @@ function Tree({ id, byBoss, emps, depth = 0 }: { id: string; byBoss: Map<string 
 export default async function OrgPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const s = await getSession();
   const sp = await searchParams;
-  const year = Number(sp.tahun ?? new Date(Date.now() + 8 * 3600e3).getUTCFullYear());
+  const year = Number(sp.tahun ?? new Date(Date.now() + 7 * 3600e3).getUTCFullYear());
   const supabase = await createClient();
   const [{ data: emps }, { data: depts }, { data: gap }, { data: positions }] = await Promise.all([
     supabase.from('employees').select('id, nrp, full_name, supervisor_id, department_id, positions(name, level)').eq('status', 'active').order('full_name').limit(5000).returns<Emp[]>(),

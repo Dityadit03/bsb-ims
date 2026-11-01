@@ -51,7 +51,7 @@ export default async function PenomoranPage() {
               <tr key={r.number}>
                 <td className="font-mono">{r.number}</td>
                 <td><Pill tone={r.status === 'void' ? 'crit' : r.status === 'legacy' ? 'muted' : 'ok'}>{r.status === 'void' ? 'Batal' : r.status === 'legacy' ? 'Migrasi' : 'Terbit'}</Pill></td>
-                <td className="tabular text-xs text-muted">{new Date(r.issued_at).toLocaleString('id-ID', { timeZone: 'Asia/Makassar' })}</td>
+                <td className="tabular text-xs text-muted">{new Date(r.issued_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</td>
               </tr>
             ))}
           </Table>

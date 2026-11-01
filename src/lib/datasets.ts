@@ -225,9 +225,9 @@ export const DATASETS: Dataset[] = [
 
 export const dataset = (key: string) => DATASETS.find(d => d.key === key);
 
-// Cap waktu ISO → "2026-10-24 14:30" (WITA, zona site)
+// Cap waktu ISO → "2026-10-24 14:30" (WIB, zona site)
 const time = (v: unknown) => typeof v === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(v)
-  ? new Date(new Date(v).getTime() + 8 * 3600000).toISOString().slice(0, 16).replace('T', ' ') : v;
+  ? new Date(new Date(v).getTime() + 7 * 3600000).toISOString().slice(0, 16).replace('T', ' ') : v;
 
 export function tableOf(d: Dataset, rows: Record<string, unknown>[]) {
   return [d.columns.map(c => c[1]), ...rows.map(r => d.columns.map(([k, , f]) => {

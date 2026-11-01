@@ -34,6 +34,6 @@ export const SMKP_ELEMENTS = [
 export const rev = (n: number | null | undefined) => (n == null ? '–' : `Rev.${String(n).padStart(2, '0')}`);
 
 export const fmtDate = (d: string | null | undefined) =>
-  d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Makassar' }) : '–';
+  d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' }) : '–';
 export const fmtDateTime = (d: string | null | undefined) =>
-  d ? new Date(d).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Makassar' }) : '–';
+  d ? new Date(d).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Jakarta' }) : '–';

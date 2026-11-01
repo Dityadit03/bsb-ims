@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { type Dataset, tableOf, toCsv } from '@/lib/datasets';
 import { writeXlsx, type Cell } from '@/lib/xlsx';
 
-const stamp = () => new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10); // WITA
+const stamp = () => new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10); // WIB
 
 export function spreadsheetResponse(name: string, sheets: { name: string; rows: Cell[][] }[], format: string, cache = 'private, no-store') {
   const file = `${name}-${stamp()}`;

@@ -72,9 +72,9 @@ export const OT_STATUS: Record<string, [Tone, string]> = {
 export const DAY_TYPE: Record<string, string> = { workday: 'Hari kerja', restday: 'Hari istirahat', holiday: 'Hari libur' };
 export const ATT_SOURCE: Record<string, string> = { app: 'Aplikasi', fingerprint: 'Fingerprint', manual: 'Koreksi' };
 export const fmtTime = (d: string | null | undefined) =>
-  d ? new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Makassar' }) : '–';
+  d ? new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }) : '–';
 // Tanggal hari ini di zona site (YYYY-MM-DD)
-export const siteToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
+export const siteToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
 
 // ---------------------------------------------------------------- payroll
 export const RUN_STATUS: Record<string, [Tone, string]> = {

@@ -18,10 +18,10 @@ export default async function AuditPage() {
       <PageHeader eyebrow="Administrasi" title="Audit trail" />
       <p className="text-sm text-muted">Catatan ini tidak bisa diubah atau dihapus oleh siapa pun, termasuk administrator. Ditampilkan 200 kejadian terakhir.</p>
       <Panel>
-        <Table head={['Waktu (WITA)', 'Pelaku', 'Aksi', 'Objek']}>
+        <Table head={['Waktu (WIB)', 'Pelaku', 'Aksi', 'Objek']}>
           {(data ?? []).map(l => (
             <tr key={l.id}>
-              <td className="tabular whitespace-nowrap text-xs">{new Date(l.occurred_at).toLocaleString('id-ID', { timeZone: 'Asia/Makassar' })}</td>
+              <td className="tabular whitespace-nowrap text-xs">{new Date(l.occurred_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</td>
               <td className="text-sm">{l.profiles?.email ?? 'sistem'}</td>
               <td className="font-mono text-xs">{l.action}</td>
               <td className="font-mono text-xs">{l.table_name}{l.record_id ? ` · ${l.record_id.slice(0, 8)}` : ''}</td>

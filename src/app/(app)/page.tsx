@@ -12,9 +12,9 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', '
 const num = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });
 type Sap = { week_start: string; week_no: number; on_leave: boolean; obs_target: number; obs_act: number; insp_target: number; insp_act: number; hazard_target: number; hazard_act: number };
 
-// Jam & tanggal site (WITA)
+// Jam & tanggal site (WIB)
 function siteNow() {
-  const d = new Date(Date.now() + 8 * 3600000);
+  const d = new Date(Date.now() + 7 * 3600000);
   return { hour: d.getUTCHours(), iso: d.toISOString().slice(0, 10), year: d.getUTCFullYear(), month: d.getUTCMonth() };
 }
 
@@ -29,7 +29,7 @@ export default async function HomePage() {
     supabase.from('incident_register').select('classification, occurred_at').gte('occurred_at', yearStart).limit(5000),
     supabase.from('production_month').select('month, tonnage_approved, tonnage_all').gte('month', yearStart).order('month'),
     supabase.from('sap_weekly').select('week_start, week_no, on_leave, obs_target, obs_act, insp_target, insp_act, hazard_target, hazard_act')
-      .lte('week_start', new Date(Date.now() + 8 * 3600000 - 7 * 86400000).toISOString().slice(0, 10)).order('week_start', { ascending: false })
+      .lte('week_start', new Date(Date.now() + 7 * 3600000 - 7 * 86400000).toISOString().slice(0, 10)).order('week_start', { ascending: false })
       .limit(1500).returns<Sap[]>(),
     getAlerts(),
   ]);
@@ -64,7 +64,7 @@ export default async function HomePage() {
 
   const first = (s.profile.full_name ?? s.profile.email).split(' ')[0];
   const greet = now.hour < 11 ? 'pagi' : now.hour < 15 ? 'siang' : now.hour < 18 ? 'sore' : 'malam';
-  const date = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Makassar' });
+  const date = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
   const open = (href: string) => <Link href={href} className="shrink-0 text-xs font-semibold text-violet underline underline-offset-2">Buka →</Link>;
 
   return (

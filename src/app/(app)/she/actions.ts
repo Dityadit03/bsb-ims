@@ -134,7 +134,7 @@ export async function reportIncident(_: ActionState, f: FormData): Promise<Actio
   let id: string;
   try {
     id = (await call('incident_report', {
-      p_occurred_at: when ? `${when}:00+08:00` : null, p_department: str(f, 'department'), p_classification: str(f, 'classification'),
+      p_occurred_at: when ? `${when}:00+07:00` : null, p_department: str(f, 'department'), p_classification: str(f, 'classification'),
       p_chronology: str(f, 'chronology'), p_work_area: str(f, 'area'), p_location_note: str(f, 'location'), p_unit_no: str(f, 'unit'),
       p_involved_names: str(f, 'involved'), p_immediate_action: str(f, 'immediate'), p_late_reason: str(f, 'late_reason'),
       p_idempotency_key: str(f, 'idem'),
@@ -157,7 +157,7 @@ export async function investigateIncident(_: ActionState, f: FormData) {
 export async function closeIncident(_: ActionState, f: FormData) {
   const when = str(f, 'notified');
   return run(`/she/insiden/${str(f, 'id')}`, 'Insiden ditutup', () => call('incident_close', {
-    p_id: str(f, 'id'), p_note: str(f, 'note'), p_regulator_notified_at: when ? `${when}:00+08:00` : null,
+    p_id: str(f, 'id'), p_note: str(f, 'note'), p_regulator_notified_at: when ? `${when}:00+07:00` : null,
   }));
 }
 

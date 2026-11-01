@@ -83,7 +83,7 @@ const Pct = ({ v }: { v: number | null }) => (
 export default async function SapPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const s = await getSession();
   const sp = await searchParams;
-  const current = sapWeek(new Date(Date.now() + 8 * 3600e3));
+  const current = sapWeek(new Date(Date.now() + 7 * 3600e3));
   const ws = sp.minggu && sp.minggu <= current ? sp.minggu : current;
   const tab = TABS.some(([k]) => k === sp.tab) ? sp.tab! : 'ringkasan';
   const manage = s.can('sap.manage');

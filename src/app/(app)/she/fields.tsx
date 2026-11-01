@@ -20,7 +20,7 @@ export async function sheMasters() {
   return { depts: (depts ?? []) as Opt[], areas: (areas ?? []) as Opt[] };
 }
 
-export const today = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+export const today = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
 
 export function DeptSelect({ name = 'department', label = 'Departemen', depts, value }: { name?: string; label?: string; depts: Opt[]; value?: string | null }) {
   return (

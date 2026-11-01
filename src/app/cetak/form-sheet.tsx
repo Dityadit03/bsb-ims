@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 export function FormSheet({ title, number, subtitle, printedBy, sign, children }: {
   title: string; number: string; subtitle?: string; printedBy: string; sign: string[]; children: ReactNode;
 }) {
-  const printed = new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Asia/Makassar' });
+  const printed = new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Asia/Jakarta' });
   return (
     <article className="mx-auto flex min-h-[273mm] max-w-[210mm] flex-col bg-white p-8 text-[13px] leading-snug shadow-sm print:min-h-0 print:max-w-none print:p-0 print:shadow-none">
       <style>{'@page{size:A4;margin:12mm}'}</style>

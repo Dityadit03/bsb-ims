@@ -30,7 +30,7 @@ export default async function IncidentPage({ searchParams }: { searchParams: Pro
     sheMasters(),
   ]);
   const n = (c: string[]) => (ytd ?? []).filter(x => c.includes(x.classification)).length;
-  const nowLocal = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 16);
+  const nowLocal = new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 16);
 
   return (
     <>
@@ -46,7 +46,7 @@ export default async function IncidentPage({ searchParams }: { searchParams: Pro
         <Panel title="Lapor insiden & nearmiss">
           <ActionForm action={reportIncident} label="Kirim laporan awal" primary hidden={{ idem: randomUUID() }} className="max-w-3xl">
             <div className="grid gap-3 sm:grid-cols-3">
-              <label className="grid gap-1 text-sm">Waktu kejadian (WITA)<input type="datetime-local" name="occurred" required max={nowLocal} className={input} /></label>
+              <label className="grid gap-1 text-sm">Waktu kejadian (WIB)<input type="datetime-local" name="occurred" required max={nowLocal} className={input} /></label>
               <label className="grid gap-1 text-sm">Klasifikasi awal
                 <select name="classification" className={input}>{Object.entries(INCIDENT_CLASS).map(([k, [, l]]) => <option key={k} value={k}>{l}</option>)}</select>
               </label>

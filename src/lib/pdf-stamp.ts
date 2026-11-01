@@ -21,7 +21,7 @@ export const sha256 = (bytes: Uint8Array) => createHash('sha256').update(bytes).
 export const rev = (n: number) => `Rev.${String(n).padStart(2, '0')}`;
 
 const tanggal = (iso: string) =>
-  new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Makassar' });
+  new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' });
 
 // Stempel "CONTROLLED DOCUMENT" di halaman pertama + QR verifikasi, dan identitas dokumen di kaki setiap halaman.
 export async function stampControlled(source: Uint8Array, info: StampInfo): Promise<Uint8Array> {
@@ -64,13 +64,13 @@ export async function stampUncontrolled(source: Uint8Array, who: string): Promis
   const pdf = await PDFDocument.load(source, { updateMetadata: false });
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const mono = await pdf.embedFont(StandardFonts.Courier);
-  const when = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Makassar' });
+  const when = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
   for (const page of pdf.getPages()) {
     const { width, height } = page.getSize();
     page.drawText('SALINAN TIDAK TERKENDALI', {
       x: width / 2 - 170, y: height / 2 - 60, size: 34, font: bold, color: rgb(0.7, 0.15, 0.12), opacity: 0.12, rotate: degrees(35),
     });
-    page.drawText(`Salinan tidak terkendali bila dicetak · diunduh ${who} · ${when} WITA · cek versi berlaku di BSB IMS`, {
+    page.drawText(`Salinan tidak terkendali bila dicetak · diunduh ${who} · ${when} WIB · cek versi berlaku di BSB IMS`, {
       x: 36, y: 8, size: 6, font: mono, color: GREY,
     });
   }
