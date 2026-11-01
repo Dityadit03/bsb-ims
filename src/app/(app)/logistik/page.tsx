@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { randomUUID } from 'node:crypto';
 import { ExportLinks } from '@/components/export-links';
 import { ActionForm } from '@/components/action-form';
@@ -82,8 +83,11 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
         <div className="grid gap-4 lg:grid-cols-3">
           <Panel title="Penerimaan barang (GR)">
             <ActionForm action={receiveGoods} label="Catat penerimaan" primary hidden={{ idem: randomUUID() }}>
-              <select name="material" required className={input} aria-label="Barang">{base.map(m => <option key={m.id} value={m.id}>{m.code} · {m.name}</option>)}</select>
-              <select name="supplier" required className={input} aria-label="Supplier">{(suppliers ?? []).map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
+              <label className="grid gap-1 text-xs">Barang
+                <select name="material" required className={input}><option value="">Pilih barang…</option>{base.map(m => <option key={m.id} value={m.id}>{m.code} · {m.name}</option>)}</select></label>
+              <label className="grid gap-1 text-xs">Supplier
+                <select name="supplier" required className={input}><option value="">Pilih supplier…</option>{(suppliers ?? []).map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
+                {!(suppliers ?? []).length && <span className="text-crit">Belum ada supplier aktif. Tambahkan dulu di <Link href="/logistik/supplier" className="underline">Supplier</Link>.</span>}</label>
               <div className="grid grid-cols-2 gap-2">
                 <input type="number" name="qty" required min={0.01} step="0.01" className={input} placeholder="Jumlah" />
                 <input type="number" name="cost" required min={0} className={input} placeholder="Harga satuan (Rp)" />
@@ -93,8 +97,11 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
           </Panel>
           <Panel title="Pengisian BBM / oli ke unit">
             <ActionForm action={issueFuel} label="Catat pengisian" primary hidden={{ idem: randomUUID() }}>
-              <select name="unit" required className={input} aria-label="Unit">{(units ?? []).map(u => <option key={u.id} value={u.id}>{u.unit_no} · HM {u.current_hm}</option>)}</select>
-              <select name="material" required className={input} aria-label="BBM / oli">{fuels.map(m => <option key={m.id} value={m.id}>{m.code} · {m.name}</option>)}</select>
+              <label className="grid gap-1 text-xs">Unit
+                <select name="unit" required className={input}><option value="">Pilih unit…</option>{(units ?? []).map(u => <option key={u.id} value={u.id}>{u.unit_no} · HM {u.current_hm}</option>)}</select></label>
+              <label className="grid gap-1 text-xs">Jenis BBM / oli
+                <select name="material" required className={input}><option value="">Pilih BBM / oli…</option>{fuels.map(m => <option key={m.id} value={m.id}>{m.code} · {m.name}</option>)}</select>
+                {!fuels.length && <span className="text-crit">Belum ada barang berkategori BBM atau oli. {wh ? 'Tambahkan di panel "Daftarkan / perbarui barang" di bawah (kategori BBM atau oli).' : 'Minta petugas gudang menambahkannya.'} Untuk isi dari tangki site pakai <Link href="/logistik/bbm" className="underline">Stasiun BBM</Link>.</span>}</label>
               <div className="grid grid-cols-2 gap-2">
                 <input type="number" name="qty" required min={0.1} step="0.1" className={input} placeholder="Liter" />
                 <input type="number" name="hm" required min={0} step="0.1" className={input} placeholder="HM / KM" />
@@ -104,7 +111,8 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
           </Panel>
           <Panel title="Stok opname">
             <ActionForm action={opname} label="Simpan hasil hitung">
-              <select name="material" required className={input} aria-label="Barang">{base.map(m => <option key={m.id} value={m.id}>{m.code} · stok {qty(m.stock_qty)} {m.uom}</option>)}</select>
+              <label className="grid gap-1 text-xs">Barang
+                <select name="material" required className={input}><option value="">Pilih barang…</option>{base.map(m => <option key={m.id} value={m.id}>{m.code} · stok {qty(m.stock_qty)} {m.uom}</option>)}</select></label>
               <input type="number" name="counted" required min={0} step="0.01" className={input} placeholder="Jumlah fisik" />
               <input name="note" className={input} placeholder="Keterangan selisih (wajib bila berbeda)" />
             </ActionForm>
