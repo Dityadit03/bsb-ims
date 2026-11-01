@@ -42,6 +42,8 @@ export const getAlerts = cache(async () => {
     count(supabase.from('tyre_status').select('*', head).eq('alert', 'soon')),
     count(supabase.from('stock_planning').select('*', head).eq('critical', true).eq('reorder_now', true)),
   ]);
+  const { data: picItems } = await supabase.rpc('my_pic_items');
+  const pic = (picItems ?? []) as { overdue: boolean; assigned: boolean }[];
   // sertifikat terbaru per karyawan & kompetensi
   const latest = new Map<string, Cert>();
   for (const c of certs.data ?? []) {
@@ -53,7 +55,7 @@ export const getAlerts = cache(async () => {
   const c = {
     mcuExp: cert(mcu, 'expired'), mcuSoon: cert(mcu, 'expiring'), simExp: cert(simper, 'expired'), simSoon: cert(simper, 'expiring'),
     othExp: cert(other, 'expired'), spipExp: (spip.data ?? []).filter(r => r.validity === 'expired').length,
-    spipSoon: (spip.data ?? []).filter(r => r.validity === 'expiring').length, hazardOpen, hazardLate, capaLate, mrWait, poWait, prDeptWait, prWait, lowStock, tasks, unread,
+    spipSoon: (spip.data ?? []).filter(r => r.validity === 'expiring').length, hazardOpen, hazardLate, picMine: pic.filter(p => p.assigned).length, picLate: pic.filter(p => p.overdue).length, picAll: pic.length, capaLate, mrWait, poWait, prDeptWait, prWait, lowStock, tasks, unread,
     contractExp, contractSoon, leaveWait, otWait, claimWait, advWait, advLate, reqWait, perfWait, courseDue, compDue, fuelAnom, tyreReplace, tyreSoon, criticalLow,
   };
   const items = ([
@@ -81,7 +83,8 @@ export const getAlerts = cache(async () => {
     [c.contractSoon, 'warn', 'kontrak segera habis', '≤ 30 hari lagi', '/hrga/kesiapan'],
     [c.spipExp, 'crit', 'SPIP expired', 'Unit / alat perlu komisioning ulang', '/plant/spip'],
     [c.spipSoon, 'warn', 'SPIP segera expired', '≤ 30 hari lagi', '/plant/spip'],
-    [c.hazardLate, 'crit', 'hazard lewat batas waktu', 'Belum ditutup PIC', '/she/hazard'],
+    [c.picLate, 'crit', 'temuan SHE lewat batas waktu', 'Menjadi tanggung jawab Anda', '/she/hazard'],
+    [c.picAll - c.picLate, 'warn', 'temuan SHE perlu Anda tindak lanjuti', 'Hazard / temuan inspeksi untuk PIC Anda', '/she/hazard'],
     [c.capaLate, 'crit', 'action plan terlambat', 'Lewat tanggal target', '/capa'],
     [c.mrWait, 'warn', 'MR menunggu persetujuan', 'Material request', '/logistik/mr'],
     [c.prDeptWait, 'warn', 'Permintaan pembelian menunggu setuju departemen', 'Pembelian langsung dept', '/logistik/pengadaan'],

@@ -7,7 +7,7 @@ import { RISK } from '@/lib/compliance';
 import { fmtDate, fmtDateTime } from '@/lib/documents';
 import { HAZARD_TYPE, OPEN_CLOSED } from '@/lib/she';
 import { closeHazard } from '../../actions';
-import { PicPartner, AttachmentList, Files, LinkedCapa } from '../../fields';
+import { PicPartner, PicPerson, isPicPerson, AttachmentList, Files, LinkedCapa } from '../../fields';
 
 type Hazard = {
   id: string; hazard_no: string; reported_on: string; hazard_type: string; description: string; recommendation: string | null;
@@ -22,6 +22,7 @@ export default async function HazardDetail({ params }: { params: Promise<{ id: s
   const supabase = await createClient();
   const { data: h } = await supabase.from('she_hazard_register').select('*').eq('id', id).maybeSingle<Hazard>();
   if (!h) notFound();
+  const mine = await isPicPerson('hazard_reports', h.id, s.profile.id);
   const [tone, label] = h.is_overdue ? ['crit', 'Terlambat'] as const : OPEN_CLOSED[h.status];
 
   return (
@@ -37,12 +38,12 @@ export default async function HazardDetail({ params }: { params: Promise<{ id: s
             <AttachmentList table="hazard_reports" ids={[h.id]} />
             {h.close_note && <div className="rounded border border-line bg-ground p-3 text-sm"><div className="mb-1 text-xs text-muted">Perbaikan · {fmtDateTime(h.closed_at)}</div>{h.close_note}</div>}
           </Panel>
-          {h.status === 'open' && s.can('she.followup') && (
+          {h.status === 'open' && (s.can('she.followup') || mine) && (
             <Panel title="Tutup hazard">
               <ActionForm action={closeHazard} label="Tandai ditutup" primary hidden={{ id: h.id }}>
                 <label className="grid gap-1 text-sm">Tindakan perbaikan yang dilakukan<textarea name="note" required rows={3} className={input} /></label>
                 <Files label={h.risk_level === 'high' || h.risk_level === 'extreme' ? 'Foto bukti perbaikan (wajib)' : 'Foto bukti perbaikan'} />
-                <p className="text-xs text-muted">Hanya pengawas departemen {h.pic_department_code} yang bisa menutup.</p>
+                <p className="text-xs text-muted">Hanya PIC yang ditunjuk atau pengawas departemen {h.pic_department_code} yang bisa menutup.</p>
               </ActionForm>
             </Panel>
           )}
@@ -56,6 +57,7 @@ export default async function HazardDetail({ params }: { params: Promise<{ id: s
             <dt>Pelapor</dt><dd>{h.reporter_name} · {h.department_code}</dd>
             <dt>Lokasi</dt><dd>{h.work_area_name ?? '–'}{h.location_note ? ` · ${h.location_note}` : ''}</dd>
             <dt>PIC</dt><dd>{h.pic_department_code}</dd>
+            <dt>PIC (orang)</dt><dd><PicPerson table="hazard_reports" id={h.id} path={`/she/hazard/${h.id}`} canEdit={h.status === 'open' && s.can('she.followup')} /></dd>
             <dt>Mitra kerja</dt><dd><PicPartner table="hazard_reports" id={h.id} path={`/she/hazard/${h.id}`} current={h.pic_partner_name} currentId={h.pic_partner_id} canEdit={h.status === 'open' && s.can('she.followup')} /></dd>
             <dt>Due date</dt><dd className={h.is_overdue ? 'font-medium text-crit' : ''}>{fmtDate(h.due_date)}</dd>
           </dl>

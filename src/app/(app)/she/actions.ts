@@ -196,3 +196,12 @@ export async function setPicPartner(_: ActionState, f: FormData): Promise<Action
   revalidatePath(str(f, 'path') ?? '/she');
   return { ok: 'PIC mitra kerja disimpan' };
 }
+
+// PIC bernama: orang yang langsung dinotifikasi dan boleh menutup temuan
+export async function setPicPerson(_: ActionState, f: FormData): Promise<ActionState> {
+  try {
+    await call('set_pic_person', { p_table: str(f, 'table'), p_id: str(f, 'id'), p_user: str(f, 'user') });
+  } catch (e) { return { error: (e as Error).message }; }
+  revalidatePath(str(f, 'path') ?? '/she');
+  return { ok: str(f, 'user') ? 'PIC ditunjuk dan sudah diberi tahu' : 'PIC bernama dilepas' };
+}

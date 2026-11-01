@@ -4,7 +4,7 @@ import { DropZone } from '@/components/drop-zone';
 import { Tabs } from '@/components/tabs';
 import { ActionForm } from '@/components/action-form';
 import { input } from '@/components/ui';
-import { setPicPartner } from './actions';
+import { setPicPartner, setPicPerson } from './actions';
 import { RISK } from '@/lib/compliance';
 import { createClient } from '@/lib/supabase/server';
 
@@ -133,4 +133,31 @@ export async function PicPartner({ table, id, path, current, currentId, canEdit 
       <input name="new" className={input} placeholder="atau tambah mitra baru" />
     </ActionForm>
   );
+}
+
+// PIC bernama (orang) untuk temuan: pengawas menunjuk; orang itu langsung dinotifikasi. Hanya karyawan departemen PIC yang sudah punya akun.
+export async function PicPerson({ table, id, path, canEdit }: { table: 'hazard_reports' | 'inspection_findings'; id: string; path: string; canEdit: boolean }) {
+  const supabase = await createClient();
+  const { data: row } = await supabase.from(table).select('pic_user_id, pic_department_id').eq('id', id).maybeSingle<{ pic_user_id: string | null; pic_department_id: string }>();
+  if (!row) return <span>–</span>;
+  const { data: people } = await supabase.from('employees').select('profile_id, nrp, full_name').eq('department_id', row.pic_department_id)
+    .eq('status', 'active').not('profile_id', 'is', null).order('full_name').returns<{ profile_id: string; nrp: string; full_name: string }[]>();
+  const list = people ?? [];
+  const current = list.find(p => p.profile_id === row.pic_user_id);
+  if (!canEdit) return <span>{current ? `${current.full_name} (${current.nrp})` : row.pic_user_id ? 'Ditunjuk' : 'Belum ditunjuk (pengawas departemen)'}</span>;
+  return (
+    <ActionForm action={setPicPerson} label="Tunjuk PIC" hidden={{ table, id, path }}>
+      <select name="user" defaultValue={row.pic_user_id ?? ''} className={input} aria-label="PIC (orang)">
+        <option value="">– belum ditunjuk (pengawas departemen)</option>
+        {list.map(p => <option key={p.profile_id} value={p.profile_id}>{p.full_name} · {p.nrp}</option>)}
+      </select>
+      <p className="text-xs text-muted">{list.length ? 'Orang yang dipilih langsung mendapat notifikasi dan bisa menutup temuan.' : 'Belum ada karyawan departemen ini yang punya akun aktif.'}</p>
+    </ActionForm>
+  );
+}
+
+export async function isPicPerson(table: 'hazard_reports' | 'inspection_findings', id: string, userId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase.from(table).select('pic_user_id').eq('id', id).maybeSingle<{ pic_user_id: string | null }>();
+  return data?.pic_user_id === userId;
 }

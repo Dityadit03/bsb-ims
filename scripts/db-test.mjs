@@ -2351,6 +2351,19 @@ await test('zona waktu site WIB: pengaturan, site, dan fungsi insiden tidak lagi
   eq((await db.query(`select count(*)::int c from public.sites where timezone <> 'Asia/Jakarta'`)).rows[0].c, 0);
   eq((await db.query(`select count(*)::int c from pg_proc where proname = 'incident_report' and pg_get_functiondef(oid) like '%Makassar%'`)).rows[0].c, 0);
 });
+await test('PIC bernama: ditunjuk pengawas dept PIC, langsung dinotifikasi, tampil di daftar saya, boleh menutup; orang luar dept ditolak', async () => {
+  const h = (await as(db, ownerId, HZ_SQL, [today, HSE, PRD, await due(3), area, 'low', []])).rows[0];
+  const SET = `select public.set_pic_person('hazard_reports', $1, $2)`;
+  await expectError('42501', async () => as(db, absUser, SET, [h.id, absUser]));
+  await expectError('22023', async () => as(db, spvPrd, SET, [h.id, spvHse]));
+  eq((await as(db, absUser, `select 1 from public.my_pic_items()`)).rowCount, 0);
+  await as(db, spvPrd, SET, [h.id, absUser]);
+  eq((await as(db, absUser, `select 1 from public.notifications where kind = 'she.pic'`)).rowCount, 1);
+  eq((await as(db, absUser, `select ref_no, assigned from public.my_pic_items()`)).rows[0].ref_no, h.hazard_no);
+  await expectError('42501', async () => as(db, spvHse, `select public.hazard_close($1, 'x')`, [h.id]));
+  eq((await as(db, absUser, `select (h).status from public.hazard_close($1, 'Sudah diperbaiki') h`, [h.id])).rows[0].status, 'closed');
+  eq((await as(db, absUser, `select 1 from public.my_pic_items()`)).rowCount, 0);
+});
 await test('anon tidak punya hak apa pun atas tabel/view public; fungsi anon hanya verify_document & feed_rows', async () => {
   eq((await db.query(`select count(*)::int c from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public'`)).rows[0].c, 0);
   const fn = (await db.query(`select string_agg(p.proname, ',' order by p.proname) s from pg_proc p join pg_namespace n on n.oid = p.pronamespace

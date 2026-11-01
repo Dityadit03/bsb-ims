@@ -7,7 +7,7 @@ import { RISK } from '@/lib/compliance';
 import { fmtDate, fmtDateTime } from '@/lib/documents';
 import { INSPECTION_TYPE } from '@/lib/she';
 import { closeFinding } from '../../actions';
-import { PicPartner, AttachmentList, Files, LinkedCapa } from '../../fields';
+import { PicPartner, PicPerson, isPicPerson, AttachmentList, Files, LinkedCapa } from '../../fields';
 
 type Insp = {
   id: string; inspection_no: string; inspected_on: string; inspection_type: string; object: string; note: string | null;
@@ -26,6 +26,8 @@ export default async function InspectionDetail({ params }: { params: Promise<{ i
     .select('id, inspection_no, inspected_on, inspection_type, object, note, inspector:inspector_id(full_name), area:work_area_id(name), dept:department_id(code)')
     .eq('id', id).maybeSingle<Insp>();
   if (!i) notFound();
+  const { data: mineRows } = await supabase.from('inspection_findings').select('id').eq('inspection_id', id).eq('pic_user_id', s.profile.id);
+  const mine = new Set((mineRows ?? []).map(r => r.id));
   const { data: findings } = await supabase.from('she_finding_register').select('*').eq('inspection_id', id).order('seq').returns<Finding[]>();
 
   return (
@@ -40,11 +42,13 @@ export default async function InspectionDetail({ params }: { params: Promise<{ i
               <Pill tone={f.status === 'closed' ? 'ok' : f.is_overdue ? 'crit' : 'warn'}>{f.status === 'closed' ? 'Closed' : f.is_overdue ? 'Terlambat' : 'Open'}</Pill></div>}>
               <p className="text-sm">{f.description}</p>
               <p className="text-xs text-muted">PIC {f.pic_department_code} · due {fmtDate(f.due_date)}{f.pic_partner_name && f.status !== 'open' ? ` · mitra kerja ${f.pic_partner_name}` : ''}</p>
+              {f.status === 'open' && <div className="text-sm"><div className="mb-1 text-xs text-muted">PIC (orang) yang langsung diberi tahu</div>
+                <PicPerson table="inspection_findings" id={f.id} path={`/she/inspeksi/${i.id}`} canEdit={s.can('she.followup')} /></div>}
               {f.status === 'open' && <div className="text-sm"><div className="mb-1 text-xs text-muted">Mitra kerja pelaksana perbaikan</div>
                 <PicPartner table="inspection_findings" id={f.id} path={`/she/inspeksi/${i.id}`} current={f.pic_partner_name} currentId={f.pic_partner_id} canEdit={s.can('she.followup')} /></div>}
               <AttachmentList table="inspection_findings" ids={[f.id]} />
               {f.close_note && <div className="rounded border border-line bg-ground p-3 text-sm"><div className="mb-1 text-xs text-muted">Perbaikan · {fmtDateTime(f.closed_at)}</div>{f.close_note}</div>}
-              {f.status === 'open' && s.can('she.followup') && (
+              {f.status === 'open' && (s.can('she.followup') || mine.has(f.id)) && (
                 <ActionForm action={closeFinding} label="Tutup temuan" hidden={{ id: f.id, inspection: i.id }}>
                   <input name="note" required className={input} placeholder="Tindakan perbaikan" />
                   <Files label={f.risk_level === 'high' || f.risk_level === 'extreme' ? 'Foto bukti (wajib)' : 'Foto bukti'} />
