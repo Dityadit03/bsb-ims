@@ -2364,6 +2364,16 @@ await test('PIC bernama: ditunjuk pengawas dept PIC, langsung dinotifikasi, tamp
   eq((await as(db, absUser, `select (h).status from public.hazard_close($1, 'Sudah diperbaiki') h`, [h.id])).rows[0].status, 'closed');
   eq((await as(db, absUser, `select 1 from public.my_pic_items()`)).rowCount, 0);
 });
+await test('hapus akun: hanya lewat SQL Editor; ditolak bila punya riwayat bisnis; akun bersih terhapus', async () => {
+  const clean = await createUser('salah.daftar@bsb.co.id');
+  await db.query(`insert into public.user_roles(user_id, role_code, granted_by) values ($1, 'STAFF', $2)`, [clean, adminId]);
+  await expectError('42501', async () => as(db, adminId, `select public.admin_purge_user($1)`, [clean])); // klien aplikasi tidak punya hak eksekusi
+  await db.query(`select public.admin_purge_user($1)`, [clean]); // SQL Editor (postgres)
+  eq((await db.query(`select count(*)::int c from auth.users where id = $1`, [clean])).rows[0].c, 0);
+  eq((await db.query(`select count(*)::int c from public.profiles where id = $1`, [clean])).rows[0].c, 0);
+  await expectError('23503', async () => db.query(`select public.admin_purge_user($1)`, [absUser])); // punya absensi/lampiran
+  eq((await db.query(`select count(*)::int c from auth.users where id = $1`, [absUser])).rows[0].c, 1);
+});
 await test('anon tidak punya hak apa pun atas tabel/view public; fungsi anon hanya verify_document & feed_rows', async () => {
   eq((await db.query(`select count(*)::int c from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public'`)).rows[0].c, 0);
   const fn = (await db.query(`select string_agg(p.proname, ',' order by p.proname) s from pg_proc p join pg_namespace n on n.oid = p.pronamespace
