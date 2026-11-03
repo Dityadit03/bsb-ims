@@ -29,6 +29,16 @@ export async function receiveFuel(_: ActionState, f: FormData) {
   });
 }
 export async function dispenseFuel(_: ActionState, f: FormData) {
+  if (str(f, 'unit') === '__other') {
+    const supabase = await createClient();
+    const { data: t } = await supabase.from('fuel_tanks').select('material_id').eq('id', str(f, 'tank') ?? '').maybeSingle();
+    if (!t) return { error: 'Pilih tangki' };
+    const r = await run('Pengajuan dikirim, menunggu persetujuan PJO', 'fuel_other_request', {
+      p_material: t.material_id, p_liters: num(f, 'liters'), p_recipient: str(f, 'recipient'), p_purpose: str(f, 'purpose'), p_tank: str(f, 'tank'),
+    });
+    if (!r.error) revalidatePath('/logistik');
+    return r;
+  }
   return run('BBM dikeluarkan', 'fuel_tank_dispense', {
     p_tank: str(f, 'tank'), p_unit: str(f, 'unit'), p_liters: num(f, 'liters'), p_hm: num(f, 'hm'), p_note: str(f, 'note'),
   });

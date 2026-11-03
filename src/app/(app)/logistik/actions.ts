@@ -46,10 +46,27 @@ export async function receiveGoods(_: ActionState, f: FormData) {
 }
 
 export async function issueFuel(_: ActionState, f: FormData) {
+  if (str(f, 'unit') === '__other') {
+    return run('/logistik', 'Pengajuan dikirim, menunggu persetujuan PJO', () => rpc('fuel_other_request', {
+      p_material: str(f, 'material'), p_liters: num(f, 'qty'), p_recipient: str(f, 'recipient'), p_purpose: str(f, 'purpose'),
+      p_idempotency_key: str(f, 'idem'),
+    }));
+  }
   return run('/logistik', 'Pengisian dicatat', () => rpc('fuel_issue', {
     p_unit: str(f, 'unit'), p_material: str(f, 'material'), p_qty: num(f, 'qty'), p_hm: num(f, 'hm'), p_note: str(f, 'note'),
     p_idempotency_key: str(f, 'idem'),
   }));
+}
+
+export async function decideFuelOther(_: ActionState, f: FormData) {
+  const approve = f.get('decision') === 'approve';
+  return run('/logistik', approve ? 'Disetujui, stok dikurangi' : 'Ditolak', () => rpc('fuel_other_decide', {
+    p_id: str(f, 'id'), p_approve: approve, p_note: str(f, 'note'),
+  }));
+}
+
+export async function cancelFuelOther(_: ActionState, f: FormData) {
+  return run('/logistik', 'Pengajuan dibatalkan', () => rpc('fuel_other_cancel', { p_id: str(f, 'id') }));
 }
 
 export async function opname(_: ActionState, f: FormData) {

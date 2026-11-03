@@ -6,6 +6,7 @@ import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { fmtDateTime } from '@/lib/documents';
 import { LogTabs } from '../tabs';
+import { UnitOrOther } from '../unit-or-other';
 import { dipTank, dispenseFuel, openTank, receiveFuel, saveTank } from './actions';
 
 export const metadata = { title: 'Stasiun BBM' };
@@ -106,10 +107,10 @@ export default async function FuelPage() {
           <Panel title="Keluarkan ke unit" sub="HM unit wajib dan tidak boleh mundur; masuk ke biaya BBM dan konsumsi L/HM unit.">
             <ActionForm action={dispenseFuel} label="Keluarkan" primary>
               <select name="tank" required className={input} aria-label="Tangki"><option value="">Tangki</option>{tankOpts}</select>
-              <select name="unit" required className={input} aria-label="Unit"><option value="">Unit</option>{(units ?? []).map(u => <option key={u.id} value={u.id}>{u.unit_no} · {l0(u.current_hm)} HM</option>)}</select>
+              <UnitOrOther units={units ?? []} />
               <div className="grid grid-cols-2 gap-2">
                 <input type="number" name="liters" required min={1} step="0.1" className={input} placeholder="Liter" />
-                <input type="number" name="hm" required min={0} step="0.1" className={input} placeholder="HM unit" />
+                <input type="number" name="hm" min={0} step="0.1" className={input} placeholder="HM unit (unit terdaftar)" />
               </div>
               <input name="note" className={input} placeholder="Catatan" />
             </ActionForm>

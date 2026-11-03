@@ -828,6 +828,33 @@ await test('BBM langsung ke unit wajib HM yang tidak mundur; hanya BBM/pelumas',
   eq(await stock(solar.id), 4700);
   eq(Number((await db.query(`select current_hm from public.units where id = $1`, [unit.id])).rows[0].current_hm), hm + 10);
 });
+await test('BBM Lainnya (di luar unit terdaftar): diajukan gudang, stok baru berkurang setelah PJO setuju', async () => {
+  const before = await stock(solar.id);
+  const q = `select (f).* from public.fuel_other_request($1, $2, $3, $4) f`;
+  await expectError('42501', async () => as(db, ownerId, q, [solar.id, 20, 'Truk vendor', 'Pinjam']));
+  await expectError('22023', async () => as(db, logStaff, q, [solar.id, 20, '', 'Pinjam']));
+  await expectError('22023', async () => as(db, logStaff, q, [sp.id, 20, 'Truk vendor', 'Pinjam']));
+  const r = (await as(db, logStaff, q, [solar.id, 20, 'Truk vendor CV Maju', 'Pinjam darurat'])).rows[0];
+  eq(r.status, 'pending'); eq(r.request_no.startsWith('FO-BSB-'), true);
+  eq(await stock(solar.id), before);
+  eq((await db.query(`select count(*)::int c from public.notifications where user_id = $1 and kind = 'log.fuel_other'`, [pjoId])).rows[0].c, 1);
+  await expectError('42501', async () => as(db, logStaff, `select public.fuel_other_decide($1, true)`, [r.id]));
+  await expectError('22023', async () => as(db, pjoId, `select public.fuel_other_decide($1, false)`, [r.id]));
+  const ok = (await as(db, pjoId, `select (f).* from public.fuel_other_decide($1, true, 'Disetujui') f`, [r.id])).rows[0];
+  eq(ok.status, 'approved');
+  eq(await stock(solar.id), before - 20);
+  const mv = (await db.query(`select movement_type, other_to, unit_id from public.stock_movements where id = $1`, [ok.movement_id])).rows[0];
+  eq(mv.movement_type, 'fuel'); eq(mv.other_to, 'Truk vendor CV Maju'); eq(mv.unit_id, null);
+  await expectError('22023', async () => as(db, pjoId, `select public.fuel_other_decide($1, true)`, [r.id]));
+  const r2 = (await as(db, logStaff, q, [solar.id, 10, 'Genset camp', 'Operasional camp'])).rows[0];
+  await as(db, pjoId, `select public.fuel_other_decide($1, false, 'Tidak ada dasar')`, [r2.id]);
+  eq(await stock(solar.id), before - 20);
+  const r3 = (await as(db, logStaff, q, [solar.id, 10, 'Genset camp', 'Operasional camp'])).rows[0];
+  await expectError('42501', async () => as(db, ownerId, `select public.fuel_other_cancel($1)`, [r3.id]));
+  eq((await as(db, logStaff, `select (f).status from public.fuel_other_cancel($1) f`, [r3.id])).rows[0].status, 'cancelled');
+  await as(db, logStaff, `select public.stock_opname($1, $2, 'Koreksi uji')`, [solar.id, 4700]).catch(() => {});
+  eq(await stock(solar.id), 4700);
+});
 await test('stok opname: selisih wajib keterangan dan tercatat sebagai penyesuaian', async () => {
   await expectError('22023', async () => as(db, logStaff, `select public.stock_opname($1, 4650)`, [solar.id]));
   await as(db, logStaff, `select public.stock_opname($1, 4650, 'Penguapan & kalibrasi flowmeter')`, [solar.id]);
@@ -2012,6 +2039,20 @@ await test('BBM keluar dari tangki ke unit memakai HM & mengurangi isi tangki; u
   eq(st.p, 55); eq(st.v, -150);
   eq((await as(db, logStaff, `select count(*)::int c from public.fuel_tank_log_view where tank_id = $1`, [tk.id])).rows[0].c, 5);
   eq((await as(db, logStaff, `select count(*)::int c from public.fuel_reconciliation`)).rowCount, 1);
+});
+await test('BBM Lainnya dari tangki: isi tangki & buku tangki berubah hanya setelah PJO setuju', async () => {
+  const tk = global.fuelTank;
+  const lvl = async () => Number((await db.query(`select level_l from public.fuel_tanks where id = $1`, [tk.id])).rows[0].level_l);
+  const l0 = await lvl();
+  const r = (await as(db, logStaff, `select (f).* from public.fuel_other_request($1, 150, 'Kontraktor sipil', 'Genset pompa', $2) f`, [solar.id, tk.id])).rows[0];
+  eq(await lvl(), l0);
+  await as(db, pjoId, `select public.fuel_other_decide($1, true)`, [r.id]);
+  eq(await lvl(), l0 - 150);
+  const lg = (await db.query(`select kind, liters, unit_id from public.fuel_tank_logs where tank_id = $1 order by created_at desc limit 1`, [tk.id])).rows[0];
+  eq(lg.kind, 'issue'); eq(Number(lg.liters), -150); eq(lg.unit_id, null);
+  const big = (await as(db, logStaff, `select (f).* from public.fuel_other_request($1, 999999, 'X', 'Y', $2) f`, [solar.id, tk.id])).rows[0];
+  await expectError('22023', async () => as(db, pjoId, `select public.fuel_other_decide($1, true)`, [big.id]));
+  await db.query(`update public.fuel_tanks set level_l = $2 where id = $1`, [tk.id, l0]);
 });
 console.log('audit trail');
 await test('setiap penerbitan nomor tercatat', async () => {

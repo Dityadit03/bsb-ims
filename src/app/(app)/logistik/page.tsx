@@ -8,6 +8,8 @@ import { createClient } from '@/lib/supabase/server';
 import { CATEGORY, qty, rp } from '@/lib/logistics';
 import { issueFuel, opname, receiveGoods, saveLocation, saveMaterial, savePlanning } from './actions';
 import { LogTabs } from './tabs';
+import { FuelOtherPanel } from './fuel-other';
+import { UnitOrOther } from './unit-or-other';
 
 export const metadata = { title: 'Logistik' };
 
@@ -97,14 +99,13 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
           </Panel>
           <Panel title="Pengisian BBM / oli ke unit">
             <ActionForm action={issueFuel} label="Catat pengisian" primary hidden={{ idem: randomUUID() }}>
-              <label className="grid gap-1 text-xs">Unit
-                <select name="unit" required className={input}><option value="">Pilih unit…</option>{(units ?? []).map(u => <option key={u.id} value={u.id}>{u.unit_no} · HM {u.current_hm}</option>)}</select></label>
+              <UnitOrOther units={units ?? []} />
               <label className="grid gap-1 text-xs">Jenis BBM / oli
                 <select name="material" required className={input}><option value="">Pilih BBM / oli…</option>{fuels.map(m => <option key={m.id} value={m.id}>{m.code} · {m.name}</option>)}</select>
                 {!fuels.length && <span className="text-crit">Belum ada barang berkategori BBM atau oli. {wh ? 'Tambahkan di panel "Daftarkan / perbarui barang" di bawah (kategori BBM atau oli).' : 'Minta petugas gudang menambahkannya.'} Untuk isi dari tangki site pakai <Link href="/logistik/bbm" className="underline">Stasiun BBM</Link>.</span>}</label>
               <div className="grid grid-cols-2 gap-2">
                 <input type="number" name="qty" required min={0.1} step="0.1" className={input} placeholder="Liter" />
-                <input type="number" name="hm" required min={0} step="0.1" className={input} placeholder="HM / KM" />
+                <input type="number" name="hm" min={0} step="0.1" className={input} placeholder="HM / KM (unit terdaftar)" />
               </div>
               <input name="note" className={input} placeholder="Operator / catatan" />
             </ActionForm>
@@ -130,6 +131,7 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
           </ActionForm>
         </Panel>
       )}
+      <FuelOtherPanel approver={s.can('log.approve_fuel_other')} userId={s.profile.id} />
       {wh && (
         <Panel title="Lokasi rak" sub="Kode rak / bin tempat barang disimpan, mis. R2-B03. Kosongkan untuk menghapus.">
           <ActionForm action={saveLocation} label="Simpan lokasi" className="max-w-3xl">
