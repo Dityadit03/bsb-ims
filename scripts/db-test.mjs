@@ -1650,6 +1650,39 @@ await test('training center: penyelenggara internal, sasaran departemen/level, n
   // penyelenggara menutup pelatihan sendiri
   eq((await as(db, spvPrd, `select (t).status from public.training_complete($1, $2::jsonb) t`, [t.id, JSON.stringify([{ employee: wk.id, passed: true, score: 90 }])])).rows[0].status, 'done');
 });
+await test('pra-tes, pasca-tes, umpan balik: hanya peserta hadir, urutan pra-pasca-umpan balik, kunci tidak bocor, rekap penyelenggara', async () => {
+  const t = (await as(db, spvPrd, `select (t).* from public.training_create('Safety talk internal', $1::date, null, 1, null, null, 'Ani', null, null, null, '{}'::uuid[], '{}'::text[]) t`, [today])).rows[0];
+  eq(t.kind, 'internal');
+  const QS = JSON.stringify([{ question: '2+2?', options: ['3', '4'], correct: 1 }, { question: 'Warna APD?', options: ['Merah', 'Oranye', 'Hijau'], correct: 1 }]);
+  await expectError('42501', async () => as(db, absUser, `select public.training_questions_save($1, $2::jsonb)`, [t.id, QS]));
+  await expectError('22023', async () => as(db, spvPrd, `select public.training_questions_save($1, $2::jsonb)`, [t.id, JSON.stringify([{ question: 'x', options: ['a'], correct: 0 }])]));
+  eq(Number((await as(db, spvPrd, `select public.training_questions_save($1, $2::jsonb) n`, [t.id, QS])).rows[0].n), 2);
+  eq((await as(db, absUser, `select count(*)::int c from public.training_questions`)).rows[0].c, 0);
+  eq((await as(db, absUser, `select count(*)::int c from public.training_test_questions($1)`, [t.qr_token])).rows[0].c, 0);
+  await as(db, absUser, `select public.training_checkin($1)`, [t.qr_token]);
+  const qs = (await as(db, absUser, `select * from public.training_test_questions($1)`, [t.qr_token])).rows;
+  eq(qs.length, 2); eq(Object.keys(qs[0]).includes('correct'), false);
+  const ans = (a, b) => JSON.stringify({ [qs[0].id]: a, [qs[1].id]: b });
+  await expectError('22023', async () => as(db, absUser, `select public.training_test_submit($1, 'post', $2::jsonb)`, [t.qr_token, ans(1, 1)]));
+  eq(Number((await as(db, absUser, `select (r).score from public.training_test_submit($1, 'pre', $2::jsonb) r`, [t.qr_token, ans(1, 0)])).rows[0].score), 50);
+  await expectError('22023', async () => as(db, absUser, `select public.training_test_submit($1, 'pre', $2::jsonb)`, [t.qr_token, ans(1, 1)]));
+  await expectError('22023', async () => as(db, absUser, `select public.training_feedback_submit($1, 5, 5, 5)`, [t.qr_token]));
+  eq(Number((await as(db, absUser, `select (r).score from public.training_test_submit($1, 'post', $2::jsonb) r`, [t.qr_token, ans(1, 1)])).rows[0].score), 100);
+  await expectError('22023', async () => as(db, hrStaff, `select public.training_test_submit($1, 'pre', $2::jsonb)`, [t.qr_token, ans(1, 1)]));
+  await expectError('23514', async () => as(db, absUser, `select public.training_feedback_submit($1, 6, 5, 5)`, [t.qr_token]));
+  await as(db, absUser, `select public.training_feedback_submit($1, 5, 4, 4, 'Bagus')`, [t.qr_token]);
+  await expectError('22023', async () => as(db, absUser, `select public.training_feedback_submit($1, 5, 5, 5)`, [t.qr_token]));
+  await expectError('22023', async () => as(db, spvPrd, `select public.training_questions_save($1, $2::jsonb)`, [t.id, QS]));
+  const prog = (await as(db, absUser, `select * from public.training_my_progress($1)`, [t.qr_token])).rows[0];
+  eq(Number(prog.pre_score), 50); eq(Number(prog.post_score), 100); eq(prog.feedback_done, true);
+  const r = (await as(db, spvPrd, `select * from public.training_result_view where training_id = $1`, [t.id])).rows[0];
+  eq(Number(r.gain), 50); eq(r.comment, 'Bagus');
+  eq((await as(db, spvHse, `select count(*)::int c from public.training_result_view where training_id = $1`, [t.id])).rows[0].c, 0);
+  // training eksternal: tanpa soal
+  const ext = (await as(db, hrStaff, `select (t).* from public.training_save('Eksternal', $1::date, 1, 'Lembaga X') t`, [today])).rows[0];
+  eq(ext.kind, 'external');
+  await expectError('22023', async () => as(db, hrStaff, `select public.training_questions_save($1, $2::jsonb)`, [ext.id, QS]));
+});
 await test('lembur (SPL): batas jam per hari & minggu, tidak bentrok, disetujui atasan bukan pembuat', async () => {
   await as(db, spvPrd, ROSTER, [wk.id, today, today, 'D']);
   const SPL = `select (o).* from public.overtime_request_create(null, $1::date, $2::time, $3::time, 'Perbaikan jalan hauling') o`;

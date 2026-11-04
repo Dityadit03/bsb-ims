@@ -101,6 +101,32 @@ export async function checkinTraining(_: ActionState, f: FormData) {
   return run(`/pelatihan/ikut/${str(f, 'token')}`, 'Kehadiran Anda tercatat', () => rpc('training_checkin', { p_token: str(f, 'token') }));
 }
 
+// Format soal: blok dipisah baris kosong; baris pertama pertanyaan, baris berikutnya pilihan, awalan * menandai jawaban benar.
+export async function saveQuestions(_: ActionState, f: FormData) {
+  const blocks = String(f.get('questions') ?? '').split(/\n\s*\n/).map(b => b.split('\n').map(l => l.trim()).filter(Boolean)).filter(b => b.length);
+  let bad = '';
+  const qs = blocks.map((b, i) => {
+    const opts = b.slice(1);
+    const correct = opts.findIndex(o => o.startsWith('*'));
+    if (opts.length < 2 || correct < 0) bad ||= `Soal ${i + 1}: butuh minimal 2 pilihan dan satu jawaban benar bertanda *`;
+    return { question: b[0], options: opts.map(o => o.replace(/^\*\s*/, '')), correct };
+  });
+  if (bad) return { error: bad };
+  return run(`/hrga/pelatihan/${str(f, 'training')}`, `${qs.length} soal tersimpan`, () => rpc('training_questions_save', { p_training: str(f, 'training'), p_questions: qs }));
+}
+
+export async function submitTest(_: ActionState, f: FormData) {
+  const answers: Record<string, number> = {};
+  for (const [k, v] of f.entries()) if (k.startsWith('q_')) answers[k.slice(2)] = Number(v);
+  return run(`/pelatihan/ikut/${str(f, 'token')}`, 'Jawaban terkirim', () => rpc('training_test_submit', { p_token: str(f, 'token'), p_phase: str(f, 'phase'), p_answers: answers }));
+}
+
+export async function submitFeedback(_: ActionState, f: FormData) {
+  return run(`/pelatihan/ikut/${str(f, 'token')}`, 'Terima kasih atas umpan balik Anda', () => rpc('training_feedback_submit', {
+    p_token: str(f, 'token'), p_material: num(f, 'material'), p_speaker: num(f, 'speaker'), p_organization: num(f, 'organization'), p_comment: str(f, 'comment'),
+  }));
+}
+
 export async function addAttendees(_: ActionState, f: FormData) {
   return run(`/hrga/pelatihan/${str(f, 'training')}`, 'Peserta ditambahkan', () =>
     rpc('training_add_attendees', { p_training: str(f, 'training'), p_employees: f.getAll('employees').map(String) }));
