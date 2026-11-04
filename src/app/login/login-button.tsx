@@ -4,13 +4,13 @@ import { createClient } from '@/lib/supabase/client';
 import { env } from '@/lib/env';
 import { btnPrimary } from '@/components/ui';
 
-export function LoginButton({ next }: { next?: string }) {
+export function LoginButton({ next, site, hd }: { next?: string; site: string; hd?: string }) {
   const [busy, setBusy] = useState(false);
   async function signIn() {
     setBusy(true);
-    const redirectTo = `${location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ''}`;
+    const redirectTo = `${location.origin}/auth/callback?site=${encodeURIComponent(site)}${next ? `&next=${encodeURIComponent(next)}` : ''}`;
     const queryParams: Record<string, string> = { prompt: 'select_account' };
-    if (env.workspaceDomain) queryParams.hd = env.workspaceDomain;
+    if (hd || env.workspaceDomain) queryParams.hd = hd || env.workspaceDomain;
     const { error } = await createClient().auth.signInWithOAuth({ provider: 'google', options: { redirectTo, queryParams } });
     if (error) setBusy(false);
   }

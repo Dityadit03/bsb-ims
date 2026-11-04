@@ -44,8 +44,8 @@ const Badge = ({ n, tone = 'crit' }: { n: number; tone?: 'crit' | 'violet' }) =>
 type Theme = 'system' | 'light' | 'dark';
 
 // Kerangka aplikasi: bilah atas (menu, cari, peringatan, pengaturan, profil) + menu samping yang dibuka dari tombol ☰.
-export function Sidebar({ permissions, name, email, role, unit, alerts, alertTotal }: {
-  permissions: string[]; name: string; email: string; role: string; unit: string; alerts: Alert[]; alertTotal: number;
+export function Sidebar({ permissions, name, email, role, unit, siteName, alerts, alertTotal }: {
+  permissions: string[]; name: string; email: string; role: string; unit: string; siteName: string; alerts: Alert[]; alertTotal: number;
 }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
@@ -108,7 +108,7 @@ export function Sidebar({ permissions, name, email, role, unit, alerts, alertTot
             <Image src="/logo.png" alt="" width={34} height={34} priority className="size-8" />
             <span className="hidden leading-none sm:grid">
               <span className="text-[15px] font-extrabold tracking-tight">BSB IMS</span>
-              <span className="font-mono text-xs uppercase tracking-wider text-muted">Site BDA</span>
+              <span className="font-mono text-xs uppercase tracking-wider text-muted">{siteName}</span>
             </span>
           </Link>
           <form action="/cari" role="search" className="mx-auto hidden w-full max-w-xl md:block">
@@ -216,7 +216,7 @@ export function Sidebar({ permissions, name, email, role, unit, alerts, alertTot
           <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white p-1"><Image src="/logo.png" alt="" width={40} height={40} /></span>
           <span className="grid min-w-0 flex-1 leading-tight">
             <span className="font-bold">PT Berkarya Sejahtera Bersama</span>
-            <span className="truncate text-xs text-coal-ink/60">{unit} · Site BDA</span>
+            <span className="truncate text-xs text-coal-ink/60">{unit} · {siteName}</span>
           </span>
           <button onClick={() => setOpen(false)} className="grid size-9 shrink-0 place-items-center rounded-lg border border-white/15 text-coal-ink/80 hover:bg-white/10" aria-label="Tutup menu">✕</button>
         </div>

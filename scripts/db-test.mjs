@@ -1132,6 +1132,11 @@ await test('Keuangan HO menyetujui PO semua site; pengadaan HO dan staf site tid
   await expectError('42501', async () => as(db, logStaff, `select public.po_approve($1, true)`, [po.id]));
   eq((await as(db, fin, `select (o).status from public.po_approve($1, true) o`, [po.id])).rows[0].status, 'issued');
 });
+await test('akun baru ditempatkan di site sesuai domain email (HO untuk bsb-mine.id, lainnya BDA)', async () => {
+  const a = await createUser('orang.baru@bsb-mine.id'), b = await createUser('orang.lain@contoh.co.id');
+  const code = async u => (await db.query(`select s.code from public.profiles p join public.sites s on s.id = p.site_id where p.id = $1`, [u])).rows[0].code;
+  eq(await code(a), 'HO'); eq(await code(b), 'BDA');
+});
 await test('inspeksi SPIP mingguan: Plant/HSE, satu per objek per minggu, butir tidak sesuai wajib catatan dan memberi tahu', async () => {
   const rec = (await db.query(`select id from public.commissioning_records where ref_code = 'SJ-01'`)).rows[0].id;
   const items = JSON.stringify([{ text: 'Stiker terpasang', result: 'ok' }, { text: 'Kondisi fisik', result: 'ok' }]);

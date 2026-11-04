@@ -9,7 +9,7 @@ const field = 'w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2.5 
 const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 // Login karyawan: NIK + sandi. Pendaftaran perlu persetujuan administrator sebelum bisa dipakai.
-export function NikForm({ next }: { next?: string }) {
+export function NikForm({ next, site }: { next?: string; site?: string }) {
   const [mode, setMode] = useState<'masuk' | 'daftar'>('masuk');
   const [login, loginAction, loginPending] = useActionState(loginNik, {});
   const [reg, regAction, regPending] = useActionState(registerNik, {});
@@ -27,6 +27,7 @@ export function NikForm({ next }: { next?: string }) {
       </div>
       <form action={mode === 'masuk' ? loginAction : regAction} className="grid gap-3" autoComplete="on">
         <input type="hidden" name="next" value={next ?? ''} />
+        <input type="hidden" name="site" value={site ?? ''} />
         <label className="grid gap-1 text-sm">NIK
           <input name="nrp" required autoCapitalize="characters" autoComplete="username" inputMode="text" placeholder="24.05.064" className={`${field} uppercase`} />
         </label>

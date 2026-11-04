@@ -1,6 +1,7 @@
 'use server';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { siteMismatch } from '@/lib/site-guard';
 import { isNrp, normalizeNrp, nrpEmail, passwordProblem } from '@/lib/nik';
 
 export type NikState = { error?: string; ok?: string };
@@ -22,6 +23,9 @@ export async function loginNik(_: NikState, f: FormData): Promise<NikState> {
     if (/rate|too many|limit/i.test(error.message)) return { error: 'Terlalu banyak percobaan. Tunggu beberapa menit lalu coba lagi.' };
     return { error: 'NIK atau sandi salah' };
   }
+  const site = str(f, 'site');
+  const actual = await siteMismatch(site);
+  if (actual) redirect(`/login?error=site&site=${encodeURIComponent(site)}&akun=${actual}`);
   redirect(safeNext(str(f, 'next')));
 }
 
