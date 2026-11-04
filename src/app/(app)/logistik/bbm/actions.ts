@@ -20,7 +20,7 @@ export async function saveTank(_: ActionState, f: FormData) {
   });
 }
 export async function openTank(_: ActionState, f: FormData) {
-  return run('Isi awal dicatat', 'fuel_tank_opening', { p_tank: str(f, 'tank'), p_liters: num(f, 'liters'), p_note: str(f, 'note') });
+  return run('Isi awal dicatat', 'fuel_tank_opening', { p_tank: str(f, 'tank'), p_liters: num(f, 'liters'), p_note: str(f, 'note'), p_unit_cost: num(f, 'unit_cost') });
 }
 export async function receiveFuel(_: ActionState, f: FormData) {
   return run('Kiriman diterima', 'fuel_tank_receive', {

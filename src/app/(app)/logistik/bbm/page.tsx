@@ -66,8 +66,9 @@ export default async function FuelPage() {
               {t.last_dip_at && <> · ukur terakhir {fmtDateTime(t.last_dip_at)} (selisih {l0(t.last_dip_variance ?? 0)} L)</>}
             </p>
             {!t.opened && warehouse && (
-              <ActionForm action={openTank} label="Catat isi awal" hidden={{ tank: t.tank_id }} className="mt-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+              <ActionForm action={openTank} label="Catat isi awal" hidden={{ tank: t.tank_id }} className="mt-2 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
                 <input type="number" name="liters" required min={0} step="0.1" className={input} placeholder="Liter hasil ukur" />
+                <input type="number" name="unit_cost" min={0} step="0.01" className={input} placeholder="Harga / liter (opsional)" />
                 <input name="note" className={input} placeholder="Catatan" />
               </ActionForm>
             )}

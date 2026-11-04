@@ -2019,6 +2019,19 @@ await test('tangki BBM: master oleh pengelola; isi awal sekali; terima kiriman v
   eq(Number((await db.query(`select level_l from public.fuel_tanks where id = $1`, [tk.id])).rows[0].level_l), 12000);
   eq(Number((await db.query(`select stock_qty from public.materials where id = $1`, [solar.id])).rows[0].stock_qty), before + 8000);
 });
+await test('isi awal tangki ikut menambah stok barang BBM (harga opsional memperbarui rata-rata)', async () => {
+  const tk = (await as(db, logHead, `select (t).* from public.fuel_tank_save('TK-OP', 'Tangki uji isi awal', $1, 5000) t`, [solar.id])).rows[0];
+  const row = async () => (await db.query(`select stock_qty::float s, avg_cost::float a from public.materials where id = $1`, [solar.id])).rows[0];
+  const b = await row();
+  await as(db, logStaff, `select public.fuel_tank_opening($1, 1000, 'Sounding awal', 20000)`, [tk.id]);
+  const a = await row();
+  eq(a.s, b.s + 1000);
+  eq(Math.round(a.a * 100), Math.round((b.s * b.a + 1000 * 20000) / (b.s + 1000) * 100));
+  const lg = (await db.query(`select movement_id from public.fuel_tank_logs where tank_id = $1 and kind = 'opening'`, [tk.id])).rows[0];
+  eq(lg.movement_id != null, true);
+  await as(db, logStaff, `select public.fuel_tank_dispense($1, $2, 100, $3)`, [tk.id, unit.id, 1e9]).catch(() => {});
+  await db.query(`update public.fuel_tanks set active = false where id = $1`, [tk.id]);
+});
 await test('BBM keluar dari tangki ke unit memakai HM & mengurangi isi tangki; ukur menyesuaikan selisih', async () => {
   const tk = global.fuelTank;
   const hm = Number((await db.query(`select current_hm from public.units where id = $1`, [unit.id])).rows[0].current_hm);
