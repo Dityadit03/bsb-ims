@@ -1120,6 +1120,18 @@ await test('site & HO: PR/PO terpisah per site; HO hanya melihat PO yang dikirim
   eq(await seen(hoU), 1); eq(await seen(other), 0);
   eq((await as(db, logStaff, `select site_id = app.default_site() ok from public.purchase_orders where id = $1`, [po.id])).rows[0].ok, true);
 });
+await test('Keuangan HO menyetujui PO semua site; pengadaan HO dan staf site tidak', async () => {
+  const fin = await createUser('fin.ho@bsb.co.id'), proc = await createUser('proc.ho2@bsb.co.id');
+  await db.query(`insert into public.user_roles(user_id, role_code) values ($1, 'HO_FINANCE'), ($2, 'HO_PROCUREMENT')`, [fin, proc]);
+  await as(db, adminId, `select public.profile_site_set($1, 'HO')`, [fin]);
+  await as(db, adminId, `select public.profile_site_set($1, 'HO')`, [proc]);
+  const po = (await db.query(`insert into public.purchase_orders(po_no, supplier_id, status, total_value, created_by) values ('PO-F-' || substr(gen_random_uuid()::text,1,6), $1, 'awaiting_approval', 100, $2) returning id`, [sup.id, logStaff])).rows[0];
+  eq((await as(db, proc, `select id from public.purchase_orders where id = $1`, [po.id])).rowCount, 0);
+  eq((await as(db, fin, `select id from public.purchase_orders where id = $1`, [po.id])).rowCount, 1);
+  await expectError('42501', async () => as(db, proc, `select public.po_approve($1, true)`, [po.id]));
+  await expectError('42501', async () => as(db, logStaff, `select public.po_approve($1, true)`, [po.id]));
+  eq((await as(db, fin, `select (o).status from public.po_approve($1, true) o`, [po.id])).rows[0].status, 'issued');
+});
 await test('inspeksi SPIP mingguan: Plant/HSE, satu per objek per minggu, butir tidak sesuai wajib catatan dan memberi tahu', async () => {
   const rec = (await db.query(`select id from public.commissioning_records where ref_code = 'SJ-01'`)).rows[0].id;
   const items = JSON.stringify([{ text: 'Stiker terpasang', result: 'ok' }, { text: 'Kondisi fisik', result: 'ok' }]);
