@@ -1620,6 +1620,36 @@ await test('roster & cuti periodik: kebijakan diatur Dept Head/HRGA, batas hari,
   eq((await as(db, spvHse, `select * from public.upcoming_leave(14) where employee_id = $1`, [wk.id])).rows.length, 1);
   await as(db, hrStaff, `select public.roster_policy_delete($1)`, [pe.id]);
 });
+await test('training center: penyelenggara internal, sasaran departemen/level, notifikasi, QR kehadiran hanya hari H oleh karyawan sendiri', async () => {
+  const CR = `select (t).* from public.training_create($1, $2::date, '08:00', 2, 'Ruang training', 'Materi dasar', 'Budi Narasumber', 'PT Mitra', 'Praktisi 10 tahun', null, $3::uuid[], $4::text[]) t`;
+  await expectError('42501', async () => as(db, absUser, CR, ['Uji', today, [PRD], ['OPR']]));
+  await expectError('22023', async () => as(db, spvPrd, CR, ['Uji', today, [PRD], ['XYZ']]));
+  const before = (await db.query(`select count(*)::int c from public.notifications where user_id = $1 and title like 'Undangan pelatihan%'`, [absUser])).rows[0].c;
+  const lvl = (await db.query(`select p.level from public.employees e join public.positions p on p.id = e.position_id where e.id = $1`, [wk.id])).rows[0].level;
+  const other = ['DH', 'PJO'].find(x => x !== lvl);
+  const t0 = (await as(db, spvPrd, CR, ['Tidak untuk operator', today, [PRD], [other]])).rows[0];
+  eq((await db.query(`select count(*)::int c from public.notifications where user_id = $1 and title like 'Undangan pelatihan%'`, [absUser])).rows[0].c, before);
+  const t = (await as(db, spvPrd, CR, ['Defensive driving internal', today, [PRD], [lvl]])).rows[0];
+  eq(t.trainer, 'Budi Narasumber'); eq(t.qr_token.length, 32);
+  eq((await db.query(`select count(*)::int c from public.notifications where user_id = $1 and title like 'Undangan pelatihan%'`, [absUser])).rows[0].c, before + 1);
+  const tv = (await as(db, absUser, `select * from public.training_by_token($1)`, [t.qr_token])).rows[0];
+  eq(tv.joined, false);
+  const noEmp = await createUser('tc.noemp@bsb.co.id');
+  await expectError('22023', async () => as(db, noEmp, `select public.training_checkin($1)`, [t.qr_token]));
+  await expectError('P0002', async () => as(db, absUser, `select public.training_checkin('tidak-ada')`));
+  const a = (await as(db, absUser, `select (a).* from public.training_checkin($1) a`, [t.qr_token])).rows[0];
+  eq(a.source, 'qr');
+  await as(db, absUser, `select public.training_checkin($1)`, [t.qr_token]);
+  eq((await db.query(`select count(*)::int c from public.training_attendees where training_id = $1`, [t.id])).rows[0].c, 1);
+  eq((await as(db, absUser, `select joined from public.training_by_token($1)`, [t.qr_token])).rows[0].joined, true);
+  await expectError('42501', async () => as(db, spvHse, `select public.training_qr_set($1, false)`, [t.id]));
+  await as(db, spvPrd, `select public.training_qr_set($1, false)`, [t.id]);
+  await expectError('22023', async () => as(db, hrStaff, `select public.training_checkin($1)`, [t.qr_token]));
+  const f = (await as(db, spvPrd, CR, ['Besok', await due(2), [], []])).rows[0];
+  await expectError('22023', async () => as(db, absUser, `select public.training_checkin($1)`, [f.qr_token]));
+  // penyelenggara menutup pelatihan sendiri
+  eq((await as(db, spvPrd, `select (t).status from public.training_complete($1, $2::jsonb) t`, [t.id, JSON.stringify([{ employee: wk.id, passed: true, score: 90 }])])).rows[0].status, 'done');
+});
 await test('lembur (SPL): batas jam per hari & minggu, tidak bentrok, disetujui atasan bukan pembuat', async () => {
   await as(db, spvPrd, ROSTER, [wk.id, today, today, 'D']);
   const SPL = `select (o).* from public.overtime_request_create(null, $1::date, $2::time, $3::time, 'Perbaikan jalan hauling') o`;

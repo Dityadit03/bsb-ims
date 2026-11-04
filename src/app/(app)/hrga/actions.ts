@@ -2,6 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { uploadFormFiles } from '@/lib/attachments';
 
 export type ActionState = { error?: string; ok?: string };
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim() || null;
@@ -74,6 +75,30 @@ export async function saveTraining(_: ActionState, f: FormData): Promise<ActionS
     })).id;
   } catch (e) { return { error: (e as Error).message }; }
   redirect(`/hrga/pelatihan/${id}`);
+}
+
+export async function createTraining(_: ActionState, f: FormData): Promise<ActionState> {
+  let id: string;
+  try {
+    const supabase = await createClient();
+    const { data: auth } = await supabase.auth.getUser();
+    const files = await uploadFormFiles(supabase, auth.user!.id, 'pelatihan', f.getAll('files'));
+    id = (await rpc('training_create', {
+      p_title: str(f, 'title'), p_held_on: str(f, 'held_on'), p_start: str(f, 'start'), p_hours: num(f, 'hours'), p_location: str(f, 'location'),
+      p_description: str(f, 'description'), p_speaker: str(f, 'speaker'), p_speaker_org: str(f, 'speaker_org'), p_speaker_bio: str(f, 'speaker_bio'),
+      p_competency: str(f, 'competency'), p_departments: f.getAll('dept').map(String), p_levels: f.getAll('level').map(String), p_attachments: files,
+    })).id;
+  } catch (e) { return { error: (e as Error).message }; }
+  redirect(`/hrga/pelatihan/${id}`);
+}
+
+export async function setTrainingQr(_: ActionState, f: FormData) {
+  return run(`/hrga/pelatihan/${str(f, 'training')}`, str(f, 'open') === '1' ? 'Kehadiran QR dibuka' : 'Kehadiran QR ditutup', () =>
+    rpc('training_qr_set', { p_training: str(f, 'training'), p_open: str(f, 'open') === '1' }));
+}
+
+export async function checkinTraining(_: ActionState, f: FormData) {
+  return run(`/pelatihan/ikut/${str(f, 'token')}`, 'Kehadiran Anda tercatat', () => rpc('training_checkin', { p_token: str(f, 'token') }));
 }
 
 export async function addAttendees(_: ActionState, f: FormData) {

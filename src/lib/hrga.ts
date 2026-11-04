@@ -138,3 +138,5 @@ export const ASSIGN_STATUS: Record<string, [Tone, string]> = {
   completed: ['ok', 'Lulus'],
 };
 export const MATERIAL_KIND: Record<string, string> = { text: 'Bacaan', video: 'Video', link: 'Tautan', file: 'Berkas' };
+
+export const TRAINING_LEVEL: Record<string, string> = { PJO: 'PJO', DH: 'Dept Head', SH: 'Section Head', SPV: 'Supervisor', FOR: 'Foreman', STAFF: 'Staff', OPR: 'Operator' };
