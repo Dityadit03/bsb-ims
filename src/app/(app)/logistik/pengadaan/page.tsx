@@ -36,6 +36,9 @@ export default async function Pengadaan({ searchParams }: { searchParams: Promis
     supabase.from('material_stock').select('id, code, name, uom, stock_qty, min_stock, low_stock').eq('active', true).order('code').returns<Stock[]>(),
     sheMasters(),
   ]);
+  const { data: hoRows } = await supabase.from('purchase_orders').select('id, buy_at, ho_stage').not('ho_stage', 'is', null).returns<{ id: string; buy_at: string; ho_stage: string }[]>();
+  const hoOf = new Map((hoRows ?? []).map(h => [h.id, h]));
+  const HO_LBL: Record<string, string> = { sent: 'Dikirim ke HO', received: 'Diterima HO', returned: 'Kembali ke site (beli)', ordered: 'Dibeli HO' };
   const count = <T extends { status: string }>(rows: T[] | null, st: string) => (rows ?? []).filter(r => r.status === st).length;
   const buyer = s.canIn('log.purchase', 'LOG');
   const myDepts = depts.filter(d => s.canIn('log.request', d.code));
@@ -90,7 +93,7 @@ export default async function Pengadaan({ searchParams }: { searchParams: Promis
       </Panel>
       <Panel title="Purchase order (PO)">
         {pos?.length ? (
-          <Table head={['Nomor', 'Supplier', 'PR', 'Nilai', 'Estimasi tiba', 'Status']}>
+          <Table head={['Nomor', 'Supplier', 'PR', 'Nilai', 'Estimasi tiba', 'Status', 'Alur HO']}>
             {pos.map(o => (
               <tr key={o.id}>
                 <td className="whitespace-nowrap font-mono text-xs">{o.pr_id ? <Link href={`/logistik/pengadaan/${o.pr_id}`} className="font-medium hover:text-accent">{o.po_no}</Link> : o.po_no}
@@ -100,6 +103,7 @@ export default async function Pengadaan({ searchParams }: { searchParams: Promis
                 <td className="tabular text-xs">{rp(o.total_value)}</td>
                 <td className="text-xs">{fmtDate(o.expected_date)}</td>
                 <td><Pill tone={PO_STATUS[o.status][0]}>{PO_STATUS[o.status][1]}</Pill></td>
+                <td className="text-xs">{hoOf.get(o.id) ? <>{HO_LBL[hoOf.get(o.id)!.ho_stage]}<div className="text-muted">{hoOf.get(o.id)!.buy_at === 'ho' ? 'dibeli HO' : 'dibeli site'}</div></> : '–'}</td>
               </tr>
             ))}
           </Table>

@@ -1083,6 +1083,44 @@ await test('register komisioning (SPIP): oleh Plant/HSE, status berlaku dihitung
   eq((await as(db, spvPrd, `select validity from public.commissioning_register where id = $1`, [c.id])).rows[0].validity, 'expired');
   await expectError('23514', async () => as(db, spvHse, C, ['SJ-02', 'REG/2', '2025-07-01', '2025-01-01']));
 });
+await test('PO lewat HO: site kirim, HO terima, dikembalikan ke site (beli di site) atau dibeli HO; hanya pengadaan HO yang memproses', async () => {
+  const hoUser = await createUser('ho.proc@bsb.co.id');
+  await db.query(`insert into public.user_roles(user_id, role_code) values ($1, 'HO_PROCUREMENT')`, [hoUser]);
+  const mk = async () => (await db.query(`insert into public.purchase_orders(po_no, supplier_id, status, total_value, created_by) values ('PO-HO-' || substr(gen_random_uuid()::text, 1, 6), $1, 'issued', 100, $2) returning *`, [sup.id, logStaff])).rows[0];
+  const a = await mk(), b = await mk();
+  const R = `select (o).* from public.po_ho_route($1, $2, $3, $4) o`;
+  await expectError('42501', async () => as(db, spvPrd, R, [a.id, 'send', 'site', null]));
+  await expectError('22023', async () => as(db, logStaff, R, [a.id, 'send', 'entah', null]));
+  eq((await as(db, logStaff, R, [a.id, 'send', 'site', 'Butuh cepat'])).rows[0].ho_stage, 'sent');
+  await expectError('22023', async () => as(db, logStaff, R, [a.id, 'send', 'site', null]));
+  await expectError('42501', async () => as(db, logStaff, R, [a.id, 'receive', null, null]));
+  await expectError('22023', async () => as(db, hoUser, R, [a.id, 'return', null, null]));
+  eq((await as(db, hoUser, R, [a.id, 'receive', null, null])).rows[0].ho_stage, 'received');
+  await expectError('22023', async () => as(db, hoUser, R, [a.id, 'order', null, null]));
+  eq((await as(db, hoUser, R, [a.id, 'return', null, 'Beli di toko lokal'])).rows[0].ho_stage, 'returned');
+  eq((await db.query(`select count(*)::int c from public.notifications where user_id = $1 and title like '%dikembalikan ke site%'`, [logStaff])).rows[0].c, 1);
+  await as(db, logStaff, R, [b.id, 'send', 'ho', null]);
+  eq((await db.query(`select count(*)::int c from public.notifications where user_id = $1 and title like '%dikirim dari site'`, [hoUser])).rows[0].c, 2);
+  await as(db, hoUser, R, [b.id, 'receive', null, null]);
+  await expectError('22023', async () => as(db, hoUser, R, [b.id, 'return', null, null]));
+  eq((await as(db, hoUser, R, [b.id, 'order', null, 'Dibeli dari vendor pusat'])).rows[0].ho_stage, 'ordered');
+});
+await test('inspeksi SPIP mingguan: Plant/HSE, satu per objek per minggu, butir tidak sesuai wajib catatan dan memberi tahu', async () => {
+  const rec = (await db.query(`select id from public.commissioning_records where ref_code = 'SJ-01'`)).rows[0].id;
+  const items = JSON.stringify([{ text: 'Stiker terpasang', result: 'ok' }, { text: 'Kondisi fisik', result: 'ok' }]);
+  const bad = JSON.stringify([{ text: 'Stiker terpasang', result: 'ok' }, { text: 'Kondisi fisik', result: 'tidak' }]);
+  const I = `select (i).* from public.spip_inspect($1, $2::jsonb, $3) i`;
+  await expectError('42501', async () => as(db, spvPrd, I, [rec, items, null]));
+  await expectError('22023', async () => as(db, spvHse, I, [rec, bad, null]));
+  await expectError('22023', async () => as(db, spvHse, I, [rec, '[]', null]));
+  eq((await as(db, spvHse, `select due from public.spip_weekly where record_id = $1`, [rec])).rows[0].due, true);
+  const ok = (await as(db, spvHse, I, [rec, items, 'Rutin'])).rows[0];
+  eq(ok.result, 'ok');
+  eq((await as(db, spvHse, `select due from public.spip_weekly where record_id = $1`, [rec])).rows[0].due, false);
+  await expectError('22023', async () => as(db, spvHse, I, [rec, items, null]));
+  await expectError('42501', async () => as(db, spvPrd, `select public.spip_item_save(null, 'unit', 'Butir baru', 5)`));
+  eq((await as(db, spvHse, `select (i).object_type from public.spip_item_save(null, 'unit', 'Butir baru', 5) i`)).rows[0].object_type, 'unit');
+});
 await test('Pusat Data: tautan harus https dan hanya dikelola pengelola pustaka', async () => {
   const L = `select (l).* from public.resource_link_save('dt-mcu', 'Pusat Data SHE', 'Medical check up', 'Database MCU', $1, 'sheet') l`;
   await expectError('42501', async () => as(db, spvHse, L, ['https://docs.google.com/spreadsheets/d/x']));

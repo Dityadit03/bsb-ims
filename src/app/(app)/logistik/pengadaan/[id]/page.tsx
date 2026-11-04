@@ -8,7 +8,9 @@ import { createClient } from '@/lib/supabase/server';
 import { fmtDate, fmtDateTime } from '@/lib/documents';
 import { GRADE, PO_STATUS, PR_SOURCE, PR_STATUS, qty, rp } from '@/lib/logistics';
 import { DocScans } from '@/components/doc-scans';
-import { approvePo, cancelPrRequest, createPo, decidePr, decidePrDept, receivePo, saveQuote, selectQuote } from '../../actions';
+import { approvePo, cancelPrRequest, createPo, decidePr, decidePrDept, receivePo, routePoHo, saveQuote, selectQuote } from '../../actions';
+
+const HO_STAGE: Record<string, string> = { sent: 'Dikirim ke HO', received: 'Diterima HO', returned: 'Dikembalikan ke site untuk dibeli', ordered: 'Dibeli oleh HO' };
 
 type Pr = { id: string; pr_no: string; status: string; purpose: string; need_date: string | null; created_at: string; mr_id: string | null;
   mr_no: string | null; requested_by: string; requester_name: string; decided_at: string | null; decision_note: string | null; source: string; department_id: string | null;
@@ -40,6 +42,12 @@ export default async function PrDetail({ params }: { params: Promise<{ id: strin
     poIds.length ? supabase.from('purchase_order_lines').select('id, po_id, qty, qty_received, unit_price, item_name, uom, materials(code, name, uom)').in('po_id', poIds).returns<PoLine[]>()
       : Promise.resolve({ data: [] as PoLine[] }),
   ]);
+  const { data: hoRows } = poIds.length
+    ? await supabase.from('purchase_orders').select('id, buy_at, ho_stage, ho_sent_at, ho_received_at, ho_note').in('id', poIds)
+        .returns<{ id: string; buy_at: string; ho_stage: string | null; ho_sent_at: string | null; ho_received_at: string | null; ho_note: string | null }[]>()
+    : { data: [] };
+  const ho = new Map((hoRows ?? []).map(h => [h.id, h]));
+  const isHo = s.can('log.ho');
   const sup = new Map((sups ?? []).map(x => [x.id, x]));
   const quotesOf = (line: string) => (quotes ?? []).filter(q => q.pr_line_id === line);
   const buyer = s.canIn('log.purchase', 'LOG');
@@ -136,6 +144,8 @@ export default async function PrDetail({ params }: { params: Promise<{ id: strin
           {(pos ?? []).map(o => {
             const ls = (poLines ?? []).filter(x => x.po_id === o.id);
             const approve = o.status === 'awaiting_approval' && o.created_by !== s.profile.id && s.canIn('log.approve_high', 'LOG');
+            const h = ho.get(o.id);
+            const sendHo = ['issued', 'partial'].includes(o.status) && !h?.ho_stage && buyer;
             const receive = ['issued', 'partial'].includes(o.status) && s.canIn('log.warehouse', 'LOG');
             return (
               <Panel key={o.id} title={`${o.po_no} · ${o.supplier_name}`} action={<Pill tone={PO_STATUS[o.status][0]}>{PO_STATUS[o.status][1]}</Pill>}>
@@ -174,6 +184,34 @@ export default async function PrDetail({ params }: { params: Promise<{ id: strin
                       <input name="note" className={input} placeholder="Catatan" />
                     </div>
                   </ActionForm>
+                )}
+                {(h?.ho_stage || sendHo || (isHo && h?.ho_stage)) && (
+                  <div className="grid gap-2 border-t border-line pt-3">
+                    <div className="text-xs text-muted">Alur HO</div>
+                    {h?.ho_stage && (
+                      <p className="text-sm">
+                        <Pill tone={h.ho_stage === 'sent' ? 'warn' : 'accent'}>{HO_STAGE[h.ho_stage]}</Pill>{' '}
+                        <span className="text-xs text-muted">{h.buy_at === 'ho' ? 'Dibeli oleh HO' : 'Dibeli di site'} · dikirim {fmtDateTime(h.ho_sent_at)}{h.ho_received_at ? ` · diterima HO ${fmtDateTime(h.ho_received_at)}` : ''}{h.ho_note ? ` · ${h.ho_note}` : ''}</span>
+                      </p>
+                    )}
+                    {sendHo && (
+                      <ActionForm action={routePoHo} label="Kirim PO ke HO" hidden={{ pr: pr.id, po: o.id, action: 'send' }}>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <select name="buy_at" className={input} aria-label="Dibeli di mana" defaultValue="site">
+                            <option value="site">Dibeli di site (HO terima lalu kembalikan ke site)</option>
+                            <option value="ho">Dibeli langsung oleh HO</option>
+                          </select>
+                          <input name="note" className={input} placeholder="Catatan untuk HO" />
+                        </div>
+                      </ActionForm>
+                    )}
+                    {isHo && h?.ho_stage === 'sent' && <ActionForm action={routePoHo} label="Terima PO di HO" primary hidden={{ pr: pr.id, po: o.id, action: 'receive' }} />}
+                    {isHo && h?.ho_stage === 'received' && (
+                      <ActionForm action={routePoHo} label={h.buy_at === 'ho' ? 'Tandai sudah dibeli HO' : 'Kembalikan ke site untuk dibeli'} primary hidden={{ pr: pr.id, po: o.id, action: h.buy_at === 'ho' ? 'order' : 'return' }}>
+                        <input name="note" className={input} placeholder="Catatan (vendor, perkiraan tiba)" />
+                      </ActionForm>
+                    )}
+                  </div>
                 )}
                 <div className="border-t border-line pt-3"><div className="mb-2 text-xs text-muted">Formulir PO fisik</div>
                   <Link href={`/cetak/po/${o.id}`} target="_blank" className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm font-medium hover:border-accent hover:text-accent">Cetak formulir PO</Link>

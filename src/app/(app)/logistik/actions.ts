@@ -223,3 +223,7 @@ export async function receivePo(_: ActionState, f: FormData) {
     p_po: str(f, 'po'), p_lines: lines, p_doc_ref: str(f, 'doc_ref'), p_note: str(f, 'note'), p_idempotency_key: str(f, 'idem'),
   }));
 }
+
+export async function routePoHo(_: ActionState, f: FormData) {
+  return run(prPath(f), 'PO diproses', () => rpc('po_ho_route', { p_po: str(f, 'po'), p_action: str(f, 'action'), p_buy_at: str(f, 'buy_at'), p_note: str(f, 'note') }));
+}

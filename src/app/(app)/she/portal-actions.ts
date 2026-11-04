@@ -86,6 +86,17 @@ export async function saveCommissioning(_: ActionState, f: FormData) {
   }, f, 'spip'));
 }
 
+export async function inspectSpip(_: ActionState, f: FormData) {
+  const items = f.getAll('t').map((t, i) => ({ text: String(t), result: String(f.get(`r_${i}`) ?? ''), note: String(f.get(`n_${i}`) ?? '').trim() }));
+  return run('/plant/spip/inspeksi', 'Inspeksi mingguan tersimpan', () => rpc('spip_inspect', { p_record: str(f, 'record'), p_items: items, p_note: str(f, 'note') }, f, 'spip'));
+}
+
+export async function saveSpipItem(_: ActionState, f: FormData) {
+  return run('/plant/spip/inspeksi', 'Butir pemeriksaan disimpan', () => rpc('spip_item_save', {
+    p_id: str(f, 'id'), p_object_type: str(f, 'object_type') ?? '', p_text: str(f, 'text'), p_sort: Number(str(f, 'sort') ?? 0), p_active: str(f, 'active') !== 'no',
+  }));
+}
+
 // ---------------------------------------------------------------- Pusat Data
 export async function saveLink(_: ActionState, f: FormData) {
   return run('/pusat-data', 'Tautan tersimpan', () => rpc('resource_link_save', {
