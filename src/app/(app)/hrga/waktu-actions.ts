@@ -133,3 +133,9 @@ export async function cancelOvertime(_: ActionState, f: FormData) {
 export async function setAttendancePolicy(_: ActionState, f: FormData) {
   return run(['/hrga/absensi', '/absen'], 'Pengaturan kunci absen disimpan', () => rpc('attendance_policy_set', { p_mode: str(f, 'mode'), p_require_photo: true }));
 }
+
+export async function reviewSelfie(_: ActionState, f: FormData) {
+  const valid = f.get('decision') === 'valid';
+  return run(['/hrga/absensi'], valid ? 'Foto ditandai valid' : 'Foto ditandai tidak valid, karyawan diberi tahu', () =>
+    rpc('attendance_photo_review', { p_log: str(f, 'log'), p_valid: valid, p_note: str(f, 'note') }));
+}

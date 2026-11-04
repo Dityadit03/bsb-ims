@@ -2067,6 +2067,76 @@ await test('BBM Lainnya dari tangki: isi tangki & buku tangki berubah hanya sete
   await expectError('22023', async () => as(db, pjoId, `select public.fuel_other_decide($1, true)`, [big.id]));
   await db.query(`update public.fuel_tanks set level_l = $2 where id = $1`, [tk.id, l0]);
 });
+console.log('Paket A UAT: P2H temuan, breakdown di jalan, WO issue, selfie');
+const noRole = await createUser('tanpa.peran@bsb.co.id');
+let pa;
+await test('P2H dengan temuan non-kritis membuka WO perbaikan otomatis; unit tetap siap', async () => {
+  pa = (await as(db, dhPlt, `select (u).* from public.unit_save('dt-77', 'DT', $1, 'owned', null, 'Hino', 'FM260', null, 2022, 5000) u`, [PLT])).rows[0];
+  await as(db, ownerId, `select public.p2h_submit($1::date, 1, $2, 'DT-77', 'DT', $3::jsonb, 'fit', 5010, 'Lampu kiri mati')`, [today, HSE, items({ lights: 'not_ok' })]);
+  const w = (await db.query(`select wo_type, priority, description from public.work_orders where unit_id = $1 and source_table = 'p2h_checks'`, [pa.id])).rows;
+  eq(w.length, 1); eq(w[0].wo_type, 'repair'); eq(w[0].description.includes('Lampu & sein'), true);
+  eq((await db.query(`select status from public.units where id = $1`, [pa.id])).rows[0].status, 'ready');
+  await as(db, ownerId, `select public.p2h_submit($1::date, 2, $2, 'DT-77', 'DT', $3::jsonb, 'fit', 5020)`, [today, HSE, items()]);
+  eq((await db.query(`select count(*)::int c from public.work_orders where unit_id = $1`, [pa.id])).rows[0].c, 1);
+});
+let bd;
+await test('lapor breakdown di jalan: butuh lokasi, HM, foto; WO breakdown urgent terbuka; notifikasi Plant', async () => {
+  const Q = `select (b).* from public.breakdown_report($1, $2, $3, $4, $5, $6, 20, $7, false, $8::uuid[]) b`;
+  const ph = (await upload(ownerId)).id;
+  await expectError('42501', async () => as(db, noRole, Q, ['DT-77', 'Mesin mati', 5030, 100, -1.1, 116.1, null, [ph]]));
+  await expectError('22023', async () => as(db, ownerId, Q, ['DT-77', 'Mesin mati', 5030, 100, null, null, null, [ph]]));
+  await expectError('22023', async () => as(db, ownerId, Q, ['DT-77', 'Mesin mati', 5030, 100, -1.1, 116.1, null, []]));
+  await expectError('22023', async () => as(db, ownerId, Q, ['DT-77', 'Mesin mati', 100, 100, -1.1, 116.1, null, [ph]]));
+  await expectError('22023', async () => as(db, ownerId, Q, ['DT-99', 'Mesin mati', 5030, 100, -1.1, 116.1, null, [ph]]));
+  bd = (await as(db, ownerId, Q, ['DT-77', 'Mesin mati mendadak', 5030, 8800, -1.1, 116.1, 'KM 12 jalan hauling', [ph]])).rows[0];
+  eq(bd.status, 'reported'); eq(bd.report_no.startsWith('BDR-BSB-'), true); eq(Number(bd.km), 8800);
+  const w = (await db.query(`select wo_type, priority, status from public.work_orders where id = $1`, [bd.wo_id])).rows[0];
+  eq(w.wo_type, 'breakdown'); eq(w.priority, 'urgent');
+  eq((await db.query(`select status from public.units where id = $1`, [pa.id])).rows[0].status, 'breakdown');
+  eq((await db.query(`select current_hm::int h from public.units where id = $1`, [pa.id])).rows[0].h, 5030);
+  eq((await as(db, spvPlt, `select 1 from public.notifications where kind = 'plant.breakdown'`)).rowCount, 1);
+  eq((await db.query(`select jsonb_array_length(photos) n from public.breakdown_report_view where id = $1`, [bd.id])).rows[0].n, 1);
+});
+await test('verifikasi breakdown oleh Plant bukan pelapor; tolak wajib alasan dan membatalkan WO yang belum dikerjakan', async () => {
+  await expectError('42501', async () => as(db, ownerId, `select public.breakdown_verify($1, true)`, [bd.id]));
+  await expectError('42501', async () => as(db, spvHse, `select public.breakdown_verify($1, true)`, [bd.id]));
+  await expectError('22023', async () => as(db, spvPlt, `select public.breakdown_verify($1, false)`, [bd.id]));
+  eq((await as(db, spvPlt, `select (b).status from public.breakdown_verify($1, true, 'Sesuai di lokasi') b`, [bd.id])).rows[0].status, 'verified');
+  await expectError('22023', async () => as(db, spvPlt, `select public.breakdown_verify($1, true)`, [bd.id]));
+  // laporan kedua pada unit yang sudah breakdown memakai WO yang ada, lalu ditolak tanpa membatalkan WO milik laporan lain
+  const ph = (await upload(ownerId)).id;
+  const b2 = (await as(db, ownerId, `select (b).* from public.breakdown_report('DT-77', 'Laporan ganda', 5040, null, null, null, null, 'Pos 3', false, $1::uuid[]) b`, [[ph]])).rows[0];
+  eq(b2.wo_id, bd.wo_id);
+  await as(db, spvPlt, `select public.breakdown_verify($1, false, 'Duplikat')`, [b2.id]);
+  eq((await db.query(`select status from public.work_orders where id = $1`, [bd.wo_id])).rows[0].status, 'open');
+});
+await test('WO dikerjakan: barang gudang dikeluarkan langsung dengan nomor WO bila stok cukup; kurang wajib MR', async () => {
+  const w = bd.wo_id;
+  await as(db, logStaff, `select public.goods_receive($1, $2, 5, 500000, 'SJ-PA-1')`, [sp.id, sup.id]);
+  const before = await stock(sp.id);
+  await expectError('42501', async () => as(db, pltStaff, `select public.wo_issue($1, $2, 1)`, [w, sp.id]));
+  await expectError('22023', async () => as(db, logStaff, `select public.wo_issue($1, $2, 99999)`, [w, sp.id]));
+  await expectError('22023', async () => as(db, logStaff, `select public.wo_issue($1, $2, 1)`, [w, solar.id]));
+  const mv = (await as(db, logStaff, `select (m).* from public.wo_issue($1, $2, 1, 'Ambil filter')  m`, [w, sp.id])).rows[0];
+  eq(mv.movement_type, 'issue'); eq(Number(mv.qty), -1); eq(mv.mr_id, null);
+  eq(await stock(sp.id), before - 1);
+  eq((await as(db, logStaff, `select qty::int q, unit_no from public.wo_issue_view where wo_id = $1`, [w])).rows[0].unit_no, 'DT-77');
+  await db.query(`update public.work_orders set status = 'cancelled', cancel_reason = 'uji' where id = $1`, [w]);
+  await expectError('22023', async () => as(db, logStaff, `select public.wo_issue($1, $2, 1)`, [w, sp.id]));
+  await db.query(`update public.units set status = 'ready' where id = $1`, [pa.id]);
+});
+await test('selfie absensi diperiksa HRGA: tidak valid wajib alasan dan karyawan diberi tahu', async () => {
+  const photo = (await upload(absUser)).id;
+  const emp = (await db.query(`select e.id, e.profile_id from public.employees e where e.profile_id = $1`, [absUser])).rows[0];
+  const log = (await db.query(`insert into public.attendance_logs(employee_id, at, kind, source, photo_id) values ($1, now() - interval '3 days', 'in', 'app', $2) returning id`, [emp.id, photo])).rows[0].id;
+  await expectError('42501', async () => as(db, absUser, `select public.attendance_photo_review($1, true)`, [log]));
+  await expectError('22023', async () => as(db, hrStaff, `select public.attendance_photo_review($1, false)`, [log]));
+  await as(db, hrStaff, `select public.attendance_photo_review($1, false, 'Wajah tidak terlihat')`, [log]);
+  eq((await as(db, hrStaff, `select review_status from public.attendance_photo_view where log_id = $1`, [log])).rows[0].review_status, 'invalid');
+  eq((await db.query(`select count(*)::int c from public.notifications where user_id = $1 and kind = 'hr.attendance_photo'`, [absUser])).rows[0].c, 1);
+  await as(db, hrStaff, `select public.attendance_photo_review($1, true)`, [log]);
+  eq((await as(db, hrStaff, `select review_status from public.attendance_photo_view where log_id = $1`, [log])).rows[0].review_status, 'valid');
+});
 console.log('audit trail');
 await test('setiap penerbitan nomor tercatat', async () => {
   const r = await db.query(`select count(*)::int c from public.audit_logs where action = 'numbering.issue'`);

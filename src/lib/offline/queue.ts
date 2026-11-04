@@ -2,7 +2,7 @@
 // Antrean kiriman offline di IndexedDB perangkat. Isi form (termasuk foto) disimpan apa adanya lalu dikirim ulang
 // lewat server action yang sama saat sinyal kembali. Setiap kiriman membawa `cid` unik sehingga kirim ganda tidak menggandakan data.
 
-export type QueueKind = 'p2h' | 'hazard' | 'absen';
+export type QueueKind = 'p2h' | 'hazard' | 'absen' | 'breakdown';
 export type QueueItem = {
   id: string; uid: string; kind: QueueKind; label: string; createdAt: number;
   fields: [string, string | File][]; tries: number; error?: string;

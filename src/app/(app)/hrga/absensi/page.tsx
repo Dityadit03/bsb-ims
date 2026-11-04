@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/server';
 import { fmtDate } from '@/lib/documents';
 import { ATT_STATUS, ROSTER, fmtTime, siteToday } from '@/lib/hrga';
 import { EmployeeDatalist, EmployeeInput } from '../../she/fields';
-import { manualAttendance, saveLocation, saveShift, setAttendancePolicy, setHoliday } from '../waktu-actions';
+import { manualAttendance, reviewSelfie, saveLocation, saveShift, setAttendancePolicy, setHoliday } from '../waktu-actions';
 import { HrTabs } from '../tabs';
 
 export const metadata = { title: 'Absensi' };
@@ -24,7 +24,7 @@ export default async function AbsensiPage({ searchParams }: { searchParams: Prom
   const session = await getSession();
   const isHr = session.canIn('hr.manage', 'HRGA') || session.can('user.manage');
   const supabase = await createClient();
-  const tab = sp.tab === 'rekap' || sp.tab === 'pengaturan' ? sp.tab : 'harian';
+  const tab = sp.tab === 'rekap' || sp.tab === 'pengaturan' || (sp.tab === 'selfie' && isHr) ? sp.tab : 'harian';
   const date = sp.tgl && /^\d{4}-\d{2}-\d{2}$/.test(sp.tgl) ? sp.tgl : siteToday();
   const month = sp.bln && /^\d{4}-\d{2}$/.test(sp.bln) ? sp.bln : siteToday().slice(0, 7);
   const base = (p: Record<string, string>) => `/hrga/absensi?${new URLSearchParams({ tab, ...(sp.dept ? { dept: sp.dept } : {}), ...p })}`;
@@ -33,11 +33,12 @@ export default async function AbsensiPage({ searchParams }: { searchParams: Prom
     <>
       <PageHeader eyebrow="Time management" title="Absensi"><ExportLinks dataset="absensi" /></PageHeader>
       <HrTabs active="/hrga/absensi" />
-      <Tabs items={[[`/hrga/absensi?tab=harian&tgl=${date}`, 'Harian'], [`/hrga/absensi?tab=rekap&bln=${month}`, 'Rekap bulanan'], ['/hrga/absensi?tab=pengaturan', 'Lokasi, shift & libur']]}
-        active={tab === 'harian' ? `/hrga/absensi?tab=harian&tgl=${date}` : tab === 'rekap' ? `/hrga/absensi?tab=rekap&bln=${month}` : '/hrga/absensi?tab=pengaturan'} />
+      <Tabs items={[[`/hrga/absensi?tab=harian&tgl=${date}`, 'Harian'], [`/hrga/absensi?tab=rekap&bln=${month}`, 'Rekap bulanan'], ['/hrga/absensi?tab=pengaturan', 'Lokasi, shift & libur'], ...(isHr ? [[`/hrga/absensi?tab=selfie&tgl=${date}`, 'Periksa selfie'] as [string, string]] : [])]}
+        active={tab === 'selfie' ? `/hrga/absensi?tab=selfie&tgl=${date}` : tab === 'harian' ? `/hrga/absensi?tab=harian&tgl=${date}` : tab === 'rekap' ? `/hrga/absensi?tab=rekap&bln=${month}` : '/hrga/absensi?tab=pengaturan'} />
       {tab === 'harian' && <Daily date={date} sp={sp} base={base} supabase={supabase} />}
       {tab === 'rekap' && <Monthly month={month} sp={sp} supabase={supabase} />}
       {tab === 'pengaturan' && <Settings isHr={isHr} supabase={supabase} />}
+      {tab === 'selfie' && <Selfies date={date} sp={sp} base={base} supabase={supabase} />}
     </>
   );
 }
@@ -237,5 +238,54 @@ async function Settings({ isHr, supabase }: { isHr: boolean; supabase: Client })
         )}
       </Panel>
     </div>
+  );
+}
+
+type Selfie = { log_id: string; nrp: string; full_name: string; department_code: string | null; at: string; kind: string; source: string; photo_id: string;
+  in_geofence: boolean | null; distance_m: number | null; review_status: 'valid' | 'invalid' | null; review_note: string | null; reviewer_name: string | null };
+
+async function Selfies({ date, sp, base, supabase }: { date: string; sp: Record<string, string | undefined>; base: (p: Record<string, string>) => string; supabase: Client }) {
+  const from = new Date(`${date}T00:00:00+07:00`).toISOString(), to = new Date(new Date(`${date}T00:00:00+07:00`).getTime() + 86400000).toISOString();
+  let q = supabase.from('attendance_photo_view').select('*').gte('at', from).lt('at', to).order('at', { ascending: false }).limit(400);
+  if (sp.status === 'belum') q = q.is('review_status', null);
+  if (sp.status === 'invalid') q = q.eq('review_status', 'invalid');
+  if (sp.status === 'luar') q = q.eq('in_geofence', false);
+  const { data } = await q.returns<Selfie[]>();
+  const rows = data ?? [];
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        <Link href={base({ tgl: addDays(date, -1) })} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:border-violet/60" aria-label="Hari sebelumnya">‹</Link>
+        <form className="flex flex-wrap gap-2"><input type="hidden" name="tab" value="selfie" />
+          <input aria-label="Tanggal" type="date" name="tgl" defaultValue={date} className={`${input} !w-auto`} />
+          <select aria-label="Saring" name="status" defaultValue={sp.status ?? ''} className={`${input} !w-auto`}>
+            <option value="">Semua foto</option><option value="belum">Belum diperiksa</option><option value="invalid">Ditandai tidak valid</option><option value="luar">Di luar area</option></select>
+          <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Lihat</button></form>
+        <Link href={base({ tgl: addDays(date, 1) })} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:border-violet/60" aria-label="Hari berikutnya">›</Link>
+        <span className="text-sm text-muted">{fmtDate(date)} · {rows.length} foto · {rows.filter(r => !r.review_status).length} belum diperiksa</span>
+      </div>
+      {rows.length ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {rows.map(r => (
+            <div key={r.log_id} className="grid content-start gap-2 rounded-2xl border border-line bg-panel p-3 shadow-soft">
+              <a href={`/api/lampiran/${r.photo_id}`} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl bg-ground">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/api/lampiran/${r.photo_id}`} alt={`Selfie ${r.full_name}`} loading="lazy" className="aspect-[3/4] w-full object-cover" />
+              </a>
+              <div className="text-sm"><span className="font-medium">{r.full_name}</span> <span className="font-mono text-xs text-muted">{r.nrp} · {r.department_code}</span>
+                <div className="text-xs text-muted">{r.kind === 'in' ? 'Masuk' : 'Pulang'} {fmtTime(r.at)}{r.in_geofence === false && <span className="text-warn"> · di luar area{r.distance_m != null && ` (${r.distance_m} m)`}</span>}</div></div>
+              {r.review_status && <div><Pill tone={r.review_status === 'valid' ? 'ok' : 'crit'}>{r.review_status === 'valid' ? 'Valid' : 'Tidak valid'}</Pill>
+                <span className="ml-1 text-xs text-muted">{r.reviewer_name}{r.review_note && ` · ${r.review_note}`}</span></div>}
+              <div className="grid grid-cols-2 gap-2">
+                <ActionForm action={reviewSelfie} label="Valid" hidden={{ log: r.log_id, decision: 'valid' }} />
+                <ActionForm action={reviewSelfie} label="Tidak valid" hidden={{ log: r.log_id, decision: 'invalid' }}>
+                  <input name="note" required className={input} placeholder="Alasan" />
+                </ActionForm>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : <p className="text-sm text-muted">Tidak ada foto absen untuk saringan ini.</p>}
+    </>
   );
 }

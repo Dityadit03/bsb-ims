@@ -61,6 +61,12 @@ export async function issueFuel(_: ActionState, f: FormData) {
   }));
 }
 
+export async function issueFromWo(_: ActionState, f: FormData) {
+  return run('/logistik/pengeluaran', 'Barang dikeluarkan untuk WO', () => rpc('wo_issue', {
+    p_wo: str(f, 'wo'), p_material: str(f, 'material'), p_qty: num(f, 'qty'), p_note: str(f, 'note'),
+  }));
+}
+
 export async function decideFuelOther(_: ActionState, f: FormData) {
   const approve = f.get('decision') === 'approve';
   return run('/logistik', approve ? 'Disetujui, stok dikurangi' : 'Ditolak', () => rpc('fuel_other_decide', {

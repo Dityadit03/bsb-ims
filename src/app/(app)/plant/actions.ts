@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { uploadFormFiles } from '@/lib/attachments';
+import { once } from '@/lib/client-request';
 
 export type ActionState = { error?: string; ok?: string };
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim() || null;
@@ -79,4 +80,29 @@ export async function cancelWo(_: ActionState, f: FormData) {
 export async function setWoCosting(_: ActionState, f: FormData) {
   return run(`/plant/wo/${str(f, 'id')}`, 'Kode downtime dan jam kerja disimpan', () =>
     rpc('wo_costing', { p_id: str(f, 'id'), p_downtime_code: str(f, 'downtime_code'), p_labor_hours: num(f, 'labor_hours') ?? 0 }));
+}
+
+// ---------------------------------------------------------------- breakdown unscheduled di lapangan
+export async function reportBreakdown(_: ActionState, f: FormData): Promise<ActionState> {
+  try {
+    const r = await once(str(f, 'cid'), async () => {
+      const supabase = await createClient();
+      const { data: auth } = await supabase.auth.getUser();
+      const ids = await uploadFormFiles(supabase, auth.user!.id, 'breakdown', f.getAll('files'));
+      return await rpc('breakdown_report', {
+        p_unit_no: str(f, 'unit'), p_description: str(f, 'description'), p_hm: num(f, 'hm'), p_km: num(f, 'km'),
+        p_lat: num(f, 'lat'), p_lng: num(f, 'lng'), p_accuracy: num(f, 'accuracy'), p_location_note: str(f, 'location_note'),
+        p_need_tow: f.get('need_tow') === 'on', p_attachments: ids,
+      }) as unknown as { report_no: string };
+    });
+    revalidatePath('/plant/breakdown'); revalidatePath('/plant/wo');
+    if (r === 'duplicate') return { ok: 'Laporan ini sudah terkirim sebelumnya' };
+    return { ok: `${r.report_no} terkirim. Work order breakdown dibuka dan tim Plant diberi tahu.` };
+  } catch (e) { return { error: (e as Error).message }; }
+}
+
+export async function verifyBreakdown(_: ActionState, f: FormData) {
+  const ok = f.get('decision') === 'ok';
+  return run('/plant/breakdown', ok ? 'Laporan diverifikasi' : 'Laporan ditolak', () =>
+    rpc('breakdown_verify', { p_id: str(f, 'id'), p_ok: ok, p_note: str(f, 'note') }));
 }

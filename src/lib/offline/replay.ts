@@ -1,10 +1,11 @@
 'use client';
 import { clock } from '@/app/(app)/hrga/waktu-actions';
+import { reportBreakdown } from '@/app/(app)/plant/actions';
 import { reportHazard, submitP2h } from '@/app/(app)/she/actions';
 import { fieldsToForm, listQueue, removeItem, updateItem, type QueueKind } from './queue';
 
 type Result = { error?: string; ok?: string };
-export const ACTIONS: Record<QueueKind, (s: Result, f: FormData) => Promise<Result>> = { p2h: submitP2h, hazard: reportHazard, absen: clock };
+export const ACTIONS: Record<QueueKind, (s: Result, f: FormData) => Promise<Result>> = { p2h: submitP2h, hazard: reportHazard, absen: clock, breakdown: reportBreakdown };
 
 // P2H "tidak layak" mengembalikan error bernada peringatan padahal datanya sudah tersimpan
 const saved = (r: Result) => !r.error || /tersimpan/i.test(r.error);

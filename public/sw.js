@@ -6,7 +6,7 @@
 const V = 'bsb-v1';
 const STATIC = `${V}-static`;
 const PAGES = `${V}-pages`;
-const FIELD = ['/', '/she/p2h', '/she/hazard', '/absen', '/tugas'];
+const FIELD = ['/', '/she/p2h', '/plant/breakdown', '/she/hazard', '/absen', '/tugas'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(PAGES).then(c => c.add('/offline')).then(() => self.skipWaiting()));

@@ -82,8 +82,8 @@ export default async function HomePage() {
       </header>
 
       {s.can('she.report') && (
-        <nav aria-label="Aksi cepat" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {([['/she/p2h', 'P2H unit', 'truck'], ['/absen', 'Absen', 'clock'], ['/she/hazard', 'Lapor hazard', 'alert'], ['/tugas', 'Tugas saya', 'check'], ['/she/toolbox', 'Toolbox talk', 'helmet'], ['/she/serah-terima', 'Serah terima', 'swap']] as const).map(([href, label, icon]) => (
+        <nav aria-label="Aksi cepat" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
+          {([['/she/p2h', 'P2H unit', 'truck'], ['/plant/breakdown', 'Lapor breakdown', 'signal'], ['/absen', 'Absen', 'clock'], ['/she/hazard', 'Lapor hazard', 'alert'], ['/tugas', 'Tugas saya', 'check'], ['/she/toolbox', 'Toolbox talk', 'helmet'], ['/she/serah-terima', 'Serah terima', 'swap']] as const).map(([href, label, icon]) => (
             <Link key={href} href={href} className="flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl border border-line bg-panel p-3 text-center text-base font-semibold transition-colors hover:border-violet/60 active:bg-accent-soft">
               <Icon name={icon} size={26} className="text-accent" />{label}
             </Link>

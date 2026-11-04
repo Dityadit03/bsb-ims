@@ -25,11 +25,13 @@ export default async function WoDetail({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const s = await getSession();
   const supabase = await createClient();
-  const [{ data: w }, { data: cost }, { data: parts }] = await Promise.all([
+  const [{ data: w }, { data: cost }, { data: parts }, { data: direct }] = await Promise.all([
     supabase.from('work_order_register').select('*').eq('id', id).maybeSingle<Wo>(),
     supabase.from('wo_cost').select('parts_cost, labor_cost, total_cost, labor_hours, downtime_code').eq('wo_id', id)
       .maybeSingle<{ parts_cost: number; labor_cost: number; total_cost: number; labor_hours: number; downtime_code: string | null }>(),
     supabase.from('wo_parts').select('*').eq('wo_id', id).order('mr_no').returns<Part[]>(),
+    supabase.from('wo_issue_view').select('id, movement_no, material_code, material_name, uom, qty').eq('wo_id', id).order('moved_at')
+      .returns<{ id: string; movement_no: string | null; material_code: string; material_name: string; uom: string; qty: number }[]>(),
   ]);
   if (!w) notFound();
   const work = s.can('plant.work');
@@ -71,7 +73,13 @@ export default async function WoDetail({ params }: { params: Promise<{ id: strin
             </>
           )}
           {w.status !== 'cancelled' && (
-            <Panel title="Suku cadang" sub="Diminta lewat material request yang ditautkan ke WO ini. Part yang sudah disetujui tetapi belum keluar dicadangkan dari stok.">
+            <Panel title="Suku cadang" sub="Stok gudang cukup: minta gudang mengeluarkan langsung dengan nomor WO ini (tanpa MR). Stok kurang atau tidak ada: ajukan MR yang ditautkan ke WO. Part MR yang sudah disetujui tetapi belum keluar dicadangkan dari stok.">
+              {direct?.length ? (
+                <ul className="mb-3 grid gap-1 text-sm">
+                  {direct.map(d => <li key={d.id} className="flex flex-wrap gap-x-3 rounded-lg border border-line px-3 py-2"><span className="font-mono text-xs">{d.material_code}</span><span>{d.material_name}</span>
+                    <span className="tabular text-xs text-muted">{qty(d.qty)} {d.uom} dikeluarkan langsung</span><span className="font-mono text-xs text-muted">{d.movement_no}</span></li>)}
+                </ul>
+              ) : null}
               {parts?.length ? (
                 <ul className="grid gap-2 text-sm">
                   {parts.map(p => (
