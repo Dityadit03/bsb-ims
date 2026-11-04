@@ -89,9 +89,10 @@ export async function createLeave(_: ActionState, f: FormData): Promise<ActionSt
     const { profile } = await getSession();
     const supabase = await createClient();
     const files = await uploadFormFiles(supabase, profile.id, 'cuti', f.getAll('files'));
-    await rpc('leave_request_create', {
-      p_employee: await emp(f), p_type: str(f, 'type'), p_start: str(f, 'start'), p_end: str(f, 'end') ?? str(f, 'start'),
-      p_reason: str(f, 'reason'), p_attachments: files, p_idempotency_key: str(f, 'idem'),
+    let parts: unknown;
+    try { parts = JSON.parse(str(f, 'parts') ?? '[]'); } catch { parts = []; }
+    await rpc('leave_request_multi', {
+      p_employee: await emp(f), p_parts: parts, p_reason: str(f, 'reason'), p_attachments: files, p_idempotency_key: str(f, 'idem'),
     });
   });
 }

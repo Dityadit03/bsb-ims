@@ -4,6 +4,7 @@ import { input } from '@/components/ui';
 import { createClient } from '@/lib/supabase/server';
 import { siteToday } from '@/lib/hrga';
 import { EmployeeDatalist, EmployeeInput } from '../she/fields';
+import { LeaveParts } from './leave-parts';
 import { createLeave, createOvertime } from './waktu-actions';
 
 // Form pengajuan cuti: untuk diri sendiri (ESS) atau oleh atasan/HRGA atas nama karyawan
@@ -16,18 +17,11 @@ export async function LeaveForm({ forOther = false }: { forOther?: boolean }) {
       {forOther && <EmployeeDatalist />}
       <ActionForm action={createLeave} label="Ajukan cuti" primary hidden={{ idem: crypto.randomUUID() }} className="md:grid-cols-2 md:items-end">
         {forOther && <EmployeeInput required />}
-        <label className="grid gap-1 text-sm">Jenis
-          <select name="type" required className={input}>
-            {(types ?? []).map(t => <option key={t.code} value={t.code}>{t.name}{t.max_days ? ` (maks ${t.max_days} hari)` : ''}{t.requires_attachment ? ' · wajib lampiran' : ''}</option>)}
-          </select></label>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="grid gap-1 text-sm">Mulai<input type="date" name="start" required defaultValue={siteToday()} className={input} /></label>
-          <label className="grid gap-1 text-sm">Sampai<input type="date" name="end" required defaultValue={siteToday()} className={input} /></label>
-        </div>
+        <LeaveParts types={types ?? []} today={siteToday()} />
         <label className="grid gap-1 text-sm md:col-span-2">Keterangan<input name="reason" required placeholder="mis. pulang kampung, acara keluarga" className={input} /></label>
         <div className="md:col-span-2"><DropZone label="Lampiran (surat dokter, undangan, dll.)" accept="image/*,application/pdf" /></div>
       </ActionForm>
-      <p className="text-xs text-muted">Hari cuti dihitung dari roster (hari OFF dan hari libur tidak dihitung). Persetujuan: atasan langsung, lalu HRGA.</p>
+      <p className="text-xs text-muted">Hari cuti dihitung dari roster (hari OFF dan hari libur tidak dihitung). Cuti tahunan dan cuti periodik (roster) cukup disetujui atasan langsung; jenis lain disetujui atasan lalu HRGA. Cuti periodik mengikuti pengaturan roster (jeda kerja, maksimal hari, batas bersamaan).</p>
     </>
   );
 }

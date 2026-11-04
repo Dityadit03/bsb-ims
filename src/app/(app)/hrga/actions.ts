@@ -93,6 +93,17 @@ export async function setRoster(_: ActionState, f: FormData) {
   }));
 }
 
+export async function savePolicy(_: ActionState, f: FormData) {
+  return run('/hrga/roster', 'Pengaturan roster disimpan', () => rpc('roster_policy_set', {
+    p_department: str(f, 'employee') ? null : str(f, 'department'), p_employee: str(f, 'employee'), p_work_days: num(f, 'work_days'), p_off_days: num(f, 'off_days'),
+    p_notice_days: num(f, 'notice_days'), p_max_pct: num(f, 'max_pct'), p_anchor: str(f, 'anchor'), p_note: str(f, 'note'),
+  }));
+}
+
+export async function deletePolicy(_: ActionState, f: FormData) {
+  return run('/hrga/roster', 'Pengaturan dihapus', () => rpc('roster_policy_delete', { p_id: str(f, 'id') }));
+}
+
 export async function createGa(_: ActionState, f: FormData) {
   return run('/hrga/ga', 'Permintaan dikirim', () => rpc('ga_request_create', {
     p_category: str(f, 'category'), p_description: str(f, 'description'), p_location: str(f, 'location'), p_needed_by: str(f, 'needed_by'),

@@ -44,6 +44,10 @@ export const getAlerts = cache(async () => {
   ]);
   const { data: picItems } = await supabase.rpc('my_pic_items');
   const pic = (picItems ?? []) as { overdue: boolean; assigned: boolean }[];
+  const { data: soonLeave } = await supabase.rpc('upcoming_leave', { p_days: 7 });
+  const leaveSoon = (soonLeave ?? []) as { mine: boolean; starts_in: number; start_date: string; end_date: string }[];
+  const myLeave = leaveSoon.filter(l => l.mine).sort((a, b) => a.starts_in - b.starts_in)[0];
+  const teamLeave = leaveSoon.filter(l => !l.mine && l.starts_in >= 0).length;
   // sertifikat terbaru per karyawan & kompetensi
   const latest = new Map<string, Cert>();
   for (const c of certs.data ?? []) {
@@ -61,6 +65,8 @@ export const getAlerts = cache(async () => {
   const items = ([
     [c.unread, 'accent', 'notifikasi baru', 'Belum dibaca', '/tugas'],
     [c.tasks, 'accent', 'tugas menunggu Anda', 'Persetujuan & review', '/tugas'],
+    [myLeave ? 1 : 0, 'accent', myLeave ? (myLeave.starts_in <= 0 ? 'cuti Anda sedang berjalan' : `cuti Anda mulai ${myLeave.starts_in} hari lagi`) : '', myLeave ? `${myLeave.start_date.slice(8)}/${myLeave.start_date.slice(5, 7)} s/d ${myLeave.end_date.slice(8)}/${myLeave.end_date.slice(5, 7)} sesuai roster` : '', '/saya?tab=cuti'],
+    [teamLeave, 'accent', 'anggota tim mulai cuti dalam 7 hari', 'Lihat jadwal di roster', '/hrga/roster'],
     [c.leaveWait, 'warn', 'cuti menunggu persetujuan Anda', 'Pengajuan cuti & izin', '/tugas'],
     [c.otWait, 'warn', 'SPL lembur menunggu persetujuan Anda', 'Surat perintah lembur', '/tugas'],
     [c.claimWait, 'warn', 'klaim menunggu persetujuan Anda', 'Reimbursement', '/tugas'],

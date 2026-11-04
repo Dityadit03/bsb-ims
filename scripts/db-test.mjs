@@ -1492,7 +1492,7 @@ await test('impor mesin fingerprint: masuk/pulang ditentukan otomatis, terlambat
   eq((await as(db, spvPrd, `select status from public.attendance_daily where employee_id = $1 and work_date = $2::date`, [boss.id, d2])).rows[0].status, 'hadir');
 });
 let leave;
-await test('cuti: hitung hari kerja dari roster, saldo & bentrok dicek, dua tahap (atasan lalu HRGA), roster terisi CUTI', async () => {
+await test('cuti: hitung hari kerja dari roster, saldo & bentrok dicek, CT final di atasan, roster terisi CUTI', async () => {
   const y = Number(today.slice(0, 4)) + 1, s = `${y}-03-02`, e = `${y}-03-06`;
   await as(db, spvPrd, ROSTER, [wk.id, s, `${y}-03-04`, 'D']);
   await as(db, spvPrd, ROSTER, [wk.id, `${y}-03-05`, e, 'OFF']);
@@ -1509,9 +1509,8 @@ await test('cuti: hitung hari kerja dari roster, saldo & bentrok dicek, dua taha
   await expectError('42501', async () => as(db, spvHse, `select public.leave_request_decide($1, true)`, [leave.id]));
   await expectError('42501', async () => as(db, absUser, `select public.leave_request_decide($1, true)`, [leave.id]));
   eq((await as(db, spvPrd, `select can_decide from public.leave_register where id = $1`, [leave.id])).rows[0].can_decide, true);
-  eq((await as(db, spvPrd, `select (l).status from public.leave_request_decide($1, true) l`, [leave.id])).rows[0].status, 'approved_1');
-  await expectError('42501', async () => as(db, spvPrd, `select public.leave_request_decide($1, true)`, [leave.id]));
-  eq((await as(db, hrStaff, `select (l).status from public.leave_request_decide($1, true) l`, [leave.id])).rows[0].status, 'approved');
+  eq((await as(db, spvPrd, `select (l).status from public.leave_request_decide($1, true) l`, [leave.id])).rows[0].status, 'approved');
+  await expectError('22023', async () => as(db, hrStaff, `select public.leave_request_decide($1, true)`, [leave.id]));
   const codes = (await db.query(`select string_agg(code, ',' order by work_date) c from public.roster_entries where employee_id = $1 and work_date between $2 and $3`, [wk.id, s, e])).rows[0].c;
   eq(codes, 'CUTI,CUTI,CUTI,OFF,OFF');
   eq((await as(db, spvHse, `select 1 from public.leave_requests where id = $1`, [leave.id])).rowCount, 0);
@@ -1529,6 +1528,44 @@ await test('cuti: tolak wajib alasan; batal sebelum berjalan; saldo awal lewat i
   const r = (await as(db, hrStaff, `select public.import_rows('saldo_cuti', $1::jsonb, true) r`, [rows])).rows[0].r;
   eq(r.ok, 1); eq(r.errors.length, 1);
   eq(Number((await as(db, absUser, `select available from public.leave_balance where leave_type = 'CT'`)).rows[0].available), 10);
+});
+await test('roster & cuti periodik: kebijakan diatur Dept Head/HRGA, batas hari, jeda kerja, pengajuan beberapa jenis, jadwal terdekat', async () => {
+  const y = Number(today.slice(0, 4)) + 1;
+  const SET = `select (p).* from public.roster_policy_set($1, $2, $3, $4, $5, $6, $7::date, 'uji') p`;
+  await expectError('42501', async () => as(db, spvPrd, SET, [null, null, 56, 14, 14, 20, null]));
+  await expectError('42501', async () => as(db, absUser, SET, [PRD, null, 42, 7, 7, 30, null]));
+  await expectError('42501', async () => as(db, spvHse, SET, [PRD, null, 42, 7, 7, 30, null]));
+  const pd = (await as(db, spvPrd, SET, [PRD, null, 42, 7, 7, 30, null])).rows[0];
+  eq(pd.work_days, 42); eq(pd.off_days, 7);
+  const pe = (await as(db, spvPrd, SET, [null, wk.id, 1, 3, 0, 100, `${y}-01-01`])).rows[0];
+  eq((await as(db, absUser, `select work_days, off_days from public.roster_policy_for($1)`, [wk.id])).rows[0].off_days, 3);
+  await expectError('22023', async () => as(db, hrStaff, `select public.roster_policy_delete($1)`, [(await db.query(`select id from public.roster_policies where department_id is null and employee_id is null`)).rows[0].id]));
+  // CPR: lebih dari batas hari ditolak, dalam batas lolos & final di atasan
+  const CREATE = `select (l).* from public.leave_request_create(null, 'CPR', $1::date, $2::date, 'Cuti periodik') l`;
+  await expectError('22023', async () => as(db, absUser, CREATE, [`${y}-08-03`, `${y}-08-06`]));
+  const c = (await as(db, absUser, CREATE, [`${y}-08-03`, `${y}-08-05`])).rows[0];
+  eq(Number(c.days), 3);
+  eq((await as(db, spvPrd, `select (l).status from public.leave_request_decide($1, true) l`, [c.id])).rows[0].status, 'approved');
+  eq((await db.query(`select count(*)::int c from public.roster_entries where employee_id = $1 and work_date between $2 and $3 and code = 'CUTI'`, [wk.id, `${y}-08-03`, `${y}-08-05`])).rows[0].c, 3);
+  // jeda kerja sejak cuti periodik terakhir: kebijakan karyawan diubah 30 hari kerja
+  await as(db, spvPrd, SET, [null, wk.id, 30, 3, 0, 100, `${y}-01-01`]);
+  await expectError('22023', async () => as(db, absUser, CREATE, [`${y}-08-10`, `${y}-08-12`]));
+  // beberapa jenis dalam satu pengajuan: terhubung group_id, tiap jenis punya nomor
+  const parts = JSON.stringify([{ type: 'CT', start: `${y}-10-05`, end: `${y}-10-05` }, { type: 'IZN', start: `${y}-10-12`, end: `${y}-10-12`, reason: 'Urusan keluarga' }]);
+  const m = (await as(db, absUser, `select (l).* from public.leave_request_multi(null, $1::jsonb, 'Paket cuti') l`, [parts])).rows;
+  eq(m.length, 2); eq(m[0].group_id !== null && m[0].group_id === m[1].group_id, true); eq(m[0].request_no !== m[1].request_no, true);
+  await expectError('22023', async () => as(db, absUser, `select (l).* from public.leave_request_multi(null, '[]'::jsonb, 'x') l`));
+  // CT satu tahap (atasan), IZN dua tahap (atasan lalu HRGA)
+  eq((await as(db, spvPrd, `select (l).status from public.leave_request_decide($1, true) l`, [m[0].id])).rows[0].status, 'approved');
+  eq((await as(db, spvPrd, `select (l).status from public.leave_request_decide($1, true) l`, [m[1].id])).rows[0].status, 'approved_1');
+  // jadwal terdekat: cuti di roster yang dimasukkan atasan memberi tahu karyawan & muncul di daftar
+  const t1 = await due(3), t2 = await due(4);
+  await as(db, spvPrd, ROSTER, [wk.id, t1, t2, 'CUTI']);
+  eq((await db.query(`select count(*)::int c from public.notifications where user_id = $1 and title like 'Jadwal cuti Anda%'`, [absUser])).rows[0].c, 1);
+  const up = (await as(db, absUser, `select * from public.upcoming_leave(14) where mine`)).rows;
+  eq(up.length, 1); eq(up[0].days, 2); eq(up[0].starts_in, 3);
+  eq((await as(db, spvHse, `select * from public.upcoming_leave(14) where employee_id = $1`, [wk.id])).rows.length, 1);
+  await as(db, hrStaff, `select public.roster_policy_delete($1)`, [pe.id]);
 });
 await test('lembur (SPL): batas jam per hari & minggu, tidak bentrok, disetujui atasan bukan pembuat', async () => {
   await as(db, spvPrd, ROSTER, [wk.id, today, today, 'D']);
