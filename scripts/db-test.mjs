@@ -1105,6 +1105,21 @@ await test('PO lewat HO: site kirim, HO terima, dikembalikan ke site (beli di si
   await expectError('22023', async () => as(db, hoUser, R, [b.id, 'return', null, null]));
   eq((await as(db, hoUser, R, [b.id, 'order', null, 'Dibeli dari vendor pusat'])).rows[0].ho_stage, 'ordered');
 });
+await test('site & HO: PR/PO terpisah per site; HO hanya melihat PO yang dikirim ke HO; pengalihan site oleh pengelola pengguna', async () => {
+  const hoU = await createUser('ho.site@bsb.co.id'), other = await createUser('hs.lain@bsb.co.id');
+  await db.query(`insert into public.user_roles(user_id, role_code) values ($1, 'HO_PROCUREMENT'), ($2, 'STAFF')`, [hoU, other]);
+  await expectError('42501', async () => as(db, logStaff, `select public.profile_site_set($1, 'HO')`, [hoU]));
+  await as(db, adminId, `select public.profile_site_set($1, 'HO')`, [hoU]);
+  await as(db, adminId, `select public.profile_site_set($1, 'HO')`, [other]);
+  await expectError('22023', async () => as(db, adminId, `select public.profile_site_set($1, 'XX')`, [other]));
+  const pr = (await db.query(`insert into public.purchase_requisitions(pr_no, purpose, requested_by, created_by) select 'PR-S-' || substr(gen_random_uuid()::text,1,6), 'uji site', $1, $1 returning id`, [logStaff]).catch(() => null));
+  const po = (await db.query(`insert into public.purchase_orders(po_no, supplier_id, status, total_value, created_by, pr_id) values ('PO-S-' || substr(gen_random_uuid()::text,1,6), $1, 'issued', 1, $2, $3) returning id`, [sup.id, logStaff, pr?.rows[0]?.id ?? null])).rows[0];
+  const seen = async u => (await as(db, u, `select id from public.purchase_orders where id = $1`, [po.id])).rowCount;
+  eq(await seen(logStaff), 1); eq(await seen(hoU), 0); eq(await seen(other), 0);
+  await as(db, logStaff, `select public.po_ho_route($1, 'send', 'site', null)`, [po.id]);
+  eq(await seen(hoU), 1); eq(await seen(other), 0);
+  eq((await as(db, logStaff, `select site_id = app.default_site() ok from public.purchase_orders where id = $1`, [po.id])).rows[0].ok, true);
+});
 await test('inspeksi SPIP mingguan: Plant/HSE, satu per objek per minggu, butir tidak sesuai wajib catatan dan memberi tahu', async () => {
   const rec = (await db.query(`select id from public.commissioning_records where ref_code = 'SJ-01'`)).rows[0].id;
   const items = JSON.stringify([{ text: 'Stiker terpasang', result: 'ok' }, { text: 'Kondisi fisik', result: 'ok' }]);
