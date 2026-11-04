@@ -7,6 +7,7 @@ import { fmtDate } from '@/lib/documents';
 import { TRAINING_STATUS } from '@/lib/hrga';
 import { createTraining } from '../actions';
 import { Files } from '../../she/fields';
+import { OtherCompetency } from './other-competency';
 import { TRAINING_LEVEL } from '@/lib/hrga';
 import { HrTabs } from '../tabs';
 import { today, sheMasters } from '../../she/fields';
@@ -51,8 +52,7 @@ export default async function PelatihanPage() {
           <ActionForm action={createTraining} label="Simpan & kirim undangan" primary className="max-w-4xl">
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="grid gap-1 text-sm sm:col-span-2">Judul<input name="title" required className={input} placeholder="mis. Defensive driving internal" /></label>
-              <label className="grid gap-1 text-sm">Kompetensi yang diberikan
-                <select name="competency" className={input} defaultValue=""><option value="">–</option>{(comps ?? []).map(c => <option key={c.id} value={c.id}>{c.code} · {c.name}</option>)}</select></label>
+              <OtherCompetency comps={comps ?? []} />
               <label className="grid gap-1 text-sm">Tanggal<input type="date" name="held_on" required defaultValue={today()} className={input} /></label>
               <label className="grid gap-1 text-sm">Jam mulai<input type="time" name="start" className={input} /></label>
               <label className="grid gap-1 text-sm">Durasi (jam)<input type="number" name="hours" required min={0.5} step="0.5" className={input} /></label>

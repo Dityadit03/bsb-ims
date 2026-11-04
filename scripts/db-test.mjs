@@ -1683,6 +1683,14 @@ await test('pra-tes, pasca-tes, umpan balik: hanya peserta hadir, urutan pra-pas
   eq(ext.kind, 'external');
   await expectError('22023', async () => as(db, hrStaff, `select public.training_questions_save($1, $2::jsonb)`, [ext.id, QS]));
 });
+await test('kompetensi "Lainnya" untuk training internal: dibuat sekali per nama, hanya penyelenggara', async () => {
+  await expectError('42501', async () => as(db, absUser, `select public.training_competency_other('Tanggap darurat')`));
+  const a = (await as(db, spvPrd, `select public.training_competency_other('Tanggap darurat') id`)).rows[0].id;
+  const b = (await as(db, spvPrd, `select public.training_competency_other('  tanggap DARURAT ') id`)).rows[0].id;
+  eq(a, b);
+  const c = (await db.query(`select code, category, validity_months from public.competencies where id = $1`, [a])).rows[0];
+  eq(c.category, 'training'); eq(c.code.startsWith('TRN-'), true); eq(c.validity_months, null);
+});
 await test('lembur (SPL): batas jam per hari & minggu, tidak bentrok, disetujui atasan bukan pembuat', async () => {
   await as(db, spvPrd, ROSTER, [wk.id, today, today, 'D']);
   const SPL = `select (o).* from public.overtime_request_create(null, $1::date, $2::time, $3::time, 'Perbaikan jalan hauling') o`;

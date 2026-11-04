@@ -83,10 +83,17 @@ export async function createTraining(_: ActionState, f: FormData): Promise<Actio
     const supabase = await createClient();
     const { data: auth } = await supabase.auth.getUser();
     const files = await uploadFormFiles(supabase, auth.user!.id, 'pelatihan', f.getAll('files'));
+    let competency = str(f, 'competency');
+    if (competency === '__other') {
+      const supabase2 = await createClient();
+      const { data, error } = await supabase2.rpc('training_competency_other', { p_name: str(f, 'competency_other') });
+      if (error) throw new Error(error.message);
+      competency = data as string;
+    }
     id = (await rpc('training_create', {
       p_title: str(f, 'title'), p_held_on: str(f, 'held_on'), p_start: str(f, 'start'), p_hours: num(f, 'hours'), p_location: str(f, 'location'),
       p_description: str(f, 'description'), p_speaker: str(f, 'speaker'), p_speaker_org: str(f, 'speaker_org'), p_speaker_bio: str(f, 'speaker_bio'),
-      p_competency: str(f, 'competency'), p_departments: f.getAll('dept').map(String), p_levels: f.getAll('level').map(String), p_attachments: files,
+      p_competency: competency, p_departments: f.getAll('dept').map(String), p_levels: f.getAll('level').map(String), p_attachments: files,
     })).id;
   } catch (e) { return { error: (e as Error).message }; }
   redirect(`/hrga/pelatihan/${id}`);
