@@ -146,14 +146,14 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
         <Panel title="Daftarkan / perbarui barang">
           <ActionForm action={saveMaterial} label="Simpan barang" className="max-w-3xl">
             <div className="grid gap-3 sm:grid-cols-3">
-              <input name="code" required className={`${input} uppercase`} placeholder="Kode, mis. SP-FLT-01" />
+              <input name="code" required className={`${input} uppercase`} placeholder="Kode, mis. SP-FLT-01" title="Huruf, angka, titik, / atau strip" />
               <input name="name" required className={input} placeholder="Nama barang" />
               <select name="category" className={input} aria-label="Kategori">{Object.entries(CATEGORY).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
               <input name="uom" required className={input} placeholder="Satuan (pcs, L, set)" />
               <input type="number" name="min_stock" min={0} className={input} placeholder="Stok minimum" />
               <select name="active" className={input} aria-label="Aktif"><option value="true">Aktif</option><option value="false">Tidak aktif</option></select>
             </div>
-            <p className="text-xs text-muted">Kode yang sudah ada akan diperbarui. Stok dan harga hanya berubah lewat penerimaan, pengeluaran dan opname.</p>
+            <p className="text-xs text-muted">Kode hanya huruf, angka, titik, / dan strip (spasi otomatis jadi strip). Kode yang sudah ada akan diperbarui. Stok dan harga hanya berubah lewat penerimaan, pengeluaran dan opname.</p>
           </ActionForm>
         </Panel>
       )}

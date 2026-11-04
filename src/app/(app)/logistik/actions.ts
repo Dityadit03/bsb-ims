@@ -8,10 +8,13 @@ export type ActionState = { error?: string; ok?: string };
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim() || null;
 const num = (f: FormData, k: string) => (str(f, k) == null ? null : Number(str(f, k)));
 
+// Kode barang: huruf besar/angka dan . / - saja. Spasi dan _ diganti '-', karakter lain dibuang.
+const normCode = (v: string | null) => v?.toUpperCase().replace(/[\s_]+/g, '-').replace(/[^A-Z0-9./-]/g, '').replace(/^[^A-Z0-9]+/, '') || null;
+
 async function rpc(fn: string, args: Record<string, unknown>) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc(fn, args);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(/_code_check/.test(error.message) ? 'Kode hanya boleh huruf, angka, titik, garis miring atau strip (mis. SOLAR-B50), dan harus diawali huruf/angka.' : error.message);
   return data as { id: string };
 }
 
@@ -23,7 +26,7 @@ async function run(path: string, ok: string, fn: () => Promise<unknown>): Promis
 
 export async function saveMaterial(_: ActionState, f: FormData) {
   return run('/logistik', 'Barang disimpan', () => rpc('material_save', {
-    p_code: str(f, 'code'), p_name: str(f, 'name'), p_category: str(f, 'category'), p_uom: str(f, 'uom'),
+    p_code: normCode(str(f, 'code')), p_name: str(f, 'name'), p_category: str(f, 'category'), p_uom: str(f, 'uom'),
     p_min_stock: num(f, 'min_stock') ?? 0, p_active: str(f, 'active') !== 'false',
   }));
 }
