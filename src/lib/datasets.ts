@@ -238,7 +238,9 @@ export function tableOf(d: Dataset, rows: Record<string, unknown>[]) {
 
 export function toCsv(rows: (string | number | boolean | null)[][]) {
   return rows.map(r => r.map(v => {
-    const s = v == null ? '' : String(v);
+    let s = v == null ? '' : String(v);
+    // Cegah injeksi rumus (Excel/Sheets menjalankan teks berawalan = + - @): beri apostrof, kecuali angka murni
+    if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s) && !/^[+-]?\d+([.,]\d+)*$/.test(s)) s = `'${s}`;
     return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   }).join(',')).join('\r\n');
 }

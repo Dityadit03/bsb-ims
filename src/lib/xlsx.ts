@@ -1,5 +1,6 @@
 import 'server-only';
 import { deflateRawSync, inflateRawSync } from 'node:zlib';
+import { env } from '@/lib/env';
 
 // Penulis & pembaca .xlsx minimal tanpa pustaka luar: cukup untuk ekspor register dan impor satu lembar.
 export type Cell = string | number | boolean | null | undefined;
@@ -67,7 +68,7 @@ function sheetXml(rows: Cell[][]) {
     if (typeof v === 'number' && Number.isFinite(v)) return `<c r="${ref}"${s}><v>${v}</v></c>`;
     if (typeof v === 'boolean') return `<c r="${ref}"${s} t="b"><v>${v ? 1 : 0}</v></c>`;
     // tautan foto aplikasi menjadi sel yang bisa diklik (rumus HYPERLINK), teks tampil "Buka foto"
-    if (ri > 0 && typeof v === 'string' && /^https:\/\/[^\s"]+\/api\/lampiran\/[0-9a-f-]{36}$/.test(v)) {
+    if (ri > 0 && typeof v === 'string' && /^https:\/\/[^\s"]+\/api\/lampiran\/[0-9a-f-]{36}$/.test(v) && v.startsWith(`${env.appUrl}/api/lampiran/`)) {
       return `<c r="${ref}" t="str"><f>HYPERLINK("${esc(v)}","Buka foto")</f><v>Buka foto</v></c>`;
     }
     return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${esc(String(v))}</t></is></c>`;

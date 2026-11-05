@@ -2711,6 +2711,34 @@ await test('isolasi site: data site A tidak terlihat di site B; hanya admin sist
   eq((await as(db, adminId, `select (s).code from public.site_save('XYZ', 'Site Baru', 'xyz.co.id') s`)).rows[0].code, 'XYZ');
   eq((await anon(`select code from public.login_sites() where code = 'XYZ'`)).rowCount, 1);
 });
+await test('audit keamanan: akun pending tidak melihat data apa pun selain profil/notifikasi sendiri', async () => {
+  const pendingId = await createUser('pendaftar.baru@gmail.com');
+  eq((await db.query(`select status from public.profiles where id = $1`, [pendingId])).rows[0].status, 'pending');
+  const rels = (await db.query(`select c.relname from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'v') order by 1`)).rows.map(r => r.relname);
+  const seen = [];
+  for (const t of rels) {
+    try { const n = (await as(db, pendingId, `select count(*)::int c from public."${t}"`)).rows[0].c; if (n > 0) seen.push(`${t}=${n}`); } catch { /* tanpa hak = aman */ }
+  }
+  const bad = seen.filter(x => !/^(profiles|user_roles|notifications|user_site_context|executive_kpi)=/.test(x));
+  if (bad.length) throw new Error('akun pending melihat data: ' + bad.join(', '));
+});
+await test('audit keamanan: TRUNCATE/REFERENCES/TRIGGER dicabut; notifikasi hanya read_at yang bisa diubah sendiri', async () => {
+  const n = (await db.query(`select count(*)::int c from information_schema.role_table_grants where grantee in ('anon','authenticated') and table_schema = 'public' and privilege_type in ('TRUNCATE','REFERENCES','TRIGGER')`)).rows[0].c;
+  eq(n, 0);
+  await db.query(`insert into public.notifications(user_id, kind, title, body) values ($1, 'uji', 'Asli', 'Isi asli')`, [staffId]);
+  await expectError('42501', async () => as(db, staffId, `update public.notifications set title = 'Palsu', link = 'https://jahat.example' where user_id = $1`, [staffId]));
+  eq((await as(db, staffId, `update public.notifications set read_at = now() where user_id = $1 and kind = 'uji'`, [staffId])).rowCount, 1);
+});
+await test('audit keamanan: lampiran mengikuti hak atas rekaman pemilik; selfie hanya pemilik dan HRGA; berkas belum dikaitkan hanya pengunggah', async () => {
+  const ins = (path) => as(db, staffId, `insert into public.attachments(storage_path, file_name, mime_type, size_bytes, sha256, uploaded_by) values ($1, 'a.png', 'image/png', 1, repeat('a', 64), auth.uid()) returning id`, [path]);
+  const loose = (await ins(`drafts/${staffId}/lepas.png`)).rows[0].id;
+  const selfie = (await ins(`drafts/${staffId}/selfie.png`)).rows[0].id;
+  await db.query(`update public.attachments set owner_table = 'attendance_logs', owner_id = gen_random_uuid() where id = $1`, [selfie]);
+  const seeIt = async (u, id) => (await as(db, u, `select 1 from public.attachments where id = $1`, [id])).rowCount;
+  eq(await seeIt(staffId, loose), 1); eq(await seeIt(dcId, loose), 0);
+  eq(await seeIt(staffId, selfie), 1); eq(await seeIt(dcId, selfie), 0); eq(await seeIt(spvHse, selfie), 0); eq(await seeIt(hrStaff, selfie), 1);
+});
+
 await test('anon tidak punya hak apa pun atas tabel/view public; fungsi anon hanya verify_document, feed_rows & login_sites', async () => {
   eq((await db.query(`select count(*)::int c from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public'`)).rows[0].c, 0);
   const fn = (await db.query(`select string_agg(p.proname, ',' order by p.proname) s from pg_proc p join pg_namespace n on n.oid = p.pronamespace
