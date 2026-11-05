@@ -104,16 +104,16 @@ export function Sidebar({ permissions, name, email, role, unit, siteName, alerts
   return (
     <>
       <header className="sticky top-0 z-30 border-b border-line bg-panel/95 backdrop-blur after:brand-line after:absolute after:inset-x-0 after:-bottom-px after:h-0.5">
-        <div className="flex h-16 items-center gap-3 px-3 sm:px-5">
+        <div className="flex h-16 items-center gap-2 px-3 sm:gap-3 sm:px-5">
           <button onClick={() => setOpen(true)} className={iconBtn(false)} aria-label="Buka menu" aria-expanded={open} aria-controls="nav"><Icon d={I.menu} /></button>
-          <Link href="/" className="flex shrink-0 items-center gap-2">
+          <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="Beranda">
             <Image src="/logo.png" alt="" width={34} height={34} priority className="size-8" />
             <span className="hidden leading-none sm:grid">
               <span className="text-[15px] font-extrabold tracking-tight">BSB IMS</span>
               <span className="text-xs font-medium text-muted">{siteName}</span>
             </span>
           </Link>
-          {sites.length > 1 && <div className="ml-auto md:ml-0"><SiteSwitcher sites={sites} active={siteCode} /></div>}
+          {sites.length > 1 && <div className="min-w-0 flex-1 md:flex-none"><SiteSwitcher sites={sites} active={siteCode} /></div>}
           <form action="/cari" role="search" className="mx-auto hidden w-full max-w-xl md:block">
             <label className="flex items-center gap-2 rounded-xl border border-line bg-ground px-3 py-2 text-muted focus-within:border-violet/60 focus-within:bg-panel">
               <Icon d={I.search} className="size-4" />
@@ -122,7 +122,7 @@ export function Sidebar({ permissions, name, email, role, unit, siteName, alerts
               <kbd className="rounded border border-line bg-panel px-1.5 font-mono text-xs">/</kbd>
             </label>
           </form>
-          <div ref={bar} className="relative ml-auto flex items-center gap-2 md:ml-0">
+          <div ref={bar} className="relative ml-auto flex shrink-0 items-center gap-2 md:ml-0">
             <Link href="/cari" className={`${iconBtn(false)} md:hidden`} aria-label="Cari"><Icon d={I.search} /></Link>
             <button onClick={() => toggle('alerts')} className={iconBtn(pop === 'alerts')} aria-expanded={pop === 'alerts'} aria-label={`Peringatan, ${alertTotal}`}>
               <Icon d={I.bell} />
