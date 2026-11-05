@@ -2,6 +2,7 @@ import Image from 'next/image';
 import { ClearOfflineCache } from './clear-offline-cache';
 import { LoginButton } from './login-button';
 import { NikForm } from './nik-form';
+import { SiteSelect } from './site-select';
 import { loginSites } from '@/lib/sites';
 
 export const metadata = { title: 'Masuk' };
@@ -25,13 +26,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <p className="text-sm text-coal-ink/70">Document Control, SMKP Minerba, SHE, Plant, Produksi, Logistik dan HRGA dalam satu sistem.</p>
         </div>
         <div className="grid gap-1.5">
-          <span className="text-xs text-coal-ink/60">Masuk ke</span>
-          <div className="grid gap-1 rounded-xl bg-white/10 p-1 text-sm font-semibold" style={{ gridTemplateColumns: `repeat(${Math.min(sites.length, 2)}, minmax(0, 1fr))` }}>
-            {sites.map(x => (
-              <a key={x.code} href={`/login?site=${x.code}${next ? `&next=${encodeURIComponent(next)}` : ''}`} aria-current={x.code === site.code}
-                className={`rounded-lg py-2 text-center ${x.code === site.code ? 'bg-white text-coal' : 'text-coal-ink/70'}`}>{x.name}</a>
-            ))}
-          </div>
+          <label className="text-xs text-coal-ink/60">Masuk ke site</label>
+          <SiteSelect sites={sites} value={site.code} next={next} />
         </div>
         {error === 'site' ? (
           <p role="alert" className="rounded-md border border-crit/40 bg-crit/10 px-3 py-2 text-sm">
@@ -45,7 +41,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <NikForm next={next} site={site.code} />
         <div className="flex items-center gap-3 text-xs text-coal-ink/50"><span className="h-px flex-1 bg-white/15" />atau<span className="h-px flex-1 bg-white/15" /></div>
         <LoginButton next={next} site={site.code} hd={site.hd} />
-        <p className="text-xs text-coal-ink/50">Login Google untuk akun email perusahaan. Akun baru perlu disetujui administrator sebelum bisa dipakai.</p>
+        <p className="text-xs text-coal-ink/50">Login Google untuk akun email perusahaan. Admin sistem dan akun HO bisa memilih site mana pun di atas. Akun baru perlu disetujui administrator sebelum bisa dipakai.</p>
       </div>
     </main>
   );
