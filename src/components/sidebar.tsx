@@ -1,6 +1,7 @@
 'use client';
 import { Icon as LineIcon } from '@/components/icon';
 import Image from 'next/image';
+import { SiteSwitcher } from '@/components/site-switcher';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -44,7 +45,8 @@ const Badge = ({ n, tone = 'crit' }: { n: number; tone?: 'crit' | 'violet' }) =>
 type Theme = 'system' | 'light' | 'dark';
 
 // Kerangka aplikasi: bilah atas (menu, cari, peringatan, pengaturan, profil) + menu samping yang dibuka dari tombol ☰.
-export function Sidebar({ permissions, name, email, role, unit, siteName, alerts, alertTotal }: {
+export function Sidebar({ permissions, name, email, role, unit, siteName, alerts, alertTotal, sites = [], siteCode = '' }: {
+  sites?: { code: string; name: string }[]; siteCode?: string;
   permissions: string[]; name: string; email: string; role: string; unit: string; siteName: string; alerts: Alert[]; alertTotal: number;
 }) {
   const path = usePathname();
@@ -111,6 +113,7 @@ export function Sidebar({ permissions, name, email, role, unit, siteName, alerts
               <span className="font-mono text-xs uppercase tracking-wider text-muted">{siteName}</span>
             </span>
           </Link>
+          {sites.length > 1 && <div className="ml-auto md:ml-0"><SiteSwitcher sites={sites} active={siteCode} /></div>}
           <form action="/cari" role="search" className="mx-auto hidden w-full max-w-xl md:block">
             <label className="flex items-center gap-2 rounded-xl border border-line bg-ground px-3 py-2 text-muted focus-within:border-violet/60 focus-within:bg-panel">
               <Icon d={I.search} className="size-4" />

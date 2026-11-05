@@ -1298,7 +1298,7 @@ await test('impor karyawan & sertifikat memakai kode departemen, nama jabatan da
 await test('anon hanya bisa memanggil verifikasi dokumen & feed spreadsheet', async () => {
   const r = await db.query(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')`);
-  eq(r.rows.map(x => x.proname).sort().join(','), 'feed_rows,verify_document');
+  eq(r.rows.map(x => x.proname).sort().join(','), 'feed_rows,login_sites,verify_document');
 });
 
 console.log('HRIS: Core HR');
@@ -2676,11 +2676,46 @@ await test('hapus akun: hanya lewat SQL Editor; ditolak bila punya riwayat bisni
   await expectError('23503', async () => db.query(`select public.admin_purge_user($1)`, [absUser])); // punya absensi/lampiran
   eq((await db.query(`select count(*)::int c from auth.users where id = $1`, [absUser])).rows[0].c, 1);
 });
-await test('anon tidak punya hak apa pun atas tabel/view public; fungsi anon hanya verify_document & feed_rows', async () => {
+const SHARED_TABLES = ['sites','profiles','user_roles','user_site_context','roles','permissions','role_permissions','allowed_domains','allowed_emails','app_settings',
+  'departments','sections','positions','notifications','notification_outbox','notification_prefs','push_subscriptions','nik_registrations','numbering_counters','numbering_schemes',
+  'registrations','feed_tokens','client_requests','holidays','leave_types','claim_types','pay_components','competencies','competency_requirements','compliance_frameworks',
+  'compliance_clauses','clause_mappings','document_types','documents','document_versions','document_distributions','workflow_definitions','workflow_versions','workflow_instances',
+  'workflow_tasks','approval_events','delegations','approver_designations','catalog_groups','catalog_models','catalog_parts','attachments','roster_policies','spip_check_items',
+  'resource_links','suppliers','purchase_requisitions','purchase_requisition_lines','supplier_quotes','purchase_orders','purchase_order_lines'];
+await test('isolasi site: setiap tabel public terisolasi per site atau tercatat sengaja dipakai bersama', async () => {
+  const rows = (await db.query(`select c.relname, exists(select 1 from pg_policy p where p.polrelid = c.oid and p.polname = 'site_isolation') iso
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind = 'r'`)).rows;
+  const loose = rows.filter(r => !r.iso && !SHARED_TABLES.includes(r.relname)).map(r => r.relname);
+  if (loose.length) throw new Error('tabel belum diklasifikasi (panggil app.site_isolate atau daftarkan sebagai bersama): ' + loose.join(', '));
+});
+await test('isolasi site: data site A tidak terlihat di site B; hanya admin sistem/HO yang berpindah site', async () => {
+  const hoUser = await createUser('ho.iso@bsb.co.id'), bdaUser = await createUser('bda.iso@bsb.co.id');
+  await as(db, adminId, `select public.profile_site_set($1, 'HO')`, [hoUser]);
+  const HOID = (await db.query(`select id from public.sites where code = 'HO'`)).rows[0].id;
+  await db.query(`insert into public.units(unit_no, unit_type, department_id, site_id) values ('HO-1', 'DT', $1, $2)`, [PLT, HOID]);
+  const nos = async u => (await as(db, u, `select unit_no from public.units order by unit_no`)).rows.map(r => r.unit_no);
+  eq((await nos(dhPlt)).includes('DT-21'), true); eq((await nos(dhPlt)).includes('HO-1'), false);
+  eq((await nos(hoUser)).includes('HO-1'), true); eq((await nos(hoUser)).includes('DT-21'), false);
+  await expectError('42501', async () => as(db, bdaUser, `select public.site_switch('HO')`));
+  await expectError('22023', async () => as(db, hoUser, `select public.site_switch('XX')`));
+  await as(db, hoUser, `select public.site_switch('BDA')`);
+  eq((await nos(hoUser)).includes('DT-21'), true); eq((await nos(hoUser)).includes('HO-1'), false);
+  await as(db, hoUser, `select public.site_switch('HO')`);
+  const inf = (await as(db, hoUser, `select * from public.my_site_info()`)).rows[0];
+  eq(inf.active_code, 'HO'); eq(inf.can_roam, true);
+  eq((await as(db, bdaUser, `select can_roam, active_code from public.my_site_info()`)).rows[0].can_roam, false);
+  // admin sistem boleh berpindah; daftar site hanya dikelola admin sistem; login_sites terbuka tanpa login
+  eq((await as(db, adminId, `select public.site_switch('HO') c`)).rows[0].c, 'HO');
+  await as(db, adminId, `select public.site_switch('BDA')`);
+  await expectError('42501', async () => as(db, hoUser, `select public.site_save('XYZ', 'Site Baru')`));
+  eq((await as(db, adminId, `select (s).code from public.site_save('XYZ', 'Site Baru', 'xyz.co.id') s`)).rows[0].code, 'XYZ');
+  eq((await anon(`select code from public.login_sites() where code = 'XYZ'`)).rowCount, 1);
+});
+await test('anon tidak punya hak apa pun atas tabel/view public; fungsi anon hanya verify_document, feed_rows & login_sites', async () => {
   eq((await db.query(`select count(*)::int c from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public'`)).rows[0].c, 0);
   const fn = (await db.query(`select string_agg(p.proname, ',' order by p.proname) s from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')`)).rows[0].s;
-  eq(fn, 'feed_rows,verify_document');
+  eq(fn, 'feed_rows,login_sites,verify_document');
 });
 await test('pengguna tanpa audit.read tidak melihat audit log', async () => {
   eq((await as(db, staffId, `select 1 from public.audit_logs`)).rowCount, 0);

@@ -16,7 +16,8 @@ Rencana build: https://claude.ai/artifact/1hBNpZYGgXVwAzeB28bgAi
 - Format nomor dokumen mengikuti Document Control BSB v4 (KBJ, MAN, SOP, STD, IK, F, PRG, REK, IZN, EXT, SRM, SRK, SKP) dan tidak boleh diubah.
 - Kode departemen/seksi: HSE(SFT,HLT,ENV) PLT(MTC) PRD(OPR) HRGA(HRD,GA) LOG(PUR) MGT(DIR,DC).
 - Setiap aturan bisnis baru diberi uji di `scripts/db-test.mjs`.
-- Fungsi yang boleh dipanggil `anon` hanya `verify_document` dan `feed_rows` (feed Google Sheets bertoken). Loop revoke di akhir migrasi baru wajib mengecualikan keduanya.
+- Fungsi yang boleh dipanggil `anon` hanya `verify_document`, `feed_rows` (feed Google Sheets bertoken) dan `login_sites` (kode+nama site untuk halaman login). Loop revoke di akhir migrasi baru wajib mengecualikan ketiganya.
+- Isolasi data per site: tabel baru di schema public wajib memanggil `select app.site_isolate('public.nama_tabel')` (kolom site_id + policy restrictive) atau, bila memang data bersama, ditambahkan ke `SHARED_TABLES` di `scripts/db-test.mjs` dan daftar kecuali di migrasi isolasi. Uji penjaga akan gagal bila tabel belum dikelompokkan. Hanya admin sistem dan akun HO yang boleh pindah site (`site_switch`). Catatan: fungsi security definer melewati RLS, jadi cek site sendiri bila membaca lintas tabel lewat UUID.
 - Register baru yang perlu diunduh/ditarik ke spreadsheet didaftarkan di `src/lib/datasets.ts` (feed hanya untuk data yang terbaca semua pengguna aktif, dan juga ditambahkan ke daftar di `feed_rows`).
 
 ## Perintah

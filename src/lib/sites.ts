@@ -1,8 +1,15 @@
+import 'server-only';
+import { createClient } from '@supabase/supabase-js';
 import { env } from '@/lib/env';
 
-// Pintu masuk per site di halaman login. Site baru: tambahkan di sini dan di tabel public.sites (kode, nama, email_domain).
-export const LOGIN_SITES: { code: string; name: string; short: string; hd: string }[] = [
-  { code: 'BDA', name: 'Site BDA', short: 'Site', hd: env.workspaceDomain },
-  { code: 'HO', name: 'Kantor Pusat (HO)', short: 'Kantor Pusat', hd: 'bsb-mine.id' },
-];
-export const siteByCode = (c?: string | null) => LOGIN_SITES.find(s => s.code === (c ?? '').toUpperCase());
+export type LoginSite = { code: string; name: string; hd: string };
+
+// Daftar site untuk halaman login, dibaca dari database (hanya kode, nama, domain email). Site baru ditambah admin sistem di /admin/site.
+export async function loginSites(): Promise<LoginSite[]> {
+  const fallback: LoginSite[] = [{ code: 'BDA', name: 'Site BDA', hd: env.workspaceDomain }];
+  try {
+    const { data, error } = await createClient(env.supabaseUrl, env.supabaseAnonKey, { auth: { persistSession: false } }).rpc('login_sites');
+    if (error || !data?.length) return fallback;
+    return (data as { code: string; name: string; email_domain: string | null }[]).map(s => ({ code: s.code, name: s.name, hd: s.email_domain || env.workspaceDomain }));
+  } catch { return fallback; }
+}
