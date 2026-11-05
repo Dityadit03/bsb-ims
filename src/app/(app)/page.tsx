@@ -71,7 +71,7 @@ export default async function HomePage() {
     <>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid gap-1.5">
-          <span className="font-mono text-xs uppercase tracking-wider text-muted">{date}</span>
+          <span className="text-sm font-medium text-muted">{date}</span>
           <h1 className="text-3xl font-extrabold leading-tight sm:text-4xl">Selamat {greet}, {first}</h1>
           <p className="text-sm text-muted">Ringkasan keselamatan, kompetensi, plant dan logistik site PT BDA.</p>
         </div>

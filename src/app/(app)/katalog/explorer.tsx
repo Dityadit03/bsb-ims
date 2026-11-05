@@ -46,7 +46,7 @@ export function Explorer({ models, current, groups, parts }: { models: CModel[];
         {models.map(m => (
           <Link key={m.id} href={`/katalog?model=${m.code}`} aria-current={m.id === current.id ? 'page' : undefined}
             className={`min-w-40 rounded-xl border p-3 text-sm transition-colors ${m.id === current.id ? 'border-violet bg-violet/10' : 'border-line bg-panel hover:border-violet/60'}`}>
-            <span className="block font-mono text-xs uppercase text-muted">{m.brand}</span>
+            <span className="block text-xs font-medium text-muted">{m.brand}</span>
             <span className="block font-semibold leading-snug">{m.name}</span>
           </Link>
         ))}
@@ -119,7 +119,7 @@ export function Explorer({ models, current, groups, parts }: { models: CModel[];
           </ul>
         ) : part ? (
           <div className="grid gap-2 text-sm">
-            <span className="font-mono text-xs uppercase text-muted">Part #{part.ref_no} · {group?.name}</span>
+            <span className="text-xs font-medium text-muted">Part #{part.ref_no} · {group?.name}</span>
             <h3 className="text-lg font-bold leading-snug">{part.name}</h3>
             <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
               <dt className="text-muted">Nomor part</dt><dd className="font-mono font-semibold">{part.part_no}</dd>
@@ -134,7 +134,7 @@ export function Explorer({ models, current, groups, parts }: { models: CModel[];
           </div>
         ) : group ? (
           <div className="grid gap-2 text-sm">
-            <span className="font-mono text-xs uppercase text-muted">{gparts.length} part</span>
+            <span className="text-xs font-medium text-muted">{gparts.length} part</span>
             {group.description && <p>{group.description}</p>}
             {gparts.length === 0 ? <p className="text-muted">Belum ada part. Logistik/Plant mengisi dari buku parts lewat Impor Excel atau form kelola.</p> : (
               <ul className="grid gap-1.5">
@@ -148,7 +148,7 @@ export function Explorer({ models, current, groups, parts }: { models: CModel[];
           </div>
         ) : (
           <div className="grid gap-2 text-sm">
-            <span className="font-mono text-xs uppercase text-muted">{current.brand}</span>
+            <span className="text-xs font-medium text-muted">{current.brand}</span>
             <h3 className="text-lg font-bold leading-snug">{current.name}</h3>
             {current.description && <p>{current.description}</p>}
             <p className="text-muted">{groups.length} kelompok sistem · {parts.length} part terdaftar.</p>

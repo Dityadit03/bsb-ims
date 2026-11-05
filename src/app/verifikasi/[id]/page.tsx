@@ -19,7 +19,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ id: str
   return (
     <main className="grid min-h-dvh place-items-center bg-ground px-4 py-10">
       <div className="grid w-full max-w-lg gap-6">
-        <span className="font-mono text-xs uppercase tracking-wider text-muted">BSB IMS · Verifikasi dokumen terkendali</span>
+        <span className="text-sm font-medium text-muted">BSB IMS, verifikasi dokumen terkendali</span>
         {!data ? (
           <div className="grid gap-2 rounded-md border-2 border-crit bg-panel p-6">
             <h1 className="text-3xl font-bold text-crit">Tidak terdaftar</h1>

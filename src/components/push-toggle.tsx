@@ -39,7 +39,7 @@ export function PushToggle() {
       </span>
       <button type="button" role="switch" aria-checked={on} disabled={busy || !supported || install} onClick={flip}
         className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-40 ${on ? 'bg-violet' : 'bg-line'}`}>
-        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${on ? 'left-[22px]' : 'left-0.5'}`} />
+        <span className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
       </button>
     </div>
   );
@@ -71,7 +71,7 @@ export function WhatsappToggle() {
       </span>
       <button type="button" role="switch" aria-checked={st.opted_in} disabled={busy || (!st.number_hint && !st.opted_in)} onClick={flip}
         className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-40 ${st.opted_in ? 'bg-violet' : 'bg-line'}`}>
-        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${st.opted_in ? 'left-[22px]' : 'left-0.5'}`} />
+        <span className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${st.opted_in ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
       </button>
     </div>
   );

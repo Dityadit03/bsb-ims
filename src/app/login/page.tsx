@@ -25,7 +25,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <span className="grid size-12 place-items-center rounded-xl bg-white p-1.5 shadow-lg"><Image src="/logo.png" alt="Logo PT Berkarya Sejahtera Bersama" width={40} height={40} priority /></span>
           <span className="grid leading-tight">
             <span className="text-sm font-bold">PT Berkarya Sejahtera Bersama</span>
-            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-coal-ink/60">Mining · Hauling · Services</span>
+            <span className="text-xs text-coal-ink/60">Mining, hauling, services</span>
           </span>
         </div>
         <div className="grid max-w-xl gap-4">
@@ -44,7 +44,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <path d="M0 220V190l120-8 100 12 140-14 120 10 160-12 160 8V220Z" fill="#0f0b18" />
         </svg>
         <div className="absolute inset-x-0 bottom-0 hidden h-2 bg-[repeating-linear-gradient(135deg,#f95a11_0_14px,#0f0b18_14px_28px)] lg:block" aria-hidden="true" />
-        <p className="absolute bottom-5 left-6 hidden lg:block text-[11px] font-semibold uppercase tracking-[0.2em] text-coal-ink/70 sm:left-10 lg:left-14">Keselamatan adalah yang utama</p>
+        <p className="absolute bottom-5 left-6 hidden lg:block text-xs font-semibold text-coal-ink/70 sm:left-10 lg:left-14">Keselamatan adalah yang utama</p>
       </section>
 
       {/* Sisi kanan: form masuk */}
@@ -55,7 +55,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <p className="text-sm text-coal-ink/65">Pilih site, lalu masuk dengan NIK atau akun Google perusahaan.</p>
           </div>
           <div className="grid gap-1.5">
-            <label htmlFor="site-select" className="text-xs font-semibold uppercase tracking-wider text-coal-ink/60">Site</label>
+            <label htmlFor="site-select" className="text-xs font-semibold text-coal-ink/70">Site</label>
             <SiteSelect sites={sites} value={site.code} next={next} />
           </div>
           {error === 'site' ? (

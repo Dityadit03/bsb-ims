@@ -110,7 +110,7 @@ export function Sidebar({ permissions, name, email, role, unit, siteName, alerts
             <Image src="/logo.png" alt="" width={34} height={34} priority className="size-8" />
             <span className="hidden leading-none sm:grid">
               <span className="text-[15px] font-extrabold tracking-tight">BSB IMS</span>
-              <span className="font-mono text-xs uppercase tracking-wider text-muted">{siteName}</span>
+              <span className="text-xs font-medium text-muted">{siteName}</span>
             </span>
           </Link>
           {sites.length > 1 && <div className="ml-auto md:ml-0"><SiteSwitcher sites={sites} active={siteCode} /></div>}
@@ -131,7 +131,7 @@ export function Sidebar({ permissions, name, email, role, unit, siteName, alerts
             <button onClick={() => toggle('settings')} className={`${iconBtn(pop === 'settings')} hidden sm:grid`} aria-expanded={pop === 'settings'} aria-label="Pengaturan"><Icon d={I.gear} /></button>
             <button onClick={() => toggle('profile')} aria-expanded={pop === 'profile'} aria-label="Profil"
               className={`flex items-center gap-2 rounded-xl border bg-panel py-1 pl-1 pr-1 transition-colors sm:pr-3 ${pop === 'profile' ? 'border-accent' : 'border-line hover:border-violet/50'}`}>
-              <span className="grid size-8 place-items-center rounded-full bg-[linear-gradient(135deg,#ea0b60,#900fb3_60%,#f95a11)] text-xs font-bold text-white">{initials(name)}</span>
+              <span className="grid size-8 place-items-center rounded-full brand-line text-xs font-bold text-white">{initials(name)}</span>
               <span className="hidden text-sm font-semibold sm:inline">{first}</span>
             </button>
 
@@ -232,7 +232,7 @@ export function Sidebar({ permissions, name, email, role, unit, siteName, alerts
               const n = itemBadge(item.href);
               return (
                 <Link key={item.href} href={item.href} onClick={() => setOpen(false)}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors ${active ? 'border border-accent/70 bg-[linear-gradient(90deg,rgb(194_18_90/0.28),transparent)] font-semibold text-white' : 'border border-transparent text-coal-ink/85 hover:bg-white/5 hover:text-white'}`}>
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors ${active ? 'border border-accent/70 bg-accent/25 font-semibold text-white' : 'border border-transparent text-coal-ink/85 hover:bg-white/5 hover:text-white'}`}>
                   {g.code === 'M0' && <Icon d={item.href === '/' ? I.home : I.inbox} className="size-4 shrink-0 opacity-80" />}
                   <span className="truncate">{item.label}</span>
                   <Badge n={n} tone={item.href === '/tugas' ? 'violet' : 'crit'} />

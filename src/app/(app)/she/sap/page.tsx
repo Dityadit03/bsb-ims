@@ -155,7 +155,7 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
             <section className="flex min-w-0 items-center gap-5 rounded-2xl border border-line bg-panel p-5 shadow-soft sm:gap-7 sm:p-6">
               <Ring value={mtdAll} size={128} stroke={12}><span className="text-3xl sm:text-4xl">{fmtPct(mtdAll)}</span></Ring>
               <div className="grid gap-1.5">
-                <span className="font-mono text-xs font-semibold uppercase tracking-wider text-muted">SAP site · month to date</span>
+                <span className="text-sm font-semibold text-muted">SAP site, month to date</span>
                 <span className={`text-2xl font-extrabold tracking-tight sm:text-3xl ${status[1]}`}>{status[0]}</span>
                 {delta != null && (
                   <span className={`w-fit rounded-full px-2 py-0.5 text-xs font-semibold ${delta < 0 ? 'bg-crit/10 text-crit' : 'bg-ok/12 text-ok'}`}>
@@ -173,7 +173,7 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
                     <section key={m.key} className={`flex items-center gap-3 rounded-2xl border border-line border-t-4 bg-panel p-4 shadow-soft ${m.border}`}>
                       <Ring value={pooled(mtdRows, m.key)} size={64} stroke={7}><span className="text-sm">{fmtPct(pooled(mtdRows, m.key))}</span></Ring>
                       <div className="grid gap-0.5">
-                        <span className="flex items-center gap-1.5 font-mono text-xs font-semibold uppercase tracking-wider text-muted">
+                        <span className="flex items-center gap-1.5 text-sm font-semibold text-muted">
                           <span className="size-2 rounded-full" style={{ background: m.color }} />{m.label}
                         </span>
                         <span className="tabular"><b className="text-2xl font-extrabold">{t.act}</b><span className="text-sm text-muted"> / {t.plan}</span></span>

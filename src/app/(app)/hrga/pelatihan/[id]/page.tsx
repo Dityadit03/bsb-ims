@@ -70,7 +70,7 @@ export default async function TrainingDetail({ params }: { params: Promise<{ id:
         {qr && (
           <Panel title="QR kehadiran" sub="Tampilkan di layar atau cetak. Peserta memindai dengan HP, masuk, lalu menekan Hadir. Hanya berlaku pada hari pelatihan.">
             <Image src={qr} alt="QR kehadiran" width={180} height={180} unoptimized className="mx-auto rounded-lg border border-line bg-white p-1" />
-            <p className="break-all text-center font-mono text-[11px] text-muted">{scanUrl}</p>
+            <p className="break-all text-center font-mono text-xs text-muted">{scanUrl}</p>
             {t.status === 'planned' && manager && (
               <ActionForm action={setTrainingQr} label={t.qr_open ? 'Tutup kehadiran QR' : 'Buka kehadiran QR'} hidden={{ training: t.id, open: t.qr_open ? '0' : '1' }} />
             )}
