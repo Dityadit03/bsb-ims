@@ -14,8 +14,9 @@ export const metadata = { title: 'Inspeksi SPIP mingguan' };
 type W = { record_id: string; object_type: string; ref_code: string; name: string; this_week_on: string | null; this_week_result: string | null; last_inspected_on: string | null; due: boolean };
 type Item = { id: string; object_type: string | null; text: string; sort_order: number; active: boolean };
 
-export default async function SpipWeekly() {
+export default async function SpipWeekly({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const s = await getSession();
+  const sp = await searchParams;
   const supabase = await createClient();
   const [{ data: weekly }, { data: items }] = await Promise.all([
     supabase.from('spip_weekly').select('*').order('ref_code').returns<W[]>(),
@@ -42,14 +43,14 @@ export default async function SpipWeekly() {
           <ul className="grid gap-2">
             {rows.map(r => (
               <li key={r.record_id} className="rounded-lg border border-line px-3 py-2">
-                <details>
+                <details open={sp.cek === r.record_id}>
                   <summary className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                     <span className="font-mono text-xs">{r.ref_code}</span><span>{r.name}</span>
                     <span className="text-xs text-muted">{OBJECT_TYPE[r.object_type]}</span>
                     {r.due ? <Pill tone="warn">Belum minggu ini</Pill> : <Pill tone={r.this_week_result === 'attention' ? 'crit' : 'ok'}>{r.this_week_result === 'attention' ? 'Ada temuan' : 'Sesuai'} · {fmtDate(r.this_week_on)}</Pill>}
                     <span className="text-xs text-muted">terakhir {r.last_inspected_on ? fmtDate(r.last_inspected_on) : 'belum pernah'}</span>
                   </summary>
-                  {write && r.due && (
+                  {write && r.due && (sp.cek === r.record_id ? (
                     <ActionForm action={inspectSpip} label="Simpan inspeksi" primary hidden={{ record: r.record_id }} className="mt-3 max-w-3xl">
                       {itemsFor(r.object_type).map((i, n) => (
                         <div key={i.id} className="grid gap-1 rounded border border-line p-2 text-sm sm:grid-cols-[2fr_auto_2fr] sm:items-center">
@@ -64,7 +65,7 @@ export default async function SpipWeekly() {
                       <label className="grid gap-1 text-sm">Catatan umum<input name="note" className={input} /></label>
                       <Files label="Foto inspeksi" />
                     </ActionForm>
-                  )}
+                  ) : <Link href={`?cek=${r.record_id}`} className="mt-2 inline-block text-sm text-accent hover:underline" scroll={false}>Isi inspeksi</Link>)}
                 </details>
               </li>))}
           </ul>

@@ -19,9 +19,9 @@ export default async function KompetensiPage({ searchParams }: { searchParams: P
   const supabase = await createClient();
   const [{ data: gaps, count: gapCount }, { data: expiring }, { data: simper }, { data: comps }, { data: positions }, { data: reqs }, { depts }] = await Promise.all([
     supabase.from('competency_matrix').select('employee_id, nrp, full_name, department_code, competency_code, status', { count: 'exact' })
-      .in('status', ['missing', 'expired', 'revoked']).order('department_code').limit(300),
+      .in('status', ['missing', 'expired', 'revoked']).order('department_code').limit(100),
     supabase.from('employee_competency_view').select('id, employee_id, full_name, department_code, competency_code, valid_until, days_left')
-      .eq('validity', 'expiring').order('valid_until').limit(200),
+      .eq('validity', 'expiring').order('valid_until').limit(100),
     supabase.from('authorization_register').select('id, employee_id, nrp, full_name, department_code, competency_code, unit_type, cert_no, valid_until, validity')
       .order('unit_type').order('full_name'),
     supabase.from('competencies').select('id, code, name, category, validity_months, unit_type, active').order('code'),
@@ -45,6 +45,7 @@ export default async function KompetensiPage({ searchParams }: { searchParams: P
               <span>{name(g)} <span className="text-xs text-muted">· {g.department_code}</span></span>
               <span><span className="font-mono text-xs">{g.competency_code}</span> <Pill tone={VALIDITY[g.status][0]}>{VALIDITY[g.status][1]}</Pill></span></li>))} />
             : <p className="text-sm text-muted">Semua karyawan memenuhi kompetensi wajib jabatannya.</p>}
+          {(gapCount ?? 0) > 100 && <p className="mt-2 text-xs text-muted">Menampilkan 100 teratas. Daftar lengkap ada di Ekspor.</p>}
         </Panel>
         <Panel title={`Segera habis masa berlaku (${expiring?.length ?? 0})`}>
           {expiring?.length ? <Clamp className="grid gap-1 text-sm" items={expiring.map(x => (
