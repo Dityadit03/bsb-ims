@@ -58,3 +58,25 @@ export async function resetPassword(_: { error?: string; password?: string }, fo
   }
   return { password: (data as { password: string }).password };
 }
+
+// Aktivasi / tambah akses berdasarkan jabatan: peran dan lingkup departemen diturunkan oleh database dari jabatan yang dipilih.
+async function activateByPosition(nik: boolean, _: { error?: string }, form: FormData): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  if (!(await sessionOk(supabase))) return { error: EXPIRED };
+  const position = String(form.get('position') ?? '');
+  const { data: acc, error: e1 } = await supabase.rpc('position_access', { p_position: position });
+  if (e1) return { error: e1.message };
+  const a = (acc as { role_code: string; department_id: string | null }[] | null)?.[0];
+  if (!a) return { error: 'Jabatan tidak ditemukan atau tidak aktif' };
+  const { data: pos } = await supabase.from('positions').select('name').eq('id', position).maybeSingle();
+  const { error } = await supabase.rpc(nik ? 'activate_nik_user' : 'activate_user', {
+    p_user: String(form.get('user')), p_role: a.role_code, p_department: a.department_id,
+    p_basis: (form.get('basis') as string) || `Jabatan: ${pos?.name ?? position}`,
+  });
+  if (error) return { error: error.message };
+  revalidatePath('/admin/pengguna');
+  return {};
+}
+
+export async function activateUserByPosition(prev: { error?: string }, form: FormData) { return activateByPosition(false, prev, form); }
+export async function activateNikByPosition(prev: { error?: string }, form: FormData) { return activateByPosition(true, prev, form); }

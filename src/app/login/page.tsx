@@ -1,15 +1,15 @@
 import Image from 'next/image';
 import { ClearOfflineCache } from './clear-offline-cache';
-import { LoginButton } from './login-button';
-import { NikForm } from './nik-form';
+import { LoginMethods } from './login-methods';
 import { SiteSelect } from './site-select';
+import { microsoftEnabled } from '@/lib/auth-providers';
 import { loginSites } from '@/lib/sites';
 
 export const metadata = { title: 'Masuk' };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; error?: string; site?: string; akun?: string }> }) {
-  const { next, error, site: siteParam, akun } = await searchParams;
-  const sites = await loginSites();
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; error?: string; site?: string; akun?: string; via?: string }> }) {
+  const { next, error, site: siteParam, akun, via } = await searchParams;
+  const [sites, microsoft] = await Promise.all([loginSites(), microsoftEnabled()]);
   const byCode = (c?: string) => sites.find(s => s.code === (c ?? '').toUpperCase());
   const site = byCode(siteParam) ?? sites[0];
   const actual = byCode(akun);
@@ -52,7 +52,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="-mt-20 grid w-full max-w-md gap-6 rounded-2xl border border-white/10 bg-[#1b1230] p-6 shadow-2xl ring-1 ring-white/5 sm:p-8 lg:mt-0">
           <div className="grid gap-1">
             <h2 className="text-2xl font-bold">Selamat datang</h2>
-            <p className="text-sm text-coal-ink/65">Pilih site, lalu masuk dengan NIK atau akun Google perusahaan.</p>
+            <p className="text-sm text-coal-ink/65">Pilih site, lalu masuk dengan NIK atau akun email kantor.</p>
           </div>
           <div className="grid gap-1.5">
             <label htmlFor="site-select" className="text-xs font-semibold text-coal-ink/70">Site</label>
@@ -64,12 +64,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             </p>
           ) : error && (
             <p role="alert" className="rounded-md border border-crit/40 bg-crit/10 px-3 py-2 text-sm">
-              Login Google gagal. Gunakan akun email perusahaan {site.name}, lalu coba lagi.
+              Login dengan akun email gagal. Coba lagi, atau hubungi administrator bila akun email Anda belum terdaftar.
             </p>
           )}
-          <NikForm next={next} site={site.code} />
-          <div className="flex items-center gap-3 text-xs text-coal-ink/50"><span className="h-px flex-1 bg-white/15" />atau<span className="h-px flex-1 bg-white/15" /></div>
-          <LoginButton next={next} site={site.code} hd={site.hd} />
+          <LoginMethods next={next} site={site.code} microsoft={microsoft} initial={via === 'email' || (error && error !== 'site') ? 'email' : 'nik'} />
           <p className="text-xs leading-relaxed text-coal-ink/50">Akun baru perlu disetujui administrator sebelum bisa dipakai. Admin sistem dan akun HO dapat memilih site mana pun.</p>
         </div>
       </section>

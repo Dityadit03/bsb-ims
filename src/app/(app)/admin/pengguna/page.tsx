@@ -1,7 +1,7 @@
 import { PageHeader, Panel, Pill, Table } from '@/components/ui';
 import { requirePermission } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
-import { ActivateForm } from './activate-form';
+import { ActivateForm, PositionForm, type AccessInfo, type PositionOption } from './activate-form';
 import { RejectForm, ResetPasswordForm } from './nik-panel';
 
 export const metadata = { title: 'Pengguna & peran' };
@@ -17,20 +17,33 @@ const STATUS = { active: ['ok', 'Aktif'], pending: ['warn', 'Menunggu'], suspend
 export default async function PenggunaPage() {
   const s = await requirePermission('user.manage');
   const supabase = await createClient();
-  const [{ data: users }, { data: roles }, { data: depts }] = await Promise.all([
+  const [{ data: users }, { data: roles }, { data: depts }, { data: poss }, { data: acc }] = await Promise.all([
     supabase.from('profiles')
       .select('id, email, full_name, status, created_at, departments(code), user_roles!user_roles_user_id_fkey(role_code, valid_until, departments(code))')
       .order('status').order('email').returns<Row[]>(),
     supabase.from('roles').select('code, name').order('code'),
     supabase.from('departments').select('id, code, name').order('sort_order'),
+    supabase.from('positions').select('id, name, level, department_id').eq('active', true).order('name').returns<{ id: string; name: string; level: string; department_id: string | null }[]>(),
+    supabase.rpc('position_access'),
   ]);
+  const deptById = new Map((depts ?? []).map(d => [d.id, d]));
+  const roleName = new Map((roles ?? []).map(r => [r.code, r.name]));
+  const positions: PositionOption[] = (poss ?? []).map(p => ({ id: p.id, name: p.name, level: p.level, group: p.department_id ? `${deptById.get(p.department_id)?.code} · ${deptById.get(p.department_id)?.name}` : 'Kantor pusat (HO)' }))
+    .sort((a, b) => (a.group === 'Kantor pusat (HO)' ? 1 : 0) - (b.group === 'Kantor pusat (HO)' ? 1 : 0) || a.group.localeCompare(b.group) || a.name.localeCompare(b.name));
+  const access: AccessInfo = Object.fromEntries(((acc ?? []) as { position_id: string; role_code: string; role_name: string; department_id: string | null }[])
+    .map(a => [a.position_id, { role: a.role_name ?? roleName.get(a.role_code) ?? a.role_code, scope: a.department_id ? (deptById.get(a.department_id)?.name ?? '') : 'semua departemen' }]));
   const isNik = (email: string) => email.endsWith('@nrp.bsb.local');
   const pending = (users ?? []).filter(u => u.status === 'pending' && !isNik(u.email));
   const { data: nikPending } = await supabase.rpc('nik_pending');
-  const nik = (nikPending ?? []) as {
+  const nikRaw = (nikPending ?? []) as {
     user_id: string; nrp: string; typed_name: string | null; registered_at: string; employee_id: string | null; employee_name: string | null;
     department: string | null; employee_status: string | null; already_linked: boolean; birth_match: boolean; birth_known: boolean;
   }[];
+  const { data: empPos } = nikRaw.length
+    ? await supabase.from('employees').select('id, position_id').in('id', nikRaw.map(r => r.employee_id).filter((x): x is string => !!x))
+    : { data: [] as { id: string; position_id: string | null }[] };
+  const posOf = new Map((empPos ?? []).map(e => [e.id, e.position_id]));
+  const nik = nikRaw;
 
   return (
     <>
@@ -56,7 +69,13 @@ export default async function PenggunaPage() {
                   </div>
                   {r.user_id === s.profile.id ? <p className="text-sm text-muted">Akun sendiri harus diaktifkan administrator lain.</p> : (
                     <>
-                      {okAll && <ActivateForm nik userId={r.user_id} roles={roles ?? []} departments={depts ?? []} />}
+                      {okAll && (
+                        <>
+                          <PositionForm nik userId={r.user_id} positions={positions} access={access} defaultPosition={r.employee_id ? posOf.get(r.employee_id) : null} />
+                          <details><summary className="cursor-pointer text-xs text-accent">Peran khusus (manual)</summary>
+                            <div className="mt-2"><ActivateForm nik userId={r.user_id} roles={roles ?? []} departments={depts ?? []} /></div></details>
+                        </>
+                      )}
                       <RejectForm userId={r.user_id} />
                     </>
                   )}
@@ -74,7 +93,13 @@ export default async function PenggunaPage() {
                 <div><b>{u.full_name}</b> <span className="text-sm text-muted">{u.email}</span></div>
                 {u.id === s.profile.id
                   ? <p className="text-sm text-muted">Akun sendiri harus diaktifkan administrator lain.</p>
-                  : <ActivateForm userId={u.id} roles={roles ?? []} departments={depts ?? []} />}
+                  : (
+                    <>
+                      <PositionForm userId={u.id} positions={positions} access={access} />
+                      <details><summary className="cursor-pointer text-xs text-accent">Peran khusus (manual)</summary>
+                        <div className="mt-2"><ActivateForm userId={u.id} roles={roles ?? []} departments={depts ?? []} /></div></details>
+                    </>
+                  )}
               </li>
             ))}
           </ul>
@@ -99,8 +124,12 @@ export default async function PenggunaPage() {
                   {u.status === 'active' && u.id !== s.profile.id && isNik(u.email) && <div className="mt-2"><ResetPasswordForm userId={u.id} /></div>}
                   {u.status === 'active' && u.id !== s.profile.id && (
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-xs text-accent">Tambah peran</summary>
-                      <div className="mt-2"><ActivateForm userId={u.id} roles={roles ?? []} departments={depts ?? []} label="Tambah peran" /></div>
+                      <summary className="cursor-pointer text-xs text-accent">Tambah akses</summary>
+                      <div className="mt-2 grid gap-3">
+                        <PositionForm userId={u.id} positions={positions} access={access} label="Tambah akses" />
+                        <details><summary className="cursor-pointer text-xs text-muted">Peran khusus (manual)</summary>
+                          <div className="mt-2"><ActivateForm userId={u.id} roles={roles ?? []} departments={depts ?? []} label="Tambah peran" /></div></details>
+                      </div>
                     </details>
                   )}
                 </td>

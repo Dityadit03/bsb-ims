@@ -2774,6 +2774,28 @@ await test('jam kerja per site: HO punya jam kantor 08.30-17.30, shift D/N site 
   eq((await q(`select count(*)::int c from public.roster_entries where employee_id = $1 and work_date = '2031-01-04'`, [emp.id]))[0].c, 0);
   eq((await as(db, hrStaff, `select public.roster_apply_office($1::date, $2::date) c`, [from, to])).rows[0].c, 0);
 });
+await test('akses menurut jabatan: peran diturunkan dari level jabatan, jabatan HO memberi HO_UAT (tanpa kelola pengguna/payroll), hanya admin pengguna', async () => {
+  const ACC = `select p.name, p.level, a.role_code, a.department_id from public.position_access() a join public.positions p on p.id = a.position_id`;
+  await expectError('42501', async () => as(db, staffId, `select * from public.position_access()`));
+  const rows = (await as(db, adminId, ACC)).rows;
+  const lv = { DH: 'DEPT_HEAD', SH: 'SUPERINTENDENT', SPV: 'SUPERVISOR', FOR: 'SUPERVISOR', STAFF: 'STAFF', OPR: 'STAFF', PJO: 'PJO' };
+  const dept = rows.filter(r => r.department_id);
+  for (const r of dept) eq(r.role_code, lv[r.level]);
+  const ho = rows.filter(r => !r.department_id);
+  eq(ho.length >= 5, true);
+  for (const r of ho) eq(r.role_code, 'HO_UAT');
+  const perms = (await db.query(`select permission_code from public.role_permissions where role_code = 'HO_UAT'`)).rows.map(r => r.permission_code);
+  for (const x of ['user.manage', 'system.configure', 'payroll.manage', 'payroll.approve', 'payroll.read']) eq(perms.includes(x), false);
+  for (const x of ['plant.manage', 'log.ho_approve', 'hr.manage', 'prod.manage', 'she.report']) eq(perms.includes(x), true);
+  // aktivasi lewat jabatan HO: akun pending jadi aktif dengan HO_UAT lingkup semua departemen
+  const hoUser = await createUser('finance.baru@bsb-mine.id');
+  await db.query(`update public.profiles set status = 'pending' where id = $1`, [hoUser]);
+  const posId = (await db.query(`select id from public.positions where code = 'HO-FIN' and department_id is null`)).rows[0].id;
+  const acc = (await as(db, adminId, `select * from public.position_access($1)`, [posId])).rows[0];
+  await as(db, adminId, `select public.activate_user($1, $2, $3, 'Jabatan: Finance (HO)')`, [hoUser, acc.role_code, acc.department_id]);
+  eq((await db.query(`select status from public.profiles where id = $1`, [hoUser])).rows[0].status, 'active');
+  eq((await db.query(`select count(*)::int c from public.user_roles where user_id = $1 and role_code = 'HO_UAT' and department_id is null`, [hoUser])).rows[0].c, 1);
+});
 await test('anon tidak punya hak apa pun atas tabel/view public; fungsi anon hanya verify_document, feed_rows & login_sites', async () => {
   eq((await db.query(`select count(*)::int c from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public'`)).rows[0].c, 0);
   const fn = (await db.query(`select string_agg(p.proname, ',' order by p.proname) s from pg_proc p join pg_namespace n on n.oid = p.pronamespace
