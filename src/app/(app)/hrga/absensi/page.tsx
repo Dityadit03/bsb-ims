@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/server';
 import { fmtDate } from '@/lib/documents';
 import { ATT_STATUS, ROSTER, fmtTime, siteToday } from '@/lib/hrga';
 import { EmployeeDatalist, EmployeeInput } from '../../she/fields';
-import { manualAttendance, reviewSelfie, saveLocation, saveShift, setAttendancePolicy, setHoliday } from '../waktu-actions';
+import { manualAttendance, reviewSelfie, applyOfficeRoster, saveLocation, saveShift, setAttendancePolicy, setHoliday } from '../waktu-actions';
 import { HrTabs } from '../tabs';
 
 export const metadata = { title: 'Absensi' };
@@ -54,7 +54,7 @@ async function Daily({ date, sp, base, supabase }: { date: string; sp: Record<st
   const pg = paginate(rows, sp.hal);
   const depts = [...new Set(all.map(r => r.department_code))].sort();
   const n = (s: string) => all.filter(r => r.status === s).length;
-  const scheduled = all.filter(r => r.roster_code === 'D' || r.roster_code === 'N');
+  const scheduled = all.filter(r => ['D', 'N', 'K'].includes(r.roster_code ?? ''));
   const present = scheduled.filter(r => r.clock_in).length;
 
   return (
@@ -123,7 +123,7 @@ async function Monthly({ month, sp, supabase }: { month: string; sp: Record<stri
   for (const r of data ?? []) {
     const a = map.get(r.employee_id) ?? { id: r.employee_id, nrp: r.nrp, name: r.full_name, dept: r.department_code, sched: 0, c: {}, late: 0, hours: 0 };
     a.c[r.status] = (a.c[r.status] ?? 0) + 1;
-    if (r.roster_code === 'D' || r.roster_code === 'N') a.sched++;
+    if (['D', 'N', 'K'].includes(r.roster_code ?? '')) a.sched++;
     a.late += r.late_minutes ?? 0; a.hours += Number(r.worked_hours ?? 0);
     map.set(r.employee_id, a);
   }
@@ -163,6 +163,9 @@ async function Monthly({ month, sp, supabase }: { month: string; sp: Record<stri
     </Panel>
   );
 }
+
+const SHIFT_LABEL: Record<string, string> = { D: 'Shift siang', N: 'Shift malam', K: 'Kantor' };
+const DAYS: [number, string][] = [[1, 'Sen'], [2, 'Sel'], [3, 'Rab'], [4, 'Kam'], [5, 'Jum'], [6, 'Sab'], [7, 'Min']];
 
 async function Settings({ isHr, supabase }: { isHr: boolean; supabase: Client }) {
   const year = siteToday().slice(0, 4);
@@ -207,19 +210,52 @@ async function Settings({ isHr, supabase }: { isHr: boolean; supabase: Client })
           </ActionForm>
         )}
       </Panel>
-      <Panel title="Shift kerja" sub="Toleransi terlambat dihitung dari jam mulai shift">
+      <Panel title="Jam kerja site" sub="Berlaku untuk site yang sedang dipilih. Toleransi terlambat dihitung dari jam masuk.">
         <div className="grid gap-3">
           {(shifts ?? []).map(s => isHr ? (
-            <ActionForm key={s.code} action={saveShift} label="Simpan" hidden={{ code: s.code }} className="grid-cols-2 md:grid-cols-5 md:items-end">
-              <label className="grid gap-1 text-sm">Shift {s.code}<input name="name" defaultValue={s.name} className={input} /></label>
-              <label className="grid gap-1 text-sm">Mulai<input type="time" name="start" defaultValue={s.start_time.slice(0, 5)} className={input} /></label>
-              <label className="grid gap-1 text-sm">Selesai<input type="time" name="end" defaultValue={s.end_time.slice(0, 5)} className={input} /></label>
+            <ActionForm key={s.code} action={saveShift} label="Simpan" hidden={s.code === 'K' ? { code: s.code, days_present: '1' } : { code: s.code }} className="grid-cols-2 md:grid-cols-5 md:items-end">
+              <label className="grid gap-1 text-sm">{SHIFT_LABEL[s.code] ?? s.code}<input name="name" defaultValue={s.name} className={input} /></label>
+              <label className="grid gap-1 text-sm">Masuk<input type="time" name="start" defaultValue={s.start_time.slice(0, 5)} className={input} /></label>
+              <label className="grid gap-1 text-sm">Pulang<input type="time" name="end" defaultValue={s.end_time.slice(0, 5)} className={input} /></label>
               <label className="grid gap-1 text-sm">Toleransi (mnt)<input type="number" name="grace" defaultValue={s.grace_minutes} className={input} /></label>
               <label className="grid gap-1 text-sm">Istirahat (mnt)<input type="number" name="break" defaultValue={s.break_minutes} className={input} /></label>
+              {s.code === 'K' && (
+                <fieldset className="col-span-full flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                  <legend className="mb-1 text-sm">Hari kerja</legend>
+                  {DAYS.map(([n, l]) => (
+                    <label key={n} className="flex items-center gap-1.5"><input type="checkbox" name="days" value={n} defaultChecked={s.work_days?.includes(n)} className="size-4 accent-[var(--color-accent)]" />{l}</label>
+                  ))}
+                </fieldset>
+              )}
             </ActionForm>
           ) : (
-            <p key={s.code} className="text-sm"><b>{s.code}</b> {s.name}: {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)}, toleransi {s.grace_minutes} menit</p>
+            <p key={s.code} className="text-sm"><b>{SHIFT_LABEL[s.code] ?? s.code}</b> {s.name}: {s.start_time.slice(0, 5)} sampai {s.end_time.slice(0, 5)}, toleransi {s.grace_minutes} menit
+              {s.code === 'K' && <>, hari kerja {DAYS.filter(([n]) => s.work_days?.includes(n)).map(([, l]) => l).join(', ')}</>}</p>
           ))}
+          {!shifts?.length && <p className="text-sm text-muted">Site ini belum punya jam kerja.</p>}
+          {isHr && !(shifts ?? []).some(s => s.code === 'K') && (
+            <ActionForm action={saveShift} label="Tambah jam kerja kantor" hidden={{ code: 'K', days_present: '1' }} className="grid-cols-2 md:grid-cols-5 md:items-end">
+              <label className="grid gap-1 text-sm">Nama<input name="name" defaultValue="Jam kerja kantor" className={input} /></label>
+              <label className="grid gap-1 text-sm">Masuk<input type="time" name="start" defaultValue="08:30" className={input} /></label>
+              <label className="grid gap-1 text-sm">Pulang<input type="time" name="end" defaultValue="17:30" className={input} /></label>
+              <label className="grid gap-1 text-sm">Toleransi (mnt)<input type="number" name="grace" defaultValue={15} className={input} /></label>
+              <label className="grid gap-1 text-sm">Istirahat (mnt)<input type="number" name="break" defaultValue={60} className={input} /></label>
+              <fieldset className="col-span-full flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                <legend className="mb-1 text-sm">Hari kerja</legend>
+                {DAYS.map(([n, l]) => (
+                  <label key={n} className="flex items-center gap-1.5"><input type="checkbox" name="days" value={n} defaultChecked={n <= 5} className="size-4 accent-[var(--color-accent)]" />{l}</label>
+                ))}
+              </fieldset>
+            </ActionForm>
+          )}
+          {isHr && (shifts ?? []).some(s => s.code === 'K') && (
+            <ActionForm action={applyOfficeRoster} label="Terapkan ke roster" className="mt-1 grid-cols-2 border-t border-line pt-3 md:grid-cols-3 md:items-end"
+              confirm="Isi roster jam kerja kantor untuk semua karyawan aktif site ini? Roster yang sudah ada tidak diubah.">
+              <p className="col-span-full text-xs text-muted">Mengisi roster kode K untuk semua karyawan aktif site ini pada hari kerja kantor, di luar hari libur. Roster yang sudah ada tidak ditimpa.</p>
+              <label className="grid gap-1 text-sm">Dari tanggal<input type="date" name="from" required defaultValue={siteToday()} className={input} /></label>
+              <label className="grid gap-1 text-sm">Sampai tanggal<input type="date" name="to" required className={input} /></label>
+            </ActionForm>
+          )}
         </div>
       </Panel>
       <Panel title={`Hari libur ${year}`} sub="Dipakai menghitung hari cuti dan jenis hari lembur. Isi nama kosong untuk menghapus.">

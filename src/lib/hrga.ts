@@ -10,7 +10,7 @@ export const VALIDITY: Record<string, [Tone, string]> = {
 export const EMPLOYMENT: Record<string, string> = { permanent: 'Tetap', contract: 'Kontrak', subcon: 'Subkontraktor' };
 export const LEVEL: Record<string, string> = { PJO: 'PJO', DH: 'Dept head', SH: 'Section head', SPV: 'Supervisor', FOR: 'Foreman', STAFF: 'Staff', OPR: 'Operator' };
 export const ROSTER: Record<string, [Tone, string]> = {
-  D: ['accent', 'Siang'], N: ['accent', 'Malam'], OFF: ['muted', 'Off'], CUTI: ['ok', 'Cuti'], SAKIT: ['crit', 'Sakit'], IZIN: ['warn', 'Izin'],
+  D: ['accent', 'Siang'], N: ['accent', 'Malam'], K: ['accent', 'Kantor'], OFF: ['muted', 'Off'], CUTI: ['ok', 'Cuti'], SAKIT: ['crit', 'Sakit'], IZIN: ['warn', 'Izin'],
 };
 export const GA_CATEGORY: Record<string, string> = {
   mess: 'Mess / akomodasi', transport: 'Transportasi', office: 'ATK / kantor', facility: 'Perbaikan fasilitas', pantry: 'Pantry / konsumsi', other: 'Lainnya',

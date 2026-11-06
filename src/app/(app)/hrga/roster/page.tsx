@@ -11,7 +11,7 @@ import { sheMasters, today } from '../../she/fields';
 export const metadata = { title: 'Roster' };
 
 const addDays = (d: string, n: number) => new Date(Date.parse(d) + n * 864e5).toISOString().slice(0, 10);
-const CELL: Record<string, string> = { D: 'bg-accent/15', N: 'bg-accent/30', OFF: 'bg-line', CUTI: 'bg-ok/20', SAKIT: 'bg-crit/20', IZIN: 'bg-warn/20' };
+const CELL: Record<string, string> = { D: 'bg-accent/15', N: 'bg-accent/30', K: 'bg-accent/20', OFF: 'bg-line', CUTI: 'bg-ok/20', SAKIT: 'bg-crit/20', IZIN: 'bg-warn/20' };
 
 export default async function RosterPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const s = await getSession();

@@ -2739,6 +2739,41 @@ await test('audit keamanan: lampiran mengikuti hak atas rekaman pemilik; selfie 
   eq(await seeIt(staffId, selfie), 1); eq(await seeIt(dcId, selfie), 0); eq(await seeIt(spvHse, selfie), 0); eq(await seeIt(hrStaff, selfie), 1);
 });
 
+await test('jam kerja per site: HO punya jam kantor 08.30-17.30, shift D/N site lain tidak terganggu, K dipakai hitung terlambat dan diterapkan ke roster', async () => {
+  const q = async (sql, args = []) => (await db.query(sql, args)).rows;
+  const ho = (await q(`select start_time::text st, end_time::text et, work_days from public.work_shifts w join public.sites s on s.id = w.site_id where s.code = 'HO' and w.code = 'K'`))[0];
+  eq(ho.st, '08:30:00'); eq(ho.et, '17:30:00'); eq(ho.work_days.join(','), '1,2,3,4,5');
+  eq((await q(`select count(*)::int c from public.work_shifts w join public.sites s on s.id = w.site_id where s.code = 'HO' and w.code in ('D','N')`))[0].c, 0);
+  // simpan jam kerja = site aktif saja; hanya HRGA; validasi
+  const SAVE = `select (w).code, (w).start_time::text st from public.shift_save($1, $2, $3::time, $4::time, $5, $6, $7::smallint[]) w`;
+  await expectError('42501', async () => as(db, spvPrd, SAVE, ['K', 'Jam kantor', '08:30', '17:30', 15, 60, null]));
+  await expectError('22023', async () => as(db, hrStaff, SAVE, ['X', 'Aneh', '08:30', '17:30', 15, 60, null]));
+  await expectError('22023', async () => as(db, hrStaff, SAVE, ['K', 'Balik', '17:30', '08:30', 15, 60, null]));
+  await expectError('22023', async () => as(db, hrStaff, SAVE, ['K', 'Tanpa hari', '08:30', '17:30', 15, 60, []]));
+  eq((await as(db, hrStaff, SAVE, ['K', 'Jam kantor BDA', '08:30', '17:30', 15, 60, [1, 2, 3, 4, 5]])).rows[0].st, '08:30:00');
+  eq((await q(`select count(*)::int c from public.work_shifts w join public.sites s on s.id = w.site_id where s.code = 'BDA' and w.code = 'K'`))[0].c, 1);
+  eq((await q(`select w.name from public.work_shifts w join public.sites s on s.id = w.site_id where s.code = 'HO' and w.code = 'K'`))[0].name, 'Jam kerja HO');
+  eq((await q(`select count(*)::int c from public.work_shifts w join public.sites s on s.id = w.site_id where s.code = 'BDA' and w.code in ('D','N')`))[0].c, 2);
+  // terlambat dan pulang cepat dihitung dari jam K
+  const d = await due(-40);
+  await as(db, hrStaff, `select public.roster_set(array[$1]::uuid[], $2::date, $2::date, 'K')`, [emp.id, d]);
+  const MAN = `select public.attendance_manual($1, ($2::date + $3::time) at time zone app.site_tz(), $4, 'Uji jam kantor')`;
+  await as(db, hrStaff, MAN, [emp.id, d, '09:10', 'in']);
+  await as(db, hrStaff, MAN, [emp.id, d, '17:00', 'out']);
+  const a = (await as(db, hrStaff, `select status, late_minutes, early_minutes from public.attendance_daily where employee_id = $1 and work_date = $2::date`, [emp.id, d])).rows[0];
+  eq(a.status, 'terlambat'); eq(a.late_minutes, 40); eq(a.early_minutes, 30);
+  // terapkan ke roster: hanya hari kerja, tidak menimpa, hanya HRGA, rentang dibatasi
+  const from = '2031-01-01', to = '2031-01-14';
+  const n = (await q(`select count(*)::int c from public.employees where status = 'active' and site_id = (select id from public.sites where code = 'BDA')`))[0].c;
+  await expectError('42501', async () => as(db, spvPrd, `select public.roster_apply_office($1::date, $2::date)`, [from, to]));
+  await expectError('22023', async () => as(db, hrStaff, `select public.roster_apply_office($1::date, $2::date)`, [from, '2031-12-31']));
+  await as(db, hrStaff, `select public.roster_set(array[$1]::uuid[], '2031-01-06'::date, '2031-01-06'::date, 'OFF')`, [emp.id]);
+  const done = (await as(db, hrStaff, `select public.roster_apply_office($1::date, $2::date) c`, [from, to])).rows[0].c;
+  eq(done, n * 10 - 1);
+  eq((await q(`select code from public.roster_entries where employee_id = $1 and work_date = '2031-01-06'`, [emp.id]))[0].code, 'OFF');
+  eq((await q(`select count(*)::int c from public.roster_entries where employee_id = $1 and work_date = '2031-01-04'`, [emp.id]))[0].c, 0);
+  eq((await as(db, hrStaff, `select public.roster_apply_office($1::date, $2::date) c`, [from, to])).rows[0].c, 0);
+});
 await test('anon tidak punya hak apa pun atas tabel/view public; fungsi anon hanya verify_document, feed_rows & login_sites', async () => {
   eq((await db.query(`select count(*)::int c from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public'`)).rows[0].c, 0);
   const fn = (await db.query(`select string_agg(p.proname, ',' order by p.proname) s from pg_proc p join pg_namespace n on n.oid = p.pronamespace

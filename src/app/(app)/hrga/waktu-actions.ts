@@ -78,9 +78,19 @@ export async function setHoliday(_: ActionState, f: FormData) {
 }
 
 export async function saveShift(_: ActionState, f: FormData) {
-  return run(['/hrga/absensi'], 'Shift disimpan', () => rpc('shift_save', {
+  const days = f.getAll('days').map(Number).filter(n => n >= 1 && n <= 7);
+  return run(['/hrga/absensi', '/hrga/roster'], 'Jam kerja disimpan', () => rpc('shift_save', {
     p_code: str(f, 'code'), p_name: str(f, 'name'), p_start: str(f, 'start'), p_end: str(f, 'end'), p_grace: num(f, 'grace'), p_break: num(f, 'break'),
+    p_days: f.has('days_present') ? days : null,
   }));
+}
+
+export async function applyOfficeRoster(_: ActionState, f: FormData) {
+  let n = 0;
+  const r = await run(['/hrga/roster', '/hrga/absensi'], 'Jadwal kantor diterapkan', async () => {
+    n = Number(await rpc('roster_apply_office', { p_from: str(f, 'from'), p_to: str(f, 'to') }));
+  });
+  return r.ok ? { ok: `Jadwal kantor diterapkan: ${n} hari kerja diisi` } : r;
 }
 
 // ---------------------------------------------------------------- cuti
