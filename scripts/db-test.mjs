@@ -2666,6 +2666,11 @@ await test('PIC bernama: ditunjuk pengawas dept PIC, langsung dinotifikasi, tamp
   eq((await as(db, absUser, `select (h).status from public.hazard_close($1, 'Sudah diperbaiki') h`, [h.id])).rows[0].status, 'closed');
   eq((await as(db, absUser, `select 1 from public.my_pic_items()`)).rowCount, 0);
 });
+await test('tutup hazard: karyawan dept PIC (bukan pengawas, bukan PIC bernama) boleh menutup; karyawan dept lain tidak', async () => {
+  const h = (await as(db, ownerId, HZ_SQL, [today, HSE, PRD, await due(3), area, 'low', []])).rows[0];
+  await expectError('42501', async () => as(db, spvHse, `select public.hazard_close($1, 'x')`, [h.id]));
+  eq((await as(db, absUser, `select (h).status from public.hazard_close($1, 'Sudah diperbaiki') h`, [h.id])).rows[0].status, 'closed');
+});
 await test('hapus akun: hanya lewat SQL Editor; ditolak bila punya riwayat bisnis; akun bersih terhapus', async () => {
   const clean = await createUser('salah.daftar@bsb.co.id');
   await db.query(`insert into public.user_roles(user_id, role_code, granted_by) values ($1, 'STAFF', $2)`, [clean, adminId]);

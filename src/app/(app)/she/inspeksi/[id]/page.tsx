@@ -7,14 +7,14 @@ import { RISK } from '@/lib/compliance';
 import { fmtDate, fmtDateTime } from '@/lib/documents';
 import { INSPECTION_TYPE } from '@/lib/she';
 import { closeFinding } from '../../actions';
-import { PicPartner, PicPerson, isPicPerson, AttachmentList, Files, LinkedCapa } from '../../fields';
+import { PicPartner, PicPerson, myEmployeeDept, isPicPerson, AttachmentList, Files, LinkedCapa } from '../../fields';
 
 type Insp = {
   id: string; inspection_no: string; inspected_on: string; inspection_type: string; object: string; note: string | null;
   inspector: { full_name: string | null } | null; area: { name: string } | null; dept: { code: string } | null;
 };
 type Finding = {
-  id: string; seq: number; description: string; risk_level: string; pic_department_code: string; pic_partner_id: string | null; pic_partner_name: string | null; due_date: string; status: string;
+  id: string; seq: number; description: string; risk_level: string; pic_department_code: string; pic_department_id: string; pic_partner_id: string | null; pic_partner_name: string | null; due_date: string; status: string;
   is_overdue: boolean; close_note: string | null; closed_at: string | null;
 };
 
@@ -27,8 +27,9 @@ export default async function InspectionDetail({ params }: { params: Promise<{ i
     .eq('id', id).maybeSingle<Insp>();
   if (!i) notFound();
   const { data: mineRows } = await supabase.from('inspection_findings').select('id').eq('inspection_id', id).eq('pic_user_id', s.profile.id);
-  const mine = new Set((mineRows ?? []).map(r => r.id));
   const { data: findings } = await supabase.from('she_finding_register').select('*').eq('inspection_id', id).order('seq').returns<Finding[]>();
+  const myDept = await myEmployeeDept(s.profile.id);
+  const mine = new Set([...(mineRows ?? []).map(r => r.id), ...(findings ?? []).filter(f => myDept && f.pic_department_id === myDept).map(f => f.id)]);
 
   return (
     <>

@@ -156,8 +156,18 @@ export async function PicPerson({ table, id, path, canEdit }: { table: 'hazard_r
   );
 }
 
+// Departemen karyawan aktif milik pengguna (null bila bukan karyawan)
+export async function myEmployeeDept(userId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase.from('employees').select('department_id').eq('profile_id', userId).eq('status', 'active').limit(1).maybeSingle<{ department_id: string }>();
+  return data?.department_id ?? null;
+}
+
+// Boleh menutup: PIC bernama, atau karyawan aktif departemen PIC
 export async function isPicPerson(table: 'hazard_reports' | 'inspection_findings', id: string, userId: string) {
   const supabase = await createClient();
-  const { data } = await supabase.from(table).select('pic_user_id').eq('id', id).maybeSingle<{ pic_user_id: string | null }>();
-  return data?.pic_user_id === userId;
+  const { data } = await supabase.from(table).select('pic_user_id, pic_department_id').eq('id', id).maybeSingle<{ pic_user_id: string | null; pic_department_id: string }>();
+  if (!data) return false;
+  if (data.pic_user_id === userId) return true;
+  return (await myEmployeeDept(userId)) === data.pic_department_id;
 }
