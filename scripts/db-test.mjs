@@ -2774,7 +2774,7 @@ await test('jam kerja per site: HO punya jam kantor 08.30-17.30, shift D/N site 
   eq((await q(`select count(*)::int c from public.roster_entries where employee_id = $1 and work_date = '2031-01-04'`, [emp.id]))[0].c, 0);
   eq((await as(db, hrStaff, `select public.roster_apply_office($1::date, $2::date) c`, [from, to])).rows[0].c, 0);
 });
-await test('akses menurut jabatan: peran diturunkan dari level jabatan, jabatan HO memberi HO_UAT (tanpa kelola pengguna/payroll), hanya admin pengguna', async () => {
+await test('akses menurut jabatan: peran diturunkan dari level jabatan, jabatan HO memberi HO_UAT (tanpa kelola pengguna/konfigurasi sistem), hanya admin pengguna', async () => {
   const ACC = `select p.name, p.level, a.role_code, a.department_id from public.position_access() a join public.positions p on p.id = a.position_id`;
   await expectError('42501', async () => as(db, staffId, `select * from public.position_access()`));
   const rows = (await as(db, adminId, ACC)).rows;
@@ -2785,7 +2785,8 @@ await test('akses menurut jabatan: peran diturunkan dari level jabatan, jabatan 
   eq(ho.length >= 5, true);
   for (const r of ho) eq(r.role_code, 'HO_UAT');
   const perms = (await db.query(`select permission_code from public.role_permissions where role_code = 'HO_UAT'`)).rows.map(r => r.permission_code);
-  for (const x of ['user.manage', 'system.configure', 'payroll.manage', 'payroll.approve', 'payroll.read']) eq(perms.includes(x), false);
+  for (const x of ['user.manage', 'system.configure']) eq(perms.includes(x), false);
+  for (const x of ['payroll.manage', 'payroll.approve', 'payroll.read']) eq(perms.includes(x), true); // dibuka sementara selama UAT
   for (const x of ['plant.manage', 'log.ho_approve', 'hr.manage', 'prod.manage', 'she.report']) eq(perms.includes(x), true);
   // aktivasi lewat jabatan HO: akun pending jadi aktif dengan HO_UAT lingkup semua departemen
   const hoUser = await createUser('finance.baru@bsb-mine.id');
