@@ -45,10 +45,14 @@ const Badge = ({ n, tone = 'crit' }: { n: number; tone?: 'crit' | 'violet' }) =>
 type Theme = 'system' | 'light' | 'dark';
 
 // Kerangka aplikasi: bilah atas (menu, cari, peringatan, pengaturan, profil) + menu samping yang dibuka dari tombol ☰.
-export function Sidebar({ permissions, name, email, role, unit, siteName, alerts, alertTotal, sites = [], siteCode = '' }: {
+export function Sidebar({ permissions, name, email, role, unit, siteName, userKey, sites = [], siteCode = '' }: {
   sites?: { code: string; name: string }[]; siteCode?: string;
-  permissions: string[]; name: string; email: string; role: string; unit: string; siteName: string; alerts: Alert[]; alertTotal: number;
+  permissions: string[]; name: string; email: string; role: string; unit: string; siteName: string; userKey: string;
 }) {
+  // Peringatan dimuat setelah halaman tampil (tidak menahan render); nilai terakhir ditampilkan dulu dari sessionStorage
+  const [al, setAl] = useState<{ items: Alert[]; total: number }>({ items: [], total: 0 });
+  const alerts = al.items, alertTotal = al.total;
+  const lastLoad = useRef(0);
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const [pop, setPop] = useState<null | 'alerts' | 'settings' | 'profile'>(null);
@@ -59,6 +63,25 @@ export function Sidebar({ permissions, name, email, role, unit, siteName, alerts
   const perms = new Set(permissions);
 
   useEffect(() => { setOpen(false); setPop(null); }, [path]);
+  useEffect(() => {
+    const key = `bsb-alerts:${userKey}`;
+    try { const c = sessionStorage.getItem(key); if (c) setAl(JSON.parse(c)); } catch {}
+    const load = () => {
+      lastLoad.current = Date.now();
+      fetch('/api/alerts', { credentials: 'same-origin' }).then(r => (r.ok ? r.json() : null)).then(j => {
+        if (j && Array.isArray(j.items)) { setAl(j); try { sessionStorage.setItem(key, JSON.stringify(j)); } catch {} }
+      }).catch(() => {});
+    };
+    load();
+    const t = setInterval(load, 120000);
+    return () => clearInterval(t);
+  }, [userKey]);
+  // pindah halaman: segarkan bila data sudah lebih dari 45 detik
+  useEffect(() => {
+    if (Date.now() - lastLoad.current < 45000) return;
+    lastLoad.current = Date.now();
+    fetch('/api/alerts', { credentials: 'same-origin' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j && Array.isArray(j.items)) setAl(j); }).catch(() => {});
+  }, [path]);
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };

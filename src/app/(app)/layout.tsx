@@ -1,14 +1,12 @@
 import { OfflineSync } from '@/components/offline-sync';
 import { Sidebar } from '@/components/sidebar';
-import { getAlerts } from '@/lib/alerts';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const s = await getSession();
   const supabase = await createClient();
-  const [{ items, total }, { data: roles }, { data: dept }, { data: siteRow }] = await Promise.all([
-    getAlerts(),
+  const [{ data: roles }, { data: dept }, { data: siteRow }] = await Promise.all([
     supabase.from('user_roles').select('role_code, roles(name)').eq('user_id', s.profile.id)
       .or(`valid_until.is.null,valid_until.gte.${new Date().toISOString().slice(0, 10)}`)
       .returns<{ role_code: string; roles: { name: string } | null }[]>(),
@@ -24,7 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <>
       <Sidebar permissions={[...s.permissions]} name={s.profile.full_name ?? s.profile.email} email={s.profile.email}
-        role={role} unit={dept?.name ?? 'Semua departemen'} siteName={siteName} alerts={items} alertTotal={total}
+        role={role} unit={dept?.name ?? 'Semua departemen'} siteName={siteName} userKey={s.profile.id}
         sites={roamSites} siteCode={siteRow?.active_code ?? ''} />
       <OfflineSync userId={s.profile.id} />
       <main className="min-w-0 px-4 pb-24 pt-6 sm:px-8 lg:pb-12 lg:pt-10">

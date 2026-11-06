@@ -43,12 +43,14 @@ export const getAlerts = cache(async () => {
     count(supabase.from('tyre_status').select('*', head).eq('alert', 'soon')),
     count(supabase.from('stock_planning').select('*', head).eq('critical', true).eq('reorder_now', true)),
   ]);
-  const { data: picItems } = await supabase.rpc('my_pic_items');
+  // tahap kedua: tiga hal ini saling bebas, jalankan bersamaan (sebelumnya berurutan = tiga kali tunggu)
+  const [{ data: picItems }, spipDue, { data: soonLeave }] = await Promise.all([
+    supabase.rpc('my_pic_items'),
+    getSession().then(sess => (sess.canIn('spip.manage', 'PLT') || sess.canIn('spip.manage', 'HSE')
+      ? count(supabase.from('spip_weekly').select('*', head).eq('due', true)) : 0)),
+    supabase.rpc('upcoming_leave', { p_days: 7 }),
+  ]);
   const pic = (picItems ?? []) as { overdue: boolean; assigned: boolean }[];
-  const sess = await getSession();
-  const spipDue = sess.canIn('spip.manage', 'PLT') || sess.canIn('spip.manage', 'HSE')
-    ? await count(supabase.from('spip_weekly').select('*', head).eq('due', true)) : 0;
-  const { data: soonLeave } = await supabase.rpc('upcoming_leave', { p_days: 7 });
   const leaveSoon = (soonLeave ?? []) as { mine: boolean; starts_in: number; start_date: string; end_date: string }[];
   const myLeave = leaveSoon.filter(l => l.mine).sort((a, b) => a.starts_in - b.starts_in)[0];
   const teamLeave = leaveSoon.filter(l => !l.mine && l.starts_in >= 0).length;
