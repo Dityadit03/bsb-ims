@@ -43,3 +43,7 @@ begin
     end loop;
   end loop;
 end $$;
+
+-- 4) Jabatan HO tidak lagi otomatis memberi HO_UAT: akun HO diaktifkan dengan peran dasar (hanya lihat),
+--    lalu admin sistem menambah peran (mis. HO_UAT, HO_FINANCE, HO_PROCUREMENT) sesuai permintaan akses.
+update public.positions set access_role = 'VIEWER' where department_id is null;
