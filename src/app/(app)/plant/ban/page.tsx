@@ -76,7 +76,7 @@ export default async function TyrePage({ searchParams }: { searchParams: Promise
                     <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-ground"><div className={`h-full ${t.usable_pct < 15 ? 'bg-crit' : t.usable_pct < 35 ? 'bg-warn' : 'bg-ok'}`} style={{ width: `${t.usable_pct}%` }} /></div>
                   )}</div>
                 <div><div className="text-xs text-muted">Umur pakai</div><div className="tabular font-medium">{n0(t.run_hm)} HM</div></div>
-                <div><div className="text-xs text-muted">Laju aus</div><div className="tabular font-medium">{t.wear_mm_per_1000hm ?? '–'} mm / 1.000 HM</div></div>
+                <div><div className="text-xs text-muted">Laju aus</div><div className="tabular font-medium">{t.wear_mm_per_1000hm != null && Number(t.run_hm) >= 100 ? `${t.wear_mm_per_1000hm} mm / 1.000 HM` : <span className="text-muted" title="Perlu minimal 100 HM pemakaian agar laju aus bermakna">belum cukup data</span>}</div></div>
                 <div><div className="text-xs text-muted">Biaya per HM</div><div className="tabular font-medium">{t.cost_per_hm != null ? rp(t.cost_per_hm) : '–'}</div></div>
                 <div><div className="text-xs text-muted">Vulkanisir</div><div className="tabular font-medium">{t.retread_count}×</div></div>
               </div>
