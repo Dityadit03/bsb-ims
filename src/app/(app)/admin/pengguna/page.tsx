@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { PageHeader, Panel, Pill, Table } from '@/components/ui';
 import { requirePermission } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
@@ -14,8 +15,9 @@ type Row = {
 
 const STATUS = { active: ['ok', 'Aktif'], pending: ['warn', 'Menunggu'], suspended: ['crit', 'Ditangguhkan'], exited: ['muted', 'Keluar'] } as const;
 
-export default async function PenggunaPage() {
+export default async function PenggunaPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const s = await requirePermission('user.manage');
+  const sp = await searchParams;
   const supabase = await createClient();
   const [{ data: users }, { data: roles }, { data: depts }, { data: poss }, { data: acc }] = await Promise.all([
     supabase.from('profiles')
@@ -122,16 +124,13 @@ export default async function PenggunaPage() {
                     )) : <span className="text-xs text-muted">Belum ada</span>}
                   </div>
                   {u.status === 'active' && u.id !== s.profile.id && isNik(u.email) && <div className="mt-2"><ResetPasswordForm userId={u.id} /></div>}
-                  {u.status === 'active' && u.id !== s.profile.id && (
-                    <details className="mt-2">
-                      <summary className="cursor-pointer text-xs text-accent">Tambah akses</summary>
-                      <div className="mt-2 grid gap-3">
-                        <PositionForm userId={u.id} positions={positions} access={access} label="Tambah akses" />
-                        <details><summary className="cursor-pointer text-xs text-muted">Peran khusus (manual)</summary>
-                          <div className="mt-2"><ActivateForm userId={u.id} roles={roles ?? []} departments={depts ?? []} label="Tambah peran" /></div></details>
-                      </div>
-                    </details>
-                  )}
+                  {u.status === 'active' && u.id !== s.profile.id && (sp.akses === u.id ? (
+                    <div className="mt-2 grid gap-3">
+                      <PositionForm userId={u.id} positions={positions} access={access} label="Tambah akses" />
+                      <details><summary className="cursor-pointer text-xs text-muted">Peran khusus (manual)</summary>
+                        <div className="mt-2"><ActivateForm userId={u.id} roles={roles ?? []} departments={depts ?? []} label="Tambah peran" /></div></details>
+                    </div>
+                  ) : <Link href={`?akses=${u.id}`} scroll={false} className="mt-2 inline-block text-xs text-accent hover:underline">Tambah akses</Link>)}
                 </td>
                 <td><Pill tone={tone}>{label}</Pill></td>
               </tr>
