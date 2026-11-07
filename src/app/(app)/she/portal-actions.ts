@@ -73,6 +73,10 @@ export async function decidePermit(_: ActionState, f: FormData) {
   }));
 }
 
+export async function cancelPermit(_: ActionState, f: FormData) {
+  return run('/she/izin', 'Izin dibatalkan', () => rpc('area_permit_cancel', { p_id: str(f, 'id'), p_reason: str(f, 'reason') }));
+}
+
 export async function closePermit(_: ActionState, f: FormData) {
   return run('/she/izin', 'Kunjungan selesai', () => rpc('area_permit_close', { p_id: str(f, 'id') }));
 }

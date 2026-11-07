@@ -5,7 +5,7 @@ import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { fmtDate } from '@/lib/documents';
 import { PERMIT_STATUS } from '@/lib/she';
-import { closePermit, decidePermit, requestPermit } from '../portal-actions';
+import { cancelPermit, closePermit, decidePermit, requestPermit } from '../portal-actions';
 import { AreaSelect, EmployeeDatalist, EmployeeInput, Files, SheTabs, sheMasters, today } from '../fields';
 
 export const metadata = { title: 'Izin masuk area' };
@@ -61,7 +61,7 @@ export default async function PermitPage() {
               <td className="whitespace-nowrap font-mono text-xs">{r.permit_no}</td>
               <td className="min-w-44">{r.visitor_name}<div className="text-xs text-muted">{r.company} · {r.people_count} orang</div></td>
               <td className="min-w-48 text-xs">{r.purpose}<div className="text-muted">Pemohon: {r.requester_name}</div>
-                {approver && r.status === 'submitted' && (
+                {approver && r.status === 'submitted' && r.requested_by !== s.profile.id && (
                   <div className="mt-2 grid gap-2">
                     <ActionForm action={decidePermit} label="Setujui" hidden={{ id: r.id, approve: 'yes' }}>
                       {!r.escort_name && <EmployeeInput name="escort" label="Pendamping" required />}
@@ -70,6 +70,11 @@ export default async function PermitPage() {
                       <input name="note" placeholder="Alasan penolakan" className={input} />
                     </ActionForm>
                   </div>
+                )}
+                {r.status === 'submitted' && r.requested_by === s.profile.id && (
+                  <ActionForm action={cancelPermit} label="Batalkan pengajuan" hidden={{ id: r.id }} className="mt-2">
+                    <input name="reason" required placeholder="Alasan pembatalan" className={input} />
+                  </ActionForm>
                 )}
                 {r.status === 'approved' && (approver || r.requested_by === s.profile.id) && (
                   <ActionForm action={closePermit} label="Tandai selesai" hidden={{ id: r.id }} className="mt-2" />

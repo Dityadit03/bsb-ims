@@ -1074,6 +1074,10 @@ await test('izin masuk area: pemohon tidak menyetujui sendiri, wajib pendamping,
   eq((await as(db, spvHse, `select on_site_today from public.area_permit_register where id = $1`, [p.id])).rows[0].on_site_today, true);
   const p2 = (await as(db, spvHse, R, [today])).rows[0];
   await expectError('22023', async () => as(db, hseMgr, `select public.area_permit_decide($1, false)`, [p2.id]));
+  await expectError('22023', async () => as(db, spvHse, `select public.area_permit_cancel($1, '')`, [p2.id]));
+  await expectError('42501', async () => as(db, spvPrd, `select public.area_permit_cancel($1, 'x')`, [p2.id]));
+  eq((await as(db, spvHse, `select (p).status from public.area_permit_cancel($1, 'batal') p`, [p2.id])).rows[0].status, 'rejected');
+  await expectError('22023', async () => as(db, spvHse, `select public.area_permit_cancel($1, 'lagi')`, [p2.id]));
 });
 await test('register komisioning (SPIP): oleh Plant/HSE, status berlaku dihitung', async () => {
   const C = `select (c).* from public.commissioning_save(null, 'tool', $1, 'Stand jack', 'Tool workshop', $2, $3::date, $4::date) c`;
