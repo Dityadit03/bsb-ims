@@ -64,7 +64,8 @@ export default async function ReportDetail({ params }: { params: Promise<{ id: s
                     <select name="unit" required className={input}>{(units ?? []).map(u => (
                       <option key={u.id} value={u.id}>{u.unit_no}{fitSet.has(u.unit_no) ? '' : ' · belum P2H layak'}</option>))}</select></label>
                   <label className="grid gap-1 text-sm">Rute
-                    <select name="route" required className={input}>{(routes ?? []).map(x => <option key={x.id} value={x.id}>{x.code} · {x.name}</option>)}</select></label>
+                    <select name="route" required className={input}>{(routes ?? []).length ? (routes ?? []).map(x => <option key={x.id} value={x.id}>{x.code} · {x.name}</option>) : <option value="">Belum ada rute aktif</option>}</select>
+                    {!(routes ?? []).length && <span className="text-xs text-warn">Belum ada rute. Minta Kepala Produksi mengisi di Produksi → Rute &amp; target.</span>}</label>
                   <label className="grid gap-1 text-sm">Operator<input name="operator" required className={input} /></label>
                   <label className="grid gap-1 text-sm">Ritase<input type="number" name="trips" required min={0} className={input} /></label>
                   <label className="grid gap-1 text-sm">Tonase<input type="number" name="tonnage" required min={0} step="0.01" className={input} /></label>
