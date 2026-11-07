@@ -113,7 +113,7 @@ export function Sidebar({ permissions, name, email, role, unit, siteName, userKe
   const itemBadge = (href: string) => alerts.filter(a => a.tone !== 'accent' || href === '/tugas').filter(a => base(a.href) === href).reduce((t, a) => t + a.n, 0);
   const isActive = (href: string, siblings: string[]) =>
     href === '/' ? path === '/' : path === href || (path.startsWith(href + '/') && !siblings.some(o => o !== href && o.length > href.length && path.startsWith(o)));
-  const groups = NAV.filter(g => g.ready).map(g => ({ ...g, items: g.items.filter(i => !i.perm || perms.has(i.perm)) })).filter(g => g.items.length);
+  const groups = NAV.filter(g => g.ready).map(g => ({ ...g, items: g.items.filter(i => (!i.perm || perms.has(i.perm)) && (!i.any || i.any.some(p => perms.has(p)))) })).filter(g => g.items.length);
   const activeGroup = groups.find(g => g.items.some(i => isActive(i.href, g.items.map(x => x.href))))?.code;
   const isOpen = (code: string) => code === 'M0' || code === activeGroup || expanded.has(code);
   const flip = (code: string) => setExpanded(s => { const n = new Set(s); if (n.has(code)) n.delete(code); else n.add(code); return n; });

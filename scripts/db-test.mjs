@@ -2785,7 +2785,15 @@ await test('akses menurut jabatan: peran diturunkan dari level jabatan, jabatan 
   const rows = (await as(db, adminId, ACC)).rows;
   const lv = { DH: 'DEPT_HEAD', SH: 'SUPERINTENDENT', SPV: 'SUPERVISOR', FOR: 'SUPERVISOR', STAFF: 'STAFF', OPR: 'STAFF', PJO: 'PJO' };
   const dept = rows.filter(r => r.department_id);
-  for (const r of dept) eq(r.role_code, lv[r.level]);
+  const FIELD = ['OPERATOR', 'TEKNISI', 'PETUGAS_LAPANGAN', 'PETUGAS_BBM', 'SAFETY_STAFF'];
+  for (const r of dept) eq(FIELD.includes(r.role_code) ? r.level === 'STAFF' || r.level === 'OPR' : r.role_code === lv[r.level], true);
+  // peran lapangan sempit: tanpa hak kelola SDM/pengadaan/persetujuan
+  for (const role of FIELD) {
+    const pm = (await db.query(`select permission_code from public.role_permissions where role_code = $1`, [role])).rows.map(x => x.permission_code);
+    for (const x of ['hr.manage', 'log.purchase', 'log.approve', 'prod.approve', 'document.approve', 'user.manage']) eq(pm.includes(x), false);
+    eq(pm.includes('she.report'), true);
+  }
+  eq((await db.query(`select count(*)::int c from public.positions p join public.departments d on d.id = p.department_id where d.code = 'PLT' and p.name = 'Mekanik' and p.access_role = 'TEKNISI'`)).rows[0].c, 1);
   const ho = rows.filter(r => !r.department_id);
   eq(ho.length >= 5, true);
   for (const r of ho) eq(r.role_code, 'VIEWER');
