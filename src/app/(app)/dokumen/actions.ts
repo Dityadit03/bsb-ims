@@ -57,6 +57,9 @@ export async function startRevision(_: ActionState, form: FormData) {
 export async function obsoleteDocument(_: ActionState, form: FormData) {
   return rpcAndRefresh('document_obsolete', { p_document: str(form, 'document'), p_reason: str(form, 'reason') }, str(form, 'document'), 'Dokumen dicabut');
 }
+export async function cancelDraftDocument(_: ActionState, form: FormData) {
+  return rpcAndRefresh('document_cancel_draft', { p_document: str(form, 'document'), p_reason: str(form, 'reason') }, str(form, 'document'), 'Usulan dibatalkan');
+}
 export async function acknowledge(_: ActionState, form: FormData) {
   return rpcAndRefresh('document_acknowledge', { p_version: str(form, 'version') }, str(form, 'document'), 'Penerimaan dikonfirmasi');
 }

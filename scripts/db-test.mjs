@@ -263,6 +263,14 @@ await test('dikembalikan → revisi draf → diajukan ulang', async () => {
   await as(db, ownerId, `select public.document_submit($1)`, [sopVer]);
   eq(await verStatus(sopVer), 'in_review');
 });
+await test('usulan dokumen: batalkan butuh alasan, pemilik/DC saja, tak bisa bila sudah terbit', async () => {
+  const r = await as(db, ownerId, `select (d).id from public.document_request('SOP', $1, 'Usulan Uji Batal', $2) d`, [HSE, ENV]);
+  const id = r.rows[0].id;
+  await expectError('22023', async () => as(db, ownerId, `select public.document_cancel_draft($1, '')`, [id]));
+  await expectError('42501', async () => as(db, spvPlt, `select public.document_cancel_draft($1, 'iseng')`, [id]));
+  const c = await as(db, ownerId, `select (d).status from public.document_cancel_draft($1, 'Salah jenis') d`, [id]);
+  eq(c.rows[0].status, 'cancelled');
+});
 await test('belum disetujui → tidak bisa diterbitkan', async () => {
   const a = await upload(dcId);
   await expectError('22023', async () => as(db, dcId, `select public.document_release($1, '2026-10-24', $2)`, [sopVer, a.id]));

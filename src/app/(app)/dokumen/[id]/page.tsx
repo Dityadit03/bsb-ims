@@ -6,7 +6,7 @@ import { PageHeader, Panel, Pill, Table, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { ACCESS_LABEL, DOC_STATUS, SMKP_ELEMENTS, VERSION_STATUS, fmtDate, fmtDateTime, rev } from '@/lib/documents';
-import { acknowledge, distribute, obsoleteDocument, releaseVersion, startRevision, submitVersion, uploadDraft } from '../actions';
+import { acknowledge, cancelDraftDocument, distribute, obsoleteDocument, releaseVersion, startRevision, submitVersion, uploadDraft } from '../actions';
 
 type Version = {
   id: string; revision: number; status: string; change_summary: string | null; draft_sha256: string | null; final_sha256: string | null;
@@ -187,6 +187,14 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
           {doc.smkp_elements.length > 0 && (
             <Panel title="Elemen SMKP">
               <ul className="grid gap-1 text-sm">{SMKP_ELEMENTS.filter(([n]) => doc.smkp_elements.includes(n)).map(([n, l]) => <li key={n}><b className="font-mono">E{n}</b> {l}</li>)}</ul>
+            </Panel>
+          )}
+          {(isOwner || canRelease) && ['draft', 'in_process'].includes(doc.status) && !doc.effective_version_id && (
+            <Panel title="Batalkan usulan">
+              <ActionForm action={cancelDraftDocument} label="Batalkan usulan" hidden={{ document: doc.id }}>
+                <input id="cancel_reason" name="reason" required placeholder="Alasan pembatalan" className={input} />
+                <span className="text-xs text-muted">Hanya untuk dokumen yang belum pernah terbit. Riwayat tetap tersimpan.</span>
+              </ActionForm>
             </Panel>
           )}
           {canRelease && ['effective', 'under_revision'].includes(doc.status) && (
