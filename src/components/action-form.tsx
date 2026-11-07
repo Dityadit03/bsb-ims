@@ -1,5 +1,5 @@
 'use client';
-import { useActionState } from 'react';
+import { startTransition, useActionState, useEffect, useRef } from 'react';
 import { btnGhost, btnPrimary } from '@/components/ui';
 
 type State = { error?: string; ok?: string };
@@ -16,8 +16,17 @@ export function ActionForm({ action, label, children, primary = false, hidden = 
   confirm?: string;
 }) {
   const [state, run, pending] = useActionState(action, {});
+  const ref = useRef<HTMLFormElement>(null);
+  // React 19 mengosongkan formulir setelah aksi selesai, juga saat gagal validasi, sehingga isian pengguna hilang.
+  // Kirim lewat transisi agar isian tetap ada bila gagal; kosongkan hanya bila berhasil.
+  useEffect(() => { if (state.ok) ref.current?.reset(); }, [state]);
   return (
-    <form action={run} onSubmit={e => { if (confirm && !window.confirm(confirm)) e.preventDefault(); }} className={`grid gap-2 ${className}`}>
+    <form ref={ref} onSubmit={e => {
+      e.preventDefault();
+      if (confirm && !window.confirm(confirm)) return;
+      const data = new FormData(e.currentTarget);
+      startTransition(() => run(data));
+    }} className={`grid gap-2 ${className}`}>
       {Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
       {children}
       <div className="flex flex-wrap items-center gap-3">
