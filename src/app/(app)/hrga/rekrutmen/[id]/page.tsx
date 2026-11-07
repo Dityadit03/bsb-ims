@@ -67,7 +67,7 @@ export default async function ReqPage({ params }: { params: Promise<{ id: string
             {isHr && ['submitted', 'verified', 'open'].includes(r.status) && (
               <details className="text-sm"><summary className="cursor-pointer rounded-lg border border-line px-3.5 py-2 hover:border-violet/60">Tutup FPTK</summary>
                 <ActionForm action={closeRequisition} label="Tutup" confirm="Tutup permintaan tenaga kerja ini?" hidden={h} className="mt-2 w-64">
-                  <select name="cancel" className={input}><option value="0">Ditutup (kebutuhan selesai)</option><option value="1">Dibatalkan</option></select>
+                  <select name="cancel" defaultValue={r.status === 'open' ? '0' : '1'} className={input}><option value="0">Ditutup (kebutuhan selesai)</option><option value="1">Dibatalkan</option></select>
                   <input name="reason" required placeholder="Alasan" className={input} />
                   <span className="text-xs text-muted">Pelamar yang masih proses dinyatakan tidak lolos.</span></ActionForm></details>
             )}
