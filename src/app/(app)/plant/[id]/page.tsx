@@ -76,7 +76,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ id: str
               <ActionForm action={createWo} label="Buat WO" primary hidden={{ unit: u.id, idem: randomUUID(), ...(manage ? {} : { type: 'breakdown' }) }}>
                 <div className="grid gap-3 sm:grid-cols-3">
                   {manage && <label className="grid gap-1 text-sm">Jenis
-                    <select name="type" className={input}>{Object.entries(WO_TYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>}
+                    <select name="type" className={input}>{Object.entries(WO_TYPE).filter(([k]) => k !== 'pm' || Boolean(plans?.length)).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>}
                   <label className="grid gap-1 text-sm">Prioritas
                     <select name="priority" className={input} defaultValue="medium">{Object.entries(PRIORITY).map(([k, [, l]]) => <option key={k} value={k}>{l}</option>)}</select></label>
                   <label className="grid gap-1 text-sm">HM saat ini<input type="number" name="hm" min={u.current_hm} step="0.1" className={input} /></label>

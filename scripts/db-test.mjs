@@ -689,7 +689,7 @@ await test('WO PM wajib rencana PM; penyelesaian mencatat HM servis terakhir', a
   const plan = (await as(db, dhPlt, `select (p).* from public.pm_plan_save($1, 'Servis 250 jam', 250, 11780) p`, [unit.id])).rows[0];
   eq((await as(db, dhPlt, `select count(*)::int c from public.pm_due where unit_id = $1`, [unit.id])).rows[0].c, 1);
   await expectError('42501', async () => as(db, spvPlt, `select public.wo_create($1, 'pm', 'Servis', 'medium', null, $2)`, [unit.id, plan.id]));
-  await expectError('23514', async () => as(db, dhPlt, `select public.wo_create($1, 'pm', 'Servis')`, [unit.id]));
+  await expectError('22023', async () => as(db, dhPlt, `select public.wo_create($1, 'pm', 'Servis')`, [unit.id]));
   const wo = (await as(db, dhPlt, `select (w).* from public.wo_create($1, 'pm', 'Servis 250 jam', 'medium', null, $2) w`, [unit.id, plan.id])).rows[0];
   eq((await db.query(`select status from public.units where id = $1`, [unit.id])).rows[0].status, 'ready');
   await as(db, spvPlt, `select public.wo_start($1)`, [wo.id]);
