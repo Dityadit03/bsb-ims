@@ -197,6 +197,22 @@ export async function setPicPartner(_: ActionState, f: FormData): Promise<Action
   return { ok: 'PIC mitra kerja disimpan' };
 }
 
+export async function setFindingUnit(_: ActionState, f: FormData): Promise<ActionState> {
+  try {
+    await call('finding_set_unit', { p_table: str(f, 'table'), p_id: str(f, 'id'), p_unit: str(f, 'unit') });
+  } catch (e) { return { error: (e as Error).message }; }
+  revalidatePath(str(f, 'path') ?? '/she');
+  return { ok: str(f, 'unit') ? 'Unit dikaitkan' : 'Kaitan unit dilepas' };
+}
+
+export async function createFindingWo(_: ActionState, f: FormData): Promise<ActionState> {
+  try {
+    await call('finding_create_wo', { p_table: str(f, 'table'), p_id: str(f, 'id') });
+  } catch (e) { return { error: (e as Error).message }; }
+  revalidatePath(str(f, 'path') ?? '/she');
+  return { ok: 'WO perbaikan dibuat dan Plant diberi tahu' };
+}
+
 // PIC bernama: orang yang langsung dinotifikasi dan boleh menutup temuan
 export async function setPicPerson(_: ActionState, f: FormData): Promise<ActionState> {
   try {

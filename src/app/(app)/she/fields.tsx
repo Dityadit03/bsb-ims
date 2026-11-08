@@ -4,7 +4,7 @@ import { DropZone } from '@/components/drop-zone';
 import { Tabs } from '@/components/tabs';
 import { ActionForm } from '@/components/action-form';
 import { input } from '@/components/ui';
-import { setPicPartner, setPicPerson } from './actions';
+import { createFindingWo, setFindingUnit, setPicPartner, setPicPerson } from './actions';
 import { RISK } from '@/lib/compliance';
 import { createClient } from '@/lib/supabase/server';
 
@@ -153,6 +153,38 @@ export async function PicPerson({ table, id, path, canEdit }: { table: 'hazard_r
       </select>
       <p className="text-xs text-muted">{list.length ? 'Orang yang dipilih langsung mendapat notifikasi dan bisa menutup temuan.' : 'Belum ada karyawan departemen ini yang punya akun aktif.'}</p>
     </ActionForm>
+  );
+}
+
+// Unit terkait temuan + WO perbaikan (dibuat Plant)
+export async function LinkedUnit({ table, id, path, canEdit, canWo, status }: { table: 'hazard_reports' | 'inspection_findings'; id: string; path: string;
+  canEdit: boolean; canWo: boolean; status: string }) {
+  const supabase = await createClient();
+  const [{ data: row }, { data: wo }, { data: units }] = await Promise.all([
+    supabase.from(table).select('unit_id').eq('id', id).maybeSingle<{ unit_id: string | null }>(),
+    supabase.from('work_orders').select('id, wo_no, status').eq('source_table', table).eq('source_id', id).maybeSingle<{ id: string; wo_no: string; status: string }>(),
+    supabase.from('units').select('id, unit_no').neq('status', 'retired').order('unit_no').returns<{ id: string; unit_no: string }[]>(),
+  ]);
+  const list = units ?? [];
+  const current = list.find(u => u.id === row?.unit_id);
+  return (
+    <div className="grid gap-2">
+      {canEdit && status === 'open' ? (
+        <ActionForm action={setFindingUnit} label="Simpan unit" hidden={{ table, id, path }}>
+          <select name="unit" defaultValue={row?.unit_id ?? ''} className={input} aria-label="Unit terkait">
+            <option value="">– tidak terkait unit</option>
+            {list.map(u => <option key={u.id} value={u.id}>{u.unit_no}</option>)}
+          </select>
+        </ActionForm>
+      ) : <span>{current ? current.unit_no : '–'}</span>}
+      {wo ? (
+        <Link href={`/plant/wo/${wo.id}`} className="text-sm font-semibold text-accent underline underline-offset-2">WO {wo.wo_no} →</Link>
+      ) : canWo && status === 'open' && current ? (
+        <ActionForm action={createFindingWo} label="Buat WO perbaikan" hidden={{ table, id, path }}>
+          <p className="text-xs text-muted">Prioritas WO mengikuti tingkat risiko temuan.</p>
+        </ActionForm>
+      ) : null}
+    </div>
   );
 }
 

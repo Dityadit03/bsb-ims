@@ -1115,6 +1115,17 @@ await test('tanda unit: SPIP expired dan breakdown terbuka terbaca dari unit_fla
   const f = (await db.query(`select spip_validity, open_breakdown from public.unit_flags where unit_id = $1`, [unit.id])).rows[0];
   eq(f.spip_validity, 'expired'); eq(f.open_breakdown, true);
 });
+await test('temuan SHE terkait unit: pelapor/pengawas mengaitkan, Plant membuat satu WO dari temuan', async () => {
+  const h = (await as(db, ownerId, HZ_SQL, [today, HSE, PLT, await due(3), area, 'extreme', []])).rows[0];
+  await expectError('22023', async () => as(db, dhPlt, `select public.finding_create_wo('hazard_reports', $1)`, [h.id]));
+  await expectError('42501', async () => as(db, otherId, `select public.finding_set_unit('hazard_reports', $1, $2)`, [h.id, unit.id]));
+  await as(db, ownerId, `select public.finding_set_unit('hazard_reports', $1, $2)`, [h.id, unit.id]);
+  await expectError('42501', async () => as(db, spvPrd, `select public.finding_create_wo('hazard_reports', $1)`, [h.id]));
+  const w = (await as(db, dhPlt, `select (w).* from public.finding_create_wo('hazard_reports', $1) w`, [h.id])).rows[0];
+  eq(w.wo_type, 'repair'); eq(w.priority, 'urgent'); eq(w.source_table, 'hazard_reports'); eq(w.source_id, h.id); eq(w.unit_id, unit.id);
+  await expectError('23505', async () => as(db, dhPlt, `select public.finding_create_wo('hazard_reports', $1)`, [h.id]));
+  await expectError('22023', async () => as(db, ownerId, `select public.finding_set_unit('hazard_reports', $1, gen_random_uuid())`, [h.id]));
+});
 await test('PO lewat HO: site kirim, HO terima, dikembalikan ke site (beli di site) atau dibeli HO; hanya pengadaan HO yang memproses', async () => {
   const hoUser = await createUser('ho.proc@bsb.co.id');
   await db.query(`insert into public.user_roles(user_id, role_code) values ($1, 'HO_PROCUREMENT')`, [hoUser]);
