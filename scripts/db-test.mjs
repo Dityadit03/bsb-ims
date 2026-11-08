@@ -1106,6 +1106,15 @@ await test('register komisioning (SPIP): oleh Plant/HSE, status berlaku dihitung
   eq((await as(db, spvPrd, `select validity from public.commissioning_register where id = $1`, [c.id])).rows[0].validity, 'expired');
   await expectError('23514', async () => as(db, spvHse, C, ['SJ-02', 'REG/2', '2025-07-01', '2025-01-01']));
 });
+await test('tanda unit: SPIP expired dan breakdown terbuka terbaca dari unit_flags', async () => {
+  const f0 = (await db.query(`select spip_validity, open_breakdown from public.unit_flags where unit_id = $1`, [unit.id])).rows[0];
+  eq(f0.open_breakdown, false);
+  const u = (await as(db, spvHse, `select (c).* from public.commissioning_save(null, 'unit', $1, 'Unit uji tanda', 'Sarana Utama', 'REG/F', '2025-01-01'::date, '2025-02-01'::date, null, null, '{}') c`, [unit.unit_no])).rows[0];
+  await db.query(`update public.commissioning_records set unit_id = $1 where id = $2`, [unit.id, u.id]);
+  await as(db, dhPlt, `select public.wo_create($1, 'breakdown', 'Mogok uji tanda')`, [unit.id]);
+  const f = (await db.query(`select spip_validity, open_breakdown from public.unit_flags where unit_id = $1`, [unit.id])).rows[0];
+  eq(f.spip_validity, 'expired'); eq(f.open_breakdown, true);
+});
 await test('PO lewat HO: site kirim, HO terima, dikembalikan ke site (beli di site) atau dibeli HO; hanya pengadaan HO yang memproses', async () => {
   const hoUser = await createUser('ho.proc@bsb.co.id');
   await db.query(`insert into public.user_roles(user_id, role_code) values ($1, 'HO_PROCUREMENT')`, [hoUser]);

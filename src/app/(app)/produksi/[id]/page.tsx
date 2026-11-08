@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { unitFlagText, type UnitFlag } from '@/lib/unit-flags';
 import { ActionForm } from '@/components/action-form';
 import { PageHeader, Panel, Pill, Table, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
@@ -19,7 +20,7 @@ export default async function ReportDetail({ params }: { params: Promise<{ id: s
   const supabase = await createClient();
   const { data: r } = await supabase.from('production_reports').select('*').eq('id', id).maybeSingle<Report>();
   if (!r) notFound();
-  const [{ data: sum }, { data: trips }, { data: delays }, { data: units }, { data: routes }, { data: fit }] = await Promise.all([
+  const [{ data: sum }, { data: trips }, { data: delays }, { data: units }, { data: routes }, { data: fit }, { data: flags }] = await Promise.all([
     supabase.from('production_summary').select('supervisor_name, trips, tonnage, ton_km, delay_hours').eq('id', id).single(),
     supabase.from('haul_trips').select('id, operator_name, trips, tonnage, hm_start, hm_end, units(unit_no), haul_routes(code, distance_km)')
       .eq('report_id', id).order('created_at').returns<Trip[]>(),
@@ -27,7 +28,9 @@ export default async function ReportDetail({ params }: { params: Promise<{ id: s
     supabase.from('units').select('id, unit_no, status').neq('status', 'retired').order('unit_no'),
     supabase.from('haul_routes').select('id, code, name').eq('active', true).order('code'),
     supabase.from('p2h_checks').select('unit_no').eq('check_date', r.report_date).eq('shift', r.shift).in('conclusion', ['fit', 'fit_with_notes']),
+    supabase.from('unit_flags').select('unit_no, spip_validity, open_breakdown').returns<UnitFlag[]>(),
   ]);
+  const flagMap = new Map((flags ?? []).map(f => [f.unit_no, f]));
   const fitSet = new Set((fit ?? []).map(p => p.unit_no));
   const edit = r.status === 'draft' && s.canIn('prod.report', 'PRD');
   const review = r.status === 'submitted' && s.canIn('prod.approve', 'PRD') && r.submitted_by !== s.profile.id;
@@ -62,7 +65,7 @@ export default async function ReportDetail({ params }: { params: Promise<{ id: s
                 <div className="grid gap-3 sm:grid-cols-4">
                   <label className="grid gap-1 text-sm">Unit
                     <select name="unit" required className={input}>{(units ?? []).map(u => (
-                      <option key={u.id} value={u.id}>{u.unit_no}{fitSet.has(u.unit_no) ? '' : ' · belum P2H layak'}</option>))}</select></label>
+                      <option key={u.id} value={u.id}>{u.unit_no}{fitSet.has(u.unit_no) ? '' : ' · belum P2H layak'}{unitFlagText(flagMap.get(u.unit_no))}</option>))}</select></label>
                   <label className="grid gap-1 text-sm">Rute
                     <select name="route" required className={input}>{(routes ?? []).length ? (routes ?? []).map(x => <option key={x.id} value={x.id}>{x.code} · {x.name}</option>) : <option value="">Belum ada rute aktif</option>}</select>
                     {!(routes ?? []).length && <span className="text-xs text-warn">Belum ada rute. Minta Kepala Produksi mengisi di Produksi → Rute &amp; target.</span>}</label>
