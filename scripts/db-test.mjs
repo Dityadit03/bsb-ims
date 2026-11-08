@@ -1738,7 +1738,7 @@ await test('kompetensi "Lainnya" untuk training internal: dibuat sekali per nama
   const b = (await as(db, spvPrd, `select public.training_competency_other('  tanggap DARURAT ') id`)).rows[0].id;
   eq(a, b);
   const c = (await db.query(`select code, category, validity_months from public.competencies where id = $1`, [a])).rows[0];
-  eq(c.category, 'training'); eq(c.code.startsWith('TRN-'), true); eq(c.validity_months, null);
+  eq(c.category, 'training'); eq(c.code, 'TANGGAP-DARURAT'); eq(c.validity_months, null);
 });
 await test('lembur (SPL): batas jam per hari & minggu, tidak bentrok, disetujui atasan bukan pembuat', async () => {
   await as(db, spvPrd, ROSTER, [wk.id, today, today, 'D']);
