@@ -27,7 +27,7 @@ async function run(path: string, ok: string, fn: () => Promise<unknown>): Promis
 export async function saveMaterial(_: ActionState, f: FormData) {
   return run('/logistik', 'Barang disimpan', () => rpc('material_save', {
     p_code: normCode(str(f, 'code')), p_name: str(f, 'name'), p_category: str(f, 'category'), p_uom: str(f, 'uom'),
-    p_min_stock: num(f, 'min_stock') ?? 0, p_active: str(f, 'active') !== 'false',
+    p_min_stock: num(f, 'min_stock') ?? 0, p_active: str(f, 'active') !== 'false', p_ref_price: num(f, 'ref_price'),
   }));
 }
 

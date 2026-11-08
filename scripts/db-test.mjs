@@ -802,6 +802,17 @@ await test('MR suku cadang wajib terkait WO terbuka; nomor MR; nilai dihitung da
   eq(Number(mrBig.total_value), 12000000);
   mrSmall = (await as(db, pltStaff, `select (r).* from public.mr_create($1, 'Servis', $2::jsonb, null, $3) r`, [PLT, lines(2), woLog.id])).rows[0];
 });
+await test('harga acuan: barang tanpa harga rata-rata ditaksir dari harga acuan, nilai persediaan tidak berubah, PO terbaru mengisi harga acuan', async () => {
+  const cat = (await db.query(`select category from public.materials where id = $1`, [sp.id])).rows[0].category;
+  await expectError('22023', async () => as(db, logHead, `select public.material_save('ACU-NEG', 'Uji acuan', $1, 'pcs', 0, true, -5)`, [cat]));
+  const m = (await as(db, logHead, `select (m).* from public.material_save('ACU-01', 'Barang acuan uji', $1, 'pcs', 0, true, 250000) m`, [cat])).rows[0];
+  eq(Number(m.ref_price), 250000); eq(Number(m.avg_cost), 0);
+  const r = (await as(db, pltStaff, `select (r).* from public.mr_create($1, 'Uji acuan', $2::jsonb, null, $3) r`, [PLT, JSON.stringify([{ material: m.id, qty: 4 }]), woLog.id])).rows[0];
+  eq(Number(r.total_value), 1000000);
+  eq(Number((await db.query(`select stock_value::int v from public.material_stock where id = $1`, [m.id])).rows[0].v), 0);
+  await as(db, logHead, `select public.material_save('ACU-01', 'Barang acuan uji', $1, 'pcs', 0, true)`, [cat]);
+  eq(Number((await db.query(`select ref_price::int p from public.materials where id = $1`, [m.id])).rows[0].p), 250000);
+});
 await test('MR disetujui orang lain; di atas batas nilai wajib Dept Head; penolakan wajib alasan', async () => {
   await expectError('22023', async () => as(db, logStaff, `select public.goods_issue($1, '[]'::jsonb)`, [mrSmall.id]));
   await expectError('42501', async () => as(db, spvPlt, `select public.mr_review($1, true)`, [mrBig.id]));

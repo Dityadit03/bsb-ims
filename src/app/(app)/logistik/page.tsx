@@ -14,7 +14,7 @@ import { UnitOrOther } from './unit-or-other';
 export const metadata = { title: 'Logistik' };
 
 type Row = { id: string; code: string; name: string; category: string; uom: string; min_stock: number; stock_qty: number;
-  avg_cost: number; stock_value: number; low_stock: boolean; active: boolean; location: string | null };
+  avg_cost: number; stock_value: number; low_stock: boolean; active: boolean; location: string | null; ref_price: number };
 
 type Plan = { material_id: string; critical: boolean; lead_time_days: number; daily_use: number; cover_days: number | null; reorder_point: number;
   suggested_qty: number; reorder_now: boolean; reserved_qty: number; abc: 'A' | 'B' | 'C'; on_order: number };
@@ -151,9 +151,10 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
               <select name="category" className={input} aria-label="Kategori">{Object.entries(CATEGORY).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
               <input name="uom" required className={input} placeholder="Satuan (pcs, L, set)" />
               <input type="number" name="min_stock" min={0} className={input} placeholder="Stok minimum" />
+              <input type="number" name="ref_price" min={0} step="any" className={input} placeholder="Harga acuan (Rp, opsional)" title="Hanya untuk menaksir nilai MR bila belum ada penerimaan. Terisi otomatis dari PO terakhir." />
               <select name="active" className={input} aria-label="Aktif"><option value="true">Aktif</option><option value="false">Tidak aktif</option></select>
             </div>
-            <p className="text-xs text-muted">Kode hanya huruf, angka, titik, / dan strip (spasi otomatis jadi strip). Kode yang sudah ada akan diperbarui. Stok dan harga hanya berubah lewat penerimaan, pengeluaran dan opname.</p>
+            <p className="text-xs text-muted">Kode hanya huruf, angka, titik, / dan strip (spasi otomatis jadi strip). Kode yang sudah ada akan diperbarui. Stok dan harga rata-rata hanya berubah lewat penerimaan, pengeluaran dan opname. Harga acuan hanya menaksir nilai MR (terisi otomatis dari PO terakhir) dan tidak mengubah nilai persediaan.</p>
           </ActionForm>
         </Panel>
       )}
