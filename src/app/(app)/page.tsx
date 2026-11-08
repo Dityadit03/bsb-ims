@@ -23,12 +23,17 @@ export default async function HomePage() {
   const supabase = await createClient();
   const now = siteNow();
   const yearStart = `${now.year}-01-01`;
+  // Pengguna lapangan (hanya melapor/mengerjakan tugas) cukup melihat aksi cepat dan tugasnya; angka perusahaan disembunyikan.
+  const SUPERVISORY = ['she.followup', 'she.investigate', 'plant.manage', 'prod.manage', 'log.manage', 'log.approve', 'hr.manage', 'mgmt.review',
+    'capa.manage', 'document.release', 'user.manage', 'training.organize', 'sap.manage'];
+  const fieldOnly = s.can('she.report') && !SUPERVISORY.some(k => s.can(k));
+  const none = { data: null } as { data: null };
 
   const [emps, incidents, prod, sap, { counts: c, items: todos }] = await Promise.all([
-    supabase.from('employee_register').select('department_code, required, compliant').eq('status', 'active').limit(5000),
-    supabase.from('incident_register').select('classification, occurred_at').gte('occurred_at', yearStart).limit(5000),
-    supabase.from('production_month').select('month, tonnage_approved, tonnage_all').gte('month', yearStart).order('month'),
-    supabase.from('sap_weekly').select('week_start, week_no, on_leave, obs_target, obs_act, insp_target, insp_act, hazard_target, hazard_act')
+    fieldOnly ? none : supabase.from('employee_register').select('department_code, required, compliant').eq('status', 'active').limit(5000),
+    fieldOnly ? none : supabase.from('incident_register').select('classification, occurred_at').gte('occurred_at', yearStart).limit(5000),
+    fieldOnly ? none : supabase.from('production_month').select('month, tonnage_approved, tonnage_all').gte('month', yearStart).order('month'),
+    fieldOnly ? none : supabase.from('sap_weekly').select('week_start, week_no, on_leave, obs_target, obs_act, insp_target, insp_act, hazard_target, hazard_act')
       .lte('week_start', new Date(Date.now() + 7 * 3600000 - 7 * 86400000).toISOString().slice(0, 10)).order('week_start', { ascending: false })
       .limit(1500).returns<Sap[]>(),
     getAlerts(),
@@ -73,12 +78,14 @@ export default async function HomePage() {
         <div className="grid gap-1.5">
           <span className="text-sm font-medium text-muted">{date}</span>
           <h1 className="text-3xl font-extrabold leading-tight sm:text-4xl">Selamat {greet}, {first}</h1>
-          <p className="text-sm text-muted">Ringkasan keselamatan, kompetensi, plant dan logistik site PT BDA.</p>
+          <p className="text-sm text-muted">{fieldOnly ? 'Mulai dari aksi cepat di bawah. Tugas Anda yang menunggu ada di panel Perlu tindakan.' : 'Ringkasan keselamatan, kompetensi, plant dan logistik site PT BDA.'}</p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/she" className={btnGhost}>Isi formulir harian</Link>
-          <Link href="/data/impor" className={btnPrimary}>Upload data</Link>
-        </div>
+        {!fieldOnly && (
+          <div className="flex gap-2">
+            <Link href="/she" className={btnGhost}>Isi formulir harian</Link>
+            <Link href="/data/impor" className={btnPrimary}>Upload data</Link>
+          </div>
+        )}
       </header>
 
       {s.can('she.report') && (
@@ -91,7 +98,7 @@ export default async function HomePage() {
         </nav>
       )}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      {!fieldOnly && <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <Stat label="Karyawan aktif" value={num.format(empRows.length)} note={`${depts} departemen`} href="/hrga" />
         <Stat label="LTI" value={lti} tone={lti ? 'crit' : 'ok'} note={`${nearmiss} nearmiss · ${inc.length} insiden YTD`} href="/she/insiden" />
         <Stat label="Hazard terbuka" value={hazardOpen} tone={hazardLate ? 'warn' : undefined} note={`${hazardLate} lewat batas waktu`} href="/she/hazard" />
@@ -99,12 +106,12 @@ export default async function HomePage() {
         <Stat label="MCU expired" value={mcuExp} tone={mcuExp ? 'crit' : undefined} note={`${mcuSoon} segera ≤30 hari`} href="/hrga/kompetensi" />
         <Stat label="Kompetensi wajib" value={req ? `${Math.round((ok / req) * 100)}%` : '–'} tone={req && ok / req < 0.8 ? 'warn' : undefined}
           note={`${num.format(ok)} dari ${num.format(req)} terpenuhi`} href="/hrga/kompetensi" />
-      </div>
+      </div>}
 
-      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <Panel title={`Produksi hauling bulanan ${now.year}`} sub={`Total ${num.format(prodYtd)} ton YTD · laporan disetujui`} action={open('/produksi')}>
+      <div className={fieldOnly ? 'grid gap-4' : 'grid gap-4 lg:grid-cols-[2fr_1fr]'}>
+        {!fieldOnly && <Panel title={`Produksi hauling bulanan ${now.year}`} sub={`Total ${num.format(prodYtd)} ton YTD · laporan disetujui`} action={open('/produksi')}>
           <AreaChart data={prodData} label="Tonase per bulan" />
-        </Panel>
+        </Panel>}
         <Panel title="Perlu tindakan" sub={todos.length ? `${todos.length} hal menunggu tindak lanjut` : 'Tidak ada yang tertunda'} action={open('/tugas')}>
           <ul className="-mr-2 grid max-h-80 gap-2 overflow-y-auto pr-2">
             {todos.map(t => (
@@ -123,7 +130,7 @@ export default async function HomePage() {
         </Panel>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {!fieldOnly && <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="Nearmiss & insiden per bulan" sub={`Indikator lagging · LTI ${lti} sepanjang ${now.year}`} action={open('/she/insiden')}>
           <GroupedBars label="Nearmiss dan insiden per bulan" labels={months} series={[
             { name: 'Nearmiss', color: 'var(--color-orange)', values: perMonth(c => c === 'nearmiss') },
@@ -135,7 +142,7 @@ export default async function HomePage() {
             ? <AreaChart data={sapData} color="var(--color-ok)" suffix="%" max={100} height={220} label="Capaian SAP per minggu" />
             : <p className="py-10 text-center text-sm text-muted">Belum ada data SAP.</p>}
         </Panel>
-      </div>
+      </div>}
     </>
   );
 }
