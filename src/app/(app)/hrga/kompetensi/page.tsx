@@ -32,6 +32,10 @@ export default async function KompetensiPage({ searchParams }: { searchParams: P
   const sim = paginate(simper ?? [], sp.hal);
   const hr = s.canIn('hr.manage', 'HRGA');
   const req = new Set((reqs ?? []).map(r => `${r.position_id}:${r.competency_id}`));
+  const activeComps = (comps ?? []).filter(c => c.active);
+  const withReq = new Set((reqs ?? []).map(r => r.position_id));
+  const matrixPositions = (positions ?? []).filter(p => withReq.has(p.id));
+  const deptCode = new Map(depts.map(d => [d.id, d.code]));
   const name = (e: { employee_id: string; full_name: string }) => <Link href={`/hrga/${e.employee_id}`} className="hover:text-accent">{e.full_name}</Link>;
 
   return (
@@ -73,18 +77,19 @@ export default async function KompetensiPage({ searchParams }: { searchParams: P
         <Pager {...sim} params={sp} />
       </Panel>
       <Panel title="Matriks kompetensi jabatan">
-        {positions?.length && comps?.length ? (
+        {matrixPositions.length && activeComps.length ? (
           <div className="overflow-x-auto">
             <table className="text-xs">
-              <thead><tr><th className="p-1 text-left">Jabatan</th>{comps.filter(c => c.active).map(c => <th key={c.id} className="p-1 font-mono" title={c.name}>{c.code}</th>)}</tr></thead>
-              <tbody>{positions.map(p => (
+              <thead><tr><th className="p-1 text-left">Jabatan</th>{activeComps.map(c => <th key={c.id} className="p-1 font-mono" title={c.name}>{c.code}</th>)}</tr></thead>
+              <tbody>{matrixPositions.map(p => (
                 <tr key={p.id} className="border-t border-line">
-                  <td className="sticky left-0 whitespace-nowrap bg-panel p-1">{p.name} <span className="text-muted">({depts.find(d => d.id === p.department_id)?.code ?? '–'})</span></td>
-                  {comps.filter(c => c.active).map(c => <td key={c.id} className="p-1 text-center">{req.has(`${p.id}:${c.id}`) ? '●' : ''}</td>)}
+                  <td className="sticky left-0 whitespace-nowrap bg-panel p-1">{p.name} <span className="text-muted">({deptCode.get(p.department_id) ?? '–'})</span></td>
+                  {activeComps.map(c => <td key={c.id} className="p-1 text-center">{req.has(`${p.id}:${c.id}`) ? '●' : ''}</td>)}
                 </tr>))}</tbody>
             </table>
           </div>
-        ) : <p className="text-sm text-muted">Belum ada jabatan.</p>}
+        ) : <p className="text-sm text-muted">Belum ada jabatan dengan kompetensi wajib.</p>}
+        {(positions?.length ?? 0) > matrixPositions.length && <p className="mt-2 text-xs text-muted">{(positions?.length ?? 0) - matrixPositions.length} jabatan lain belum punya kompetensi wajib dan tidak ditampilkan di matriks. Atur lewat form di bawah.</p>}
         {hr && (
           <ActionForm action={setRequirement} label="Perbarui matriks" className="max-w-2xl">
             <div className="grid gap-2 sm:grid-cols-3">
