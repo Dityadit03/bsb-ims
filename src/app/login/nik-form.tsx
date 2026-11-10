@@ -19,12 +19,6 @@ export function NikForm({ next, site }: { next?: string; site?: string }) {
   return (
     <div className="grid gap-3">
       {SITE_KEY && <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" />}
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-white/10 p-1 text-sm font-semibold">
-        {(['masuk', 'daftar'] as const).map(m => (
-          <button key={m} type="button" onClick={() => setMode(m)}
-            className={`rounded-lg py-2 ${mode === m ? 'bg-white text-coal' : 'text-coal-ink/70'}`}>{m === 'masuk' ? 'Masuk' : 'Daftar akun'}</button>
-        ))}
-      </div>
       <form action={mode === 'masuk' ? loginAction : regAction} className="grid gap-3" autoComplete="on">
         <input type="hidden" name="next" value={next ?? ''} />
         <input type="hidden" name="site" value={site ?? ''} />
@@ -55,6 +49,13 @@ export function NikForm({ next, site }: { next?: string; site?: string }) {
           {pending ? 'Memproses…' : mode === 'masuk' ? 'Masuk dengan NIK' : 'Kirim pendaftaran'}
         </button>
         {state.error && <p role="alert" className="rounded-md border border-crit/40 bg-crit/10 px-3 py-2 text-sm">{state.error}</p>}
+        <p className="text-center text-sm text-coal-ink/70">
+          {mode === 'masuk' ? 'Belum punya akun? ' : 'Sudah punya akun? '}
+          <button type="button" onClick={() => setMode(mode === 'masuk' ? 'daftar' : 'masuk')} className="font-semibold text-white underline underline-offset-4 hover:text-coal-ink">
+            {mode === 'masuk' ? 'Daftar dengan NIK' : 'Masuk'}
+          </button>
+        </p>
+        {mode === 'masuk' && <p className="text-center text-xs text-coal-ink/55">Lupa sandi? Minta reset ke administrator site Anda.</p>}
         {mode === 'daftar' && (
           <p className="text-xs text-coal-ink/60">
             Sandi minimal 10 karakter. Setelah mendaftar, administrator mencocokkan NIK dan tanggal lahir Anda dengan data karyawan sebelum akun diaktifkan.

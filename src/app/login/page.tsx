@@ -49,15 +49,17 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
       {/* Sisi kanan: form masuk */}
       <section className="relative grid place-items-center bg-[#120b22] px-4 py-8 sm:px-8 lg:py-12">
-        <div className="-mt-20 grid w-full max-w-md gap-6 rounded-2xl border border-white/10 bg-[#1b1230] p-6 shadow-2xl ring-1 ring-white/5 sm:p-8 lg:mt-0">
+        <div className="-mt-20 grid w-full max-w-lg gap-6 rounded-2xl border border-white/10 bg-[#1b1230] p-6 shadow-2xl ring-1 ring-white/5 sm:p-8 lg:mt-0">
           <div className="grid gap-1">
             <h2 className="text-2xl font-bold">Selamat datang</h2>
             <p className="text-sm text-coal-ink/65">Pilih site, lalu masuk dengan NIK atau akun email kantor.</p>
           </div>
-          <div className="grid gap-1.5">
-            <label htmlFor="site-select" className="text-xs font-semibold text-coal-ink/70">Site</label>
-            <SiteSelect sites={sites} value={site.code} next={next} />
-          </div>
+          {sites.length > 1 && (
+            <div className="grid gap-1.5">
+              <label htmlFor="site-select" className="text-xs font-semibold text-coal-ink/70">Site</label>
+              <SiteSelect sites={sites} value={site.code} next={next} />
+            </div>
+          )}
           {error === 'site' ? (
             <p role="alert" className="rounded-md border border-crit/40 bg-crit/10 px-3 py-2 text-sm">
               Akun ini terdaftar di {actual ? actual.name : 'site lain'}. Pilih "{actual ? actual.name : 'site yang benar'}" pada pilihan site, lalu masuk lagi.
@@ -68,8 +70,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             </p>
           )}
           <LoginMethods next={next} site={site.code} microsoft={microsoft} initial={via === 'email' || (error && error !== 'site') ? 'email' : 'nik'} />
-          <p className="text-xs leading-relaxed text-coal-ink/50">Akun baru perlu disetujui administrator sebelum bisa dipakai. Admin sistem dan akun HO dapat memilih site mana pun.</p>
+          <p className="border-t border-white/10 pt-4 text-xs leading-relaxed text-coal-ink/50">Akun baru perlu disetujui administrator sebelum bisa dipakai. Admin sistem dan akun HO dapat memilih site mana pun.</p>
         </div>
+        <p className="absolute bottom-4 left-0 right-0 hidden text-center text-xs text-coal-ink/40 lg:block">BSB IMS · PT Berkarya Sejahtera Bersama · Butuh bantuan? Hubungi administrator site</p>
       </section>
     </main>
   );

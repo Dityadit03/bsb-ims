@@ -61,9 +61,10 @@ Karakter: tenang, padat, mudah dipindai. Dipakai di HP Android murah di lapangan
 ## Colors
 
 - **coal** (#1e1433, plum gelap dari logo BSB): bilah navigasi dan permukaan gelap.
-- **accent** (#c2125a, magenta logo): satu aksi utama per tampilan, tautan aktif, fokus. Jangan dipakai untuk status.
+- **accent** (#c2125a, magenta logo): tautan aktif, penanda menu, cincin fokus. Jangan dipakai untuk status.
+- **violet** (#5b21b6): warna tombol utama (`btnPrimary`), satu per kartu.
 - **ok / warn / crit**: hanya untuk status, selalu disertai label teks atau ikon, tidak pernah warna saja.
-- **violet, orange, blue**: seri grafik dan penanda kategori. Gradien magenta-ungu-oranye hanya sebagai garis penanda (`brand-line`), tidak sebagai latar.
+- **orange, blue** dan violet: seri grafik dan penanda kategori. Gradien magenta-ungu-oranye hanya sebagai garis penanda (`brand-line`), tidak sebagai latar.
 - Mode gelap mengikuti perangkat kecuali pengguna memilih Terang/Gelap di Pengaturan. Setiap warna baru wajib punya padanan gelap.
 
 ## Typography
@@ -81,7 +82,7 @@ Karakter: tenang, padat, mudah dipindai. Dipakai di HP Android murah di lapangan
 
 ## Components
 
-- **Tombol:** tinggi minimal 40px (44px untuk aksi lapangan seperti P2H dan absen), radius 8px, satu tombol utama berwarna accent per kartu.
+- **Tombol:** tinggi minimal 40px (44px untuk aksi lapangan seperti P2H dan absen), radius 8px, satu tombol utama (violet) per kartu.
 - **Input:** label di atas, tinggi minimal 40px, fokus dengan cincin accent. Pesan galat di bawah isian dalam `crit`. Formulir tidak boleh kosong kembali saat server menolak.
 - **Pill status:** bentuk kapsul, warna sesuai nada, teks wajib.
 - **Konfirmasi:** aksi yang tidak bisa dibatalkan memakai `confirm`.
