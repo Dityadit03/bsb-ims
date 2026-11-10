@@ -19,6 +19,7 @@ Rencana build: https://claude.ai/artifact/1hBNpZYGgXVwAzeB28bgAi
 - Fungsi yang boleh dipanggil `anon` hanya `verify_document`, `feed_rows` (feed Google Sheets bertoken) dan `login_sites` (kode+nama site untuk halaman login). Loop revoke di akhir migrasi baru wajib mengecualikan ketiganya.
 - Isolasi data per site: tabel baru di schema public wajib memanggil `select app.site_isolate('public.nama_tabel')` (kolom site_id + policy restrictive) atau, bila memang data bersama, ditambahkan ke `SHARED_TABLES` di `scripts/db-test.mjs` dan daftar kecuali di migrasi isolasi. Uji penjaga akan gagal bila tabel belum dikelompokkan. Hanya admin sistem dan akun HO yang boleh pindah site (`site_switch`). Catatan: fungsi security definer melewati RLS, jadi cek site sendiri bila membaca lintas tabel lewat UUID.
 - Register baru yang perlu diunduh/ditarik ke spreadsheet didaftarkan di `src/lib/datasets.ts` (feed hanya untuk data yang terbaca semua pengguna aktif, dan juga ditambahkan ke daftar di `feed_rows`).
+- UI baru mengikuti `DESIGN.md` (token warna, huruf, bentuk, aturan komponen). Sumber kode: `src/app/globals.css` dan `src/components/ui.tsx`.
 
 ## Perintah
 - `npm run dev` / `npm run build` / `npm run typecheck`
