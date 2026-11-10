@@ -55,7 +55,7 @@ export function NikForm({ next, site }: { next?: string; site?: string }) {
             {mode === 'masuk' ? 'Daftar dengan NIK' : 'Masuk'}
           </button>
         </p>
-        {mode === 'masuk' && <p className="text-center text-xs text-coal-ink/55">Lupa sandi? Minta reset ke administrator site Anda.</p>}
+        {mode === 'masuk' && <p className="text-center text-xs text-coal-ink/55">Lupa sandi? Minta reset ke admin sistem (kontak di bawah).</p>}
         {mode === 'daftar' && (
           <p className="text-xs text-coal-ink/60">
             Sandi minimal 10 karakter. Setelah mendaftar, administrator mencocokkan NIK dan tanggal lahir Anda dengan data karyawan sebelum akun diaktifkan.

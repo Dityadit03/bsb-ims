@@ -70,9 +70,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             </p>
           )}
           <LoginMethods next={next} site={site.code} microsoft={microsoft} initial={via === 'email' || (error && error !== 'site') ? 'email' : 'nik'} />
-          <p className="border-t border-white/10 pt-4 text-xs leading-relaxed text-coal-ink/50">Akun baru perlu disetujui administrator sebelum bisa dipakai. Admin sistem dan akun HO dapat memilih site mana pun.</p>
+          <div className="grid gap-1 border-t border-white/10 pt-4 text-xs leading-relaxed text-coal-ink/50">
+            <p>Akun baru perlu disetujui administrator sebelum bisa dipakai. Admin sistem dan akun HO dapat memilih site mana pun.</p>
+            <p>Butuh bantuan? Hubungi admin sistem: <a href="https://wa.me/6282188718647" className="font-semibold text-coal-ink/80 underline underline-offset-2">+62 821 8871 8647</a> · <a href="mailto:iqramaditya03@gmail.com" className="font-semibold text-coal-ink/80 underline underline-offset-2">iqramaditya03@gmail.com</a></p>
+          </div>
         </div>
-        <p className="absolute bottom-4 left-0 right-0 hidden text-center text-xs text-coal-ink/40 lg:block">BSB IMS · PT Berkarya Sejahtera Bersama · Butuh bantuan? Hubungi administrator site</p>
+        <p className="absolute bottom-4 left-0 right-0 hidden text-center text-xs text-coal-ink/40 lg:block">BSB IMS · PT Berkarya Sejahtera Bersama</p>
       </section>
     </main>
   );
