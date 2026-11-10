@@ -61,7 +61,7 @@ export default async function P2hPage({ searchParams }: { searchParams: Promise<
                     {CHOICES.map(([v, l, on]) => (
                       <label key={v} className="cursor-pointer">
                         <input type="radio" name={`item_${it.code}`} value={v} required defaultChecked={v === 'ok'} className="peer sr-only" />
-                        <span className={`block rounded-md border border-line px-3 py-2 text-center peer-focus-visible:outline-2 peer-focus-visible:outline-accent ${on}`}>{l}</span>
+                        <span className={`flex min-h-11 items-center justify-center rounded-md border border-line px-3 py-2 text-center peer-focus-visible:outline-2 peer-focus-visible:outline-accent ${on}`}>{l}</span>
                       </label>
                     ))}
                   </span>
