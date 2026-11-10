@@ -18,9 +18,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <ClearOfflineCache />
       {/* Sisi kiri: identitas tambang (di ponsel menjadi header ringkas) */}
       <section className="relative isolate flex flex-col justify-between gap-10 overflow-hidden bg-[radial-gradient(70%_60%_at_10%_0%,rgb(234_11_96/0.35),transparent_70%),radial-gradient(60%_50%_at_100%_30%,rgb(106_31_192/0.45),transparent_70%),linear-gradient(180deg,#1e1433,#120b22)] px-6 pb-28 pt-8 sm:px-10 lg:min-h-dvh lg:px-14 lg:pb-16 lg:pt-12">
-        <svg aria-hidden="true" className="absolute inset-0 -z-10 size-full opacity-[0.18]" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" viewBox="0 0 800 800" fill="none" stroke="white" strokeWidth="1">
-          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => <ellipse key={i} cx="520" cy="300" rx={60 + i * 55} ry={34 + i * 34} transform={`rotate(-18 520 300)`} />)}
-        </svg>
+        {/* Foto apel pagi site BDA, diberi lapisan plum agar teks tetap terbaca dan wajah tidak menonjol */}
+        <Image src="/login-site.jpg" alt="" fill priority sizes="(min-width: 1024px) 55vw, 100vw" className="-z-10 object-cover object-[60%_center] opacity-60 saturate-75" />
+        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgb(30_20_51/0.55),rgb(30_20_51/0.35)_35%,rgb(18_11_34/0.92)_85%)]" />
         <div className="flex items-center gap-3">
           <span className="grid size-12 place-items-center rounded-xl bg-white p-1.5 shadow-lg"><Image src="/logo.png" alt="Logo PT Berkarya Sejahtera Bersama" width={40} height={40} priority /></span>
           <span className="grid leading-tight">
