@@ -5,6 +5,7 @@ import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { fmtDate } from '@/lib/documents';
 import { closeObservation, recordObservation } from '../actions';
+import { FilterBar, Thumbs, isDate, needle, photosFor, val } from '../filters';
 import { AreaSelect, DeptSelect, Files, SheTabs, sheMasters, today, EmployeeDatalist, EmployeeInput } from '../fields';
 
 export const metadata = { title: 'Observasi PTO' };
@@ -20,10 +21,18 @@ export default async function ObservationPage({ searchParams }: { searchParams: 
   const sp = await searchParams;
   const supabase = await createClient();
   let q = supabase.from('observations')
-    .select('id, obs_no, observed_on, activity, worker_name, result, status, unsafe_behaviour, coaching, observer_id, observer:observer_id(full_name), area:work_area_id(name), dept:department_id(code)')
-    .order('observed_on', { ascending: false }).order('obs_no', { ascending: false }).limit(200);
-  if (sp.open) q = q.eq('status', 'open');
-  const [{ data: rows }, { depts, areas }] = await Promise.all([q.returns<Row[]>(), sheMasters()]);
+    .select('id, obs_no, observed_on, activity, worker_name, result, status, unsafe_behaviour, coaching, observer_id, observer:observer_id(full_name), area:work_area_id(name), dept:department_id(code)', { count: 'exact' })
+    .order('observed_on', { ascending: false }).order('obs_no', { ascending: false }).limit(300);
+  const f = { cari: needle(val(sp, '', 'cari')), dept: val(sp, '', 'dept'), area: val(sp, '', 'area'), hasil: val(sp, '', 'hasil'), status: val(sp, '', 'status') || (sp.open ? 'open' : ''), dari: val(sp, '', 'dari'), sampai: val(sp, '', 'sampai') };
+  if (f.cari) q = q.or(['obs_no', 'activity', 'worker_name', 'unsafe_behaviour', 'coaching'].map(c => `${c}.ilike.%${f.cari}%`).join(','));
+  if (f.dept) q = q.eq('department_id', f.dept);
+  if (f.area) q = q.eq('work_area_id', f.area);
+  if (f.hasil === 'safe' || f.hasil === 'unsafe') q = q.eq('result', f.hasil);
+  if (f.status === 'open' || f.status === 'closed') q = q.eq('status', f.status);
+  if (isDate(f.dari)) q = q.gte('observed_on', f.dari);
+  if (isDate(f.sampai)) q = q.lte('observed_on', f.sampai);
+  const [{ data: rows, count }, { depts, areas }] = await Promise.all([q.returns<Row[]>(), sheMasters()]);
+  const photos = await photosFor('observations', (rows ?? []).map(r => r.id));
 
   return (
     <>
@@ -56,8 +65,17 @@ export default async function ObservationPage({ searchParams }: { searchParams: 
           </ActionForm>
         </Panel>
       )}
+      <FilterBar action="/she/observasi" sp={sp} shown={rows?.length ?? 0} total={count ?? undefined} fields={[
+        { name: 'cari', label: 'Cari nomor, aktivitas, pekerja', type: 'text', placeholder: 'Ketik kata kunci' },
+        { name: 'dept', label: 'Departemen', type: 'select', options: depts.map(d => [d.id, d.code]) },
+        { name: 'area', label: 'Lokasi', type: 'select', options: areas.map(a => [a.id, a.name]) },
+        { name: 'hasil', label: 'Hasil', type: 'select', options: [['safe', 'Aman'], ['unsafe', 'Tidak aman']] },
+        { name: 'status', label: 'Tindak lanjut', type: 'select', options: [['open', 'Perlu tindak lanjut'], ['closed', 'Selesai']] },
+        { name: 'dari', label: 'Dari tanggal', type: 'date' },
+        { name: 'sampai', label: 'Sampai tanggal', type: 'date' },
+      ]} />
       {rows?.length ? (
-        <Table head={['Nomor', 'Tanggal', 'Observer', 'Aktivitas', 'Lokasi', 'Hasil', 'Tindak lanjut']}>
+        <Table head={['Nomor', 'Tanggal', 'Observer', 'Aktivitas', 'Lokasi', 'Foto', 'Hasil', 'Tindak lanjut']}>
           {rows.map(r => (
             <tr key={r.id}>
               <td className="whitespace-nowrap font-mono text-xs">{r.obs_no}</td>
@@ -66,6 +84,7 @@ export default async function ObservationPage({ searchParams }: { searchParams: 
               <td className="min-w-56">{r.activity}{r.worker_name && <div className="text-xs text-muted">{r.worker_name}</div>}
                 {r.unsafe_behaviour && <div className="text-xs text-crit">{r.unsafe_behaviour}</div>}</td>
               <td className="text-xs">{r.area?.name}</td>
+              <td><Thumbs items={photos.get(r.id)} /></td>
               <td>{r.result === 'safe' ? <Pill tone="ok">Aman</Pill> : <Pill tone="crit">Tidak aman</Pill>}</td>
               <td className="min-w-56 text-xs">
                 {r.status === 'open' ? (r.observer_id === s.profile.id || s.can('she.followup')) ? (
@@ -77,7 +96,7 @@ export default async function ObservationPage({ searchParams }: { searchParams: 
             </tr>
           ))}
         </Table>
-      ) : <p className="text-sm text-muted">Belum ada observasi.</p>}
+      ) : <p className="text-sm text-muted">Tidak ada observasi untuk saringan ini.</p>}
     </>
   );
 }

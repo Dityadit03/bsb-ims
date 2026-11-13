@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { randomUUID } from 'node:crypto';
 import { ActionForm } from '@/components/action-form';
-import { PageHeader, Panel, Pill, Table, btnGhost, input } from '@/components/ui';
+import { PageHeader, Panel, Pill, Table, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { RISK } from '@/lib/compliance';
 import { fmtDate } from '@/lib/documents';
 import { INSPECTION_TYPE, OPEN_CLOSED } from '@/lib/she';
 import { recordInspection } from '../actions';
+import { FilterBar, Thumbs, isDate, needle, photosFor, val } from '../filters';
 import { AreaSelect, DeptSelect, Files, SheTabs, sheMasters, today, EmployeeDatalist, EmployeeInput } from '../fields';
 
 export const metadata = { title: 'Inspeksi' };
@@ -23,14 +24,26 @@ export default async function InspectionPage({ searchParams }: { searchParams: P
   const s = await getSession();
   const sp = await searchParams;
   const supabase = await createClient();
-  let fq = supabase.from('she_finding_register').select('*').eq('status', 'open').order('due_date').limit(200);
-  if (sp.terlambat) fq = fq.eq('is_overdue', true);
-  const [{ data: findings }, { data: recent }, { depts, areas }] = await Promise.all([
-    fq.returns<Finding[]>(),
-    supabase.from('inspections').select('id, inspection_no, inspected_on, inspection_type, object, inspector:inspector_id(full_name), findings:inspection_findings(status)')
-      .order('inspected_on', { ascending: false }).order('inspection_no', { ascending: false }).limit(50).returns<Insp[]>(),
-    sheMasters(),
-  ]);
+  // Dua daftar, dua bilah saring: temuan (awalan t_) dan inspeksi terakhir (awalan i_)
+  const t = { cari: needle(val(sp, 't_', 'cari')), risiko: val(sp, 't_', 'risiko'), pic: val(sp, 't_', 'pic'), dari: val(sp, 't_', 'dari'), sampai: val(sp, 't_', 'sampai') };
+  const i = { cari: needle(val(sp, 'i_', 'cari')), jenis: val(sp, 'i_', 'jenis'), hasil: val(sp, 'i_', 'hasil'), dari: val(sp, 'i_', 'dari'), sampai: val(sp, 'i_', 'sampai') };
+  let fq = supabase.from('she_finding_register').select('*', { count: 'exact' }).eq('status', 'open').order('due_date').limit(200);
+  if (sp.t_terlambat || sp.terlambat) fq = fq.eq('is_overdue', true);
+  if (t.cari) fq = fq.or(['inspection_no', 'object', 'description'].map(c => `${c}.ilike.%${t.cari}%`).join(','));
+  if (t.risiko) fq = fq.eq('risk_level', t.risiko);
+  if (t.pic) fq = fq.eq('pic_department_code', t.pic);
+  if (isDate(t.dari)) fq = fq.gte('inspected_on', t.dari);
+  if (isDate(t.sampai)) fq = fq.lte('inspected_on', t.sampai);
+  let iq = supabase.from('inspections').select('id, inspection_no, inspected_on, inspection_type, object, inspector:inspector_id(full_name), findings:inspection_findings(status)', { count: 'exact' })
+    .order('inspected_on', { ascending: false }).order('inspection_no', { ascending: false }).limit(50);
+  if (i.cari) iq = iq.or(['inspection_no', 'object', 'note'].map(c => `${c}.ilike.%${i.cari}%`).join(','));
+  if (i.jenis) iq = iq.eq('inspection_type', i.jenis);
+  if (isDate(i.dari)) iq = iq.gte('inspected_on', i.dari);
+  if (isDate(i.sampai)) iq = iq.lte('inspected_on', i.sampai);
+  const [{ data: findings, count: fCount }, { data: recentAll, count: iCount }, { depts, areas }] = await Promise.all([fq.returns<Finding[]>(), iq.returns<Insp[]>(), sheMasters()]);
+  // Hasil dihitung dari temuan, jadi disaring setelah data diambil
+  const recent = (recentAll ?? []).filter(r => !i.hasil || (i.hasil === 'sesuai' ? !r.findings.length : i.hasil === 'open' ? r.findings.some(f => f.status === 'open') : r.findings.length > 0 && !r.findings.some(f => f.status === 'open')));
+  const photos = await photosFor('inspections', recent.map(r => r.id));
 
   return (
     <>
@@ -72,7 +85,15 @@ export default async function InspectionPage({ searchParams }: { searchParams: P
           </ActionForm>
         </Panel>
       )}
-      <Panel title="Temuan open" action={<Link href={sp.terlambat ? '/she/inspeksi' : '/she/inspeksi?terlambat=1'} className={btnGhost}>{sp.terlambat ? 'Semua open' : 'Lewat due date'}</Link>}>
+      <Panel title="Temuan open">
+        <FilterBar action="/she/inspeksi" prefix="t_" sp={sp} shown={findings?.length ?? 0} total={fCount ?? undefined} fields={[
+          { name: 'cari', label: 'Cari nomor, objek, temuan', type: 'text', placeholder: 'Ketik kata kunci' },
+          { name: 'risiko', label: 'Risiko', type: 'select', options: Object.entries(RISK).map(([k, [, l]]) => [k, l]) },
+          { name: 'pic', label: 'PIC', type: 'select', options: depts.map(d => [d.code, d.code]) },
+          { name: 'dari', label: 'Dari tanggal', type: 'date' },
+          { name: 'sampai', label: 'Sampai tanggal', type: 'date' },
+          { name: 'terlambat', label: 'Lewat due date', type: 'check' },
+        ]} />
         {findings?.length ? (
           <Table head={['Inspeksi', 'Temuan', 'Risiko', 'PIC', 'Due date', 'Status']}>
             {findings.map(f => (
@@ -87,11 +108,18 @@ export default async function InspectionPage({ searchParams }: { searchParams: P
               </tr>
             ))}
           </Table>
-        ) : <p className="text-sm text-muted">Tidak ada temuan open.</p>}
+        ) : <p className="mt-3 text-sm text-muted">Tidak ada temuan open untuk saringan ini.</p>}
       </Panel>
       <Panel title="Inspeksi terakhir">
-        {recent?.length ? (
-          <Table head={['Nomor', 'Tanggal', 'Jenis', 'Objek', 'Inspektor', 'Hasil']}>
+        <FilterBar action="/she/inspeksi" prefix="i_" sp={sp} shown={recent.length} total={iCount ?? undefined} fields={[
+          { name: 'cari', label: 'Cari nomor atau objek', type: 'text', placeholder: 'Ketik kata kunci' },
+          { name: 'jenis', label: 'Jenis', type: 'select', options: Object.entries(INSPECTION_TYPE) },
+          { name: 'hasil', label: 'Hasil', type: 'select', options: [['sesuai', 'Sesuai'], ['open', 'Ada temuan open'], ['closed', 'Temuan closed']] },
+          { name: 'dari', label: 'Dari tanggal', type: 'date' },
+          { name: 'sampai', label: 'Sampai tanggal', type: 'date' },
+        ]} />
+        {recent.length ? (
+          <Table head={['Nomor', 'Tanggal', 'Jenis', 'Objek', 'Inspektor', 'Foto', 'Hasil']}>
             {recent.map(r => {
               const open = r.findings.filter(f => f.status === 'open').length;
               return (
@@ -101,12 +129,13 @@ export default async function InspectionPage({ searchParams }: { searchParams: P
                   <td className="text-xs">{INSPECTION_TYPE[r.inspection_type]}</td>
                   <td>{r.object}</td>
                   <td className="text-xs">{r.inspector?.full_name}</td>
+                  <td><Thumbs items={photos.get(r.id)} /></td>
                   <td>{!r.findings.length ? <Pill tone="ok">Sesuai</Pill> : open ? <Pill tone="warn">{open} temuan open</Pill> : <Pill tone="muted">{r.findings.length} temuan closed</Pill>}</td>
                 </tr>
               );
             })}
           </Table>
-        ) : <p className="text-sm text-muted">Belum ada inspeksi.</p>}
+        ) : <p className="mt-3 text-sm text-muted">Tidak ada inspeksi untuk saringan ini.</p>}
       </Panel>
     </>
   );

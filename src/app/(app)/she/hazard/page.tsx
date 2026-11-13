@@ -2,13 +2,14 @@ import Link from 'next/link';
 import { ExportLinks } from '@/components/export-links';
 import { randomUUID } from 'node:crypto';
 import { OfflineForm } from '@/components/offline-form';
-import { PageHeader, Panel, Pill, Table, btnGhost, input } from '@/components/ui';
+import { PageHeader, Panel, Pill, Table, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { RISK } from '@/lib/compliance';
 import { fmtDate } from '@/lib/documents';
 import { HAZARD_TYPE, OPEN_CLOSED } from '@/lib/she';
 import { reportHazard } from '../actions';
+import { FilterBar, Thumbs, isDate, needle, photosFor, val } from '../filters';
 import { AreaSelect, DeptSelect, Files, RiskSelect, SheTabs, sheMasters, today, EmployeeDatalist, EmployeeInput } from '../fields';
 
 export const metadata = { title: 'Hazard report' };
@@ -22,10 +23,21 @@ export default async function HazardPage({ searchParams }: { searchParams: Promi
   const s = await getSession();
   const sp = await searchParams;
   const supabase = await createClient();
-  let q = supabase.from('she_hazard_register').select('*').order('reported_on', { ascending: false }).limit(300);
-  if (sp.status) q = q.eq('status', sp.status); else if (!sp.semua) q = q.eq('status', 'open');
+  let q = supabase.from('she_hazard_register').select('*', { count: 'exact' }).order('reported_on', { ascending: false }).limit(300);
+  const f = { cari: needle(val(sp, '', 'cari')), status: val(sp, '', 'status'), jenis: val(sp, '', 'jenis'), risiko: val(sp, '', 'risiko'), pic: val(sp, '', 'pic'), area: val(sp, '', 'area'), dari: val(sp, '', 'dari'), sampai: val(sp, '', 'sampai') };
+  // Bawaan: hanya yang terbuka; pilih "Semua status" untuk melihat seluruhnya
+  const st = f.status || (sp.semua ? 'semua' : 'open');
+  if (st !== 'semua') q = q.eq('status', st);
+  if (f.cari) q = q.or(['hazard_no', 'description', 'reporter_name', 'location_note', 'work_area_name'].map(c => `${c}.ilike.%${f.cari}%`).join(','));
+  if (f.jenis) q = q.eq('hazard_type', f.jenis);
+  if (f.risiko) q = q.eq('risk_level', f.risiko);
+  if (f.pic) q = q.eq('pic_department_code', f.pic);
+  if (f.area) q = q.eq('work_area_name', f.area);
+  if (isDate(f.dari)) q = q.gte('reported_on', f.dari);
+  if (isDate(f.sampai)) q = q.lte('reported_on', f.sampai);
   if (sp.terlambat) q = q.eq('is_overdue', true);
-  const [{ data: rows }, { depts, areas }] = await Promise.all([q.returns<Row[]>(), sheMasters()]);
+  const [{ data: rows, count }, { depts, areas }] = await Promise.all([q.returns<Row[]>(), sheMasters()]);
+  const photos = await photosFor('hazard_reports', (rows ?? []).map(r => r.id));
 
   return (
     <>
@@ -58,15 +70,19 @@ export default async function HazardPage({ searchParams }: { searchParams: Promi
           </OfflineForm>
         </Panel>
       )}
-      <form className="flex flex-wrap gap-2">
-        <select name="status" defaultValue={sp.status ?? ''} className={`${input} !w-auto`} aria-label="Status">
-          <option value="">Terbuka</option><option value="closed">Ditutup</option><option value="cancelled">Dibatalkan</option>
-        </select>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="terlambat" value="1" defaultChecked={!!sp.terlambat} /> Lewat due date</label>
-        <button className={btnGhost}>Saring</button>
-      </form>
+      <FilterBar action="/she/hazard" sp={sp} shown={rows?.length ?? 0} total={count ?? undefined} fields={[
+        { name: 'cari', label: 'Cari nomor, temuan, pelapor', type: 'text', placeholder: 'Ketik kata kunci' },
+        { name: 'status', label: 'Status', type: 'select', options: [['open', 'Terbuka'], ['closed', 'Ditutup'], ['cancelled', 'Dibatalkan'], ['semua', 'Semua status']] },
+        { name: 'jenis', label: 'Jenis', type: 'select', options: Object.entries(HAZARD_TYPE) },
+        { name: 'risiko', label: 'Risiko', type: 'select', options: Object.entries(RISK).map(([k, [, l]]) => [k, l]) },
+        { name: 'pic', label: 'PIC', type: 'select', options: depts.map(d => [d.code, d.code]) },
+        { name: 'area', label: 'Lokasi', type: 'select', options: areas.map(a => [a.name, a.name]) },
+        { name: 'dari', label: 'Dari tanggal', type: 'date' },
+        { name: 'sampai', label: 'Sampai tanggal', type: 'date' },
+        { name: 'terlambat', label: 'Lewat due date', type: 'check' },
+      ]} />
       {rows?.length ? (
-        <Table head={['Nomor', 'Tanggal', 'Jenis', 'Temuan', 'Lokasi', 'Risiko', 'PIC', 'Due date', 'Status']}>
+        <Table head={['Nomor', 'Tanggal', 'Jenis', 'Temuan', 'Lokasi', 'Foto', 'Risiko', 'PIC', 'Due date', 'Status']}>
           {rows.map(r => (
             <tr key={r.id}>
               <td className="whitespace-nowrap font-mono text-xs"><Link href={`/she/hazard/${r.id}`} className="font-medium hover:text-accent">{r.hazard_no}</Link></td>
@@ -75,6 +91,7 @@ export default async function HazardPage({ searchParams }: { searchParams: Promi
               <td className="min-w-64"><Link href={`/she/hazard/${r.id}`} className="hover:text-accent">{r.description}</Link>
                 <div className="text-xs text-muted">{r.reporter_name}</div></td>
               <td className="text-xs">{r.work_area_name}{r.location_note ? ` · ${r.location_note}` : ''}</td>
+              <td><Thumbs items={photos.get(r.id)} /></td>
               <td><Pill tone={RISK[r.risk_level][0]}>{RISK[r.risk_level][1]}</Pill></td>
               <td className="font-mono text-xs">{r.pic_department_code}</td>
               <td className={`tabular whitespace-nowrap text-xs ${r.is_overdue ? 'font-medium text-crit' : ''}`}>{fmtDate(r.due_date)}</td>
