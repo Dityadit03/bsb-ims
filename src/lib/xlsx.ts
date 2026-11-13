@@ -110,6 +110,70 @@ export function writeXlsx(sheets: { name: string; rows: Cell[][] }[]): Buffer {
   return zip(files);
 }
 
+// ---------------------------------------------------------------- tulis dengan tata letak (warna, gabung sel)
+// Untuk lembar yang meniru tampilan layar (mis. Ringkasan SAP) supaya bisa ditempel ke PowerPoint.
+export type Style = { b?: boolean; sz?: number; color?: string; fill?: string; h?: 'left' | 'center' | 'right'; v?: 'top' | 'center'; border?: boolean; pct?: boolean; wrap?: boolean };
+export type SCell = { v: Cell; s?: Style };
+export type LayoutSheet = { name: string; rows: (SCell | Cell)[][]; merges?: string[]; widths: number[]; heights?: Record<number, number> };
+
+export function writeLayoutXlsx(sheet: LayoutSheet): Buffer {
+  const fonts: string[] = [], fills: string[] = ['<fill><patternFill patternType="none"/></fill>', '<fill><patternFill patternType="gray125"/></fill>'], xfs: string[] = [];
+  const idx = (list: string[], x: string) => { let i = list.indexOf(x); if (i < 0) { list.push(x); i = list.length - 1; } return i; };
+  const argb = (c: string) => `FF${c.replace('#', '').toUpperCase()}`;
+  const styleIds = new Map<string, number>();
+  const styleOf = (s: Style = {}) => {
+    const key = JSON.stringify(s);
+    let id = styleIds.get(key);
+    if (id == null) {
+      const font = idx(fonts, `<font>${s.b ? '<b/>' : ''}<sz val="${s.sz ?? 11}"/><color rgb="${argb(s.color ?? '#1c1726')}"/><name val="Calibri"/></font>`);
+      const fill = s.fill ? idx(fills, `<fill><patternFill patternType="solid"><fgColor rgb="${argb(s.fill)}"/><bgColor indexed="64"/></patternFill></fill>`) : 0;
+      xfs.push(`<xf numFmtId="${s.pct ? 9 : 0}" fontId="${font}" fillId="${fill}" borderId="${s.border ? 1 : 0}" xfId="0" applyFont="1" applyFill="1" applyBorder="1"${s.pct ? ' applyNumberFormat="1"' : ''} applyAlignment="1">` +
+        `<alignment horizontal="${s.h ?? 'left'}" vertical="${s.v ?? 'center'}"${s.wrap ? ' wrapText="1"' : ''}/></xf>`);
+      id = xfs.length - 1; styleIds.set(key, id);
+    }
+    return id;
+  };
+  styleOf();
+  const body = sheet.rows.map((r, ri) => {
+    const h = sheet.heights?.[ri + 1];
+    return `<row r="${ri + 1}"${h ? ` ht="${h}" customHeight="1"` : ''}>${r.map((c, ci) => {
+      const cell: SCell = c != null && typeof c === 'object' ? c : { v: c };
+      const ref = `${colName(ci)}${ri + 1}`, s = ` s="${styleOf(cell.s)}"`, v = cell.v;
+      if (v == null || v === '') return `<c r="${ref}"${s}/>`;
+      if (typeof v === 'number' && Number.isFinite(v)) return `<c r="${ref}"${s}><v>${v}</v></c>`;
+      return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${esc(String(v))}</t></is></c>`;
+    }).join('')}</row>`;
+  }).join('');
+  const merges = sheet.merges?.length ? `<mergeCells count="${sheet.merges.length}">${sheet.merges.map(m => `<mergeCell ref="${m}"/>`).join('')}</mergeCells>` : '';
+  const name = esc(sheet.name.replace(/[\\/?*[\]:]/g, ' ').slice(0, 31) || 'Sheet1');
+  const sheetXmlText = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+    `<sheetViews><sheetView showGridLines="0" workbookViewId="0"/></sheetViews>` +
+    `<cols>${sheet.widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>` +
+    `<sheetData>${body}</sheetData>${merges}</worksheet>`;
+  return zip([
+    ['[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
+      `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>` +
+      `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>` +
+      `<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>` +
+      `<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`],
+    ['_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+      `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ['xl/workbook.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ` +
+      `xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${name}" sheetId="1" r:id="rId1"/></sheets></workbook>`],
+    ['xl/_rels/workbook.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+      `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>` +
+      `<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+    ['xl/styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+      `<fonts count="${fonts.length}">${fonts.join('')}</fonts><fills count="${fills.length}">${fills.join('')}</fills>` +
+      `<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>` +
+      `<border>${['left', 'right', 'top', 'bottom'].map(k => `<${k} style="thin"><color rgb="FFE3E0EA"/></${k}>`).join('')}<diagonal/></border></borders>` +
+      `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>` +
+      `<cellXfs count="${xfs.length}">${xfs.join('')}</cellXfs>` +
+      `<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`],
+    ['xl/worksheets/sheet1.xml', sheetXmlText],
+  ]);
+}
+
 // ---------------------------------------------------------------- baca (lembar pertama)
 const unesc = (s: string) => s.replace(/&(lt|gt|amp|quot|apos|#\d+|#x[0-9a-f]+);/gi, (_, e: string) =>
   e[0] === '#' ? String.fromCodePoint(e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : Number(e.slice(1)))

@@ -4,64 +4,29 @@ import { Fragment } from 'react';
 import { ExportLinks } from '@/components/export-links';
 import { ActionForm } from '@/components/action-form';
 import { Tabs } from '@/components/tabs';
-import { Panel, Table, input } from '@/components/ui';
+import { Panel, Table, btnPrimary, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { SAP_LEVEL, SAP_SECTION, sapWeek } from '@/lib/she';
 import { copySapLeave, endSapParticipant, lockSapWeek, saveSapParticipant, setSapLeave, setSapTarget } from '../portal-actions';
 import { EmployeeDatalist, EmployeeInput } from '../fields';
 import { WeekPicker } from './week-picker';
+import { LEVEL_ORDER, MONTH, ach, addDays, dayLabel, fmtPct, loadSap, mtdWeeks, pooled, statusOf, sum, weekAch, type SapMetric, type SapRow } from '@/lib/sap';
 
 export const metadata = { title: 'SAP' };
 
-type Row = {
-  employee_id: string; week_start: string; week_no: number; nrp: string; full_name: string; level: string | null; sap_section: string | null;
-  sort_order: number; locked: boolean; on_leave: boolean;
-  obs_target: number; insp_target: number; hazard_target: number; obs_act: number; insp_act: number; hazard_act: number;
-};
-type Metric = 'obs' | 'insp' | 'hazard';
+type Row = SapRow;
+type Metric = SapMetric;
 
 const METRICS: { key: Metric; short: string; label: string; color: string; text: string; bg: string; border: string }[] = [
   { key: 'obs', short: 'OBS', label: 'Observasi', color: 'var(--color-violet)', text: 'text-violet', bg: 'bg-violet/8', border: 'border-t-violet' },
   { key: 'insp', short: 'INS', label: 'Inspeksi', color: 'var(--color-blue)', text: 'text-blue', bg: 'bg-blue/8', border: 'border-t-blue' },
   { key: 'hazard', short: 'HAZ', label: 'Hazard report', color: 'var(--color-flame)', text: 'text-flame', bg: 'bg-flame/8', border: 'border-t-flame' },
 ];
-const LEVEL_ORDER = ['PJO', 'DH', 'SH', 'FOR'];
 const TABS = [['ringkasan', 'Ringkasan'], ['tabel', 'Tabel SAP'], ['peserta', 'Peserta & target'], ['laporan', 'Laporan mingguan']] as const;
-const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-const MONTH = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-const DOW = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-
-const addDays = (ws: string, days: number) => {
-  const d = new Date(`${ws}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10);
-};
-const dayLabel = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); return `${DOW[d.getUTCDay()]}, ${d.getUTCDate()} ${MON[d.getUTCMonth()]}`; };
-// Achv = Act ÷ Plan, maksimal 100%; plan 0 dianggap 100%
-const ach = (a: number, p: number) => (p > 0 ? Math.min(a / p, 1) : 1);
-const avg = (xs: (number | null)[]) => { const v = xs.filter((x): x is number => x != null); return v.length ? v.reduce((t, x) => t + x, 0) / v.length : null; };
-const fmtPct = (v: number | null) => (v == null ? 'N/A' : `${Math.round(v * 100)}%`);
 const tone = (v: number | null) => (v == null ? 'text-muted' : v >= 0.9 ? 'text-ok' : v >= 0.6 ? 'text-warn' : 'text-crit');
 const pill = (v: number | null) => (v == null ? 'bg-line/60 text-muted' : v >= 0.9 ? 'bg-ok/12 text-ok' : v >= 0.6 ? 'bg-warn/12 text-warn' : 'bg-crit/10 text-crit');
 const ringColor = (v: number | null) => (v == null ? 'var(--color-line)' : v >= 0.9 ? 'var(--color-ok)' : v >= 0.6 ? 'var(--color-warn)' : 'var(--color-crit)');
-const weekAch = (r: Row) => (r.on_leave ? null : avg([ach(r.obs_act, r.obs_target), ach(r.insp_act, r.insp_target), ach(r.hazard_act, r.hazard_target)]));
-const sum = (rows: Row[], m: Metric) => {
-  const on = rows.filter(r => !r.on_leave);
-  return { act: on.reduce((t, r) => t + r[`${m}_act`], 0), plan: on.reduce((t, r) => t + r[`${m}_target`], 0), on: on.length };
-};
-// Capaian gabungan: per jenis = total act ÷ total plan peserta onsite, lalu rata-rata tiga jenis; N/A bila semua cuti
-const pooled = (rows: Row[], m?: Metric): number | null => {
-  if (!rows.some(r => !r.on_leave)) return null;
-  if (m) { const s = sum(rows, m); return ach(s.act, s.plan); }
-  return avg(METRICS.map(x => pooled(rows, x.key)));
-};
-// Month to date: minggu yang hari Jumat-nya jatuh di bulan yang sama
-const mtdWeeks = (ws: string) => {
-  const month = addDays(ws, 3).slice(0, 7);
-  const out: string[] = [];
-  for (let w = ws; addDays(w, 3).slice(0, 7) === month; w = addDays(w, -7)) out.unshift(w);
-  return out;
-};
-
 function Ring({ value, size = 64, stroke = 7, children }: { value: number | null; size?: number; stroke?: number; children?: React.ReactNode }) {
   const r = (size - stroke) / 2, c = 2 * Math.PI * r;
   return (
@@ -88,14 +53,8 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
   const tab = TABS.some(([k]) => k === sp.tab) ? sp.tab! : 'ringkasan';
   const manage = s.can('sap.manage');
   const supabase = await createClient();
-  const [{ data }, { data: anchorRow }] = await Promise.all([
-    supabase.from('sap_weekly').select('*').gte('week_start', addDays(ws, -7 * 11)).lte('week_start', ws).not('level', 'is', null).returns<Row[]>(),
-    supabase.from('app_settings').select('value').eq('key', 'sap_anchor').maybeSingle(),
-  ]);
-  const anchor = (anchorRow?.value as { week: number; start: string } | undefined) ?? { week: 41, start: '2026-10-13' };
-  const weekNo = (w: string) => ((((Math.round((Date.parse(w) - Date.parse(anchor.start)) / 864e5 / 7) + anchor.week - 1) % 52) + 52) % 52) + 1;
+  const { all, weekNo } = await loadSap(supabase, ws);
 
-  const all = data ?? [];
   const rowsOf = (w: string) => all.filter(r => r.week_start === w);
   const week = rowsOf(ws).sort((a, b) =>
     SAP_SECTION.indexOf(a.sap_section as never) - SAP_SECTION.indexOf(b.sap_section as never)
@@ -114,7 +73,8 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
   const sections = SAP_SECTION.filter(sec => week.some(r => r.sap_section === sec));
   const fri = addDays(ws, 3);
   const monthLabel = `${MONTH[Number(fri.slice(5, 7)) - 1]} ${fri.slice(0, 4)}`;
-  const status = mtdAll == null ? ['Belum ada data', 'text-muted'] : mtdAll >= 0.9 ? ['Sesuai target', 'text-ok'] : mtdAll >= 0.6 ? ['Perlu perhatian', 'text-warn'] : ['Di bawah target', 'text-crit'];
+  const [statusLabel, statusTone] = statusOf(mtdAll);
+  const status = [statusLabel, { ok: 'text-ok', warn: 'text-warn', crit: 'text-crit', muted: 'text-muted' }[statusTone]];
 
   const weekOptions = Array.from({ length: 26 }, (_, i) => addDays(current, -7 * i)).map(w => ({
     start: w, label: `W${weekNo(w)} · ${dayLabel(w)} – ${dayLabel(addDays(w, 6))} ${addDays(w, 6).slice(0, 4)}${w === current ? ' · berjalan' : ''}`,
@@ -142,9 +102,15 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
         {!running && <Link href={`/she/sap?tab=${tab}`} className="rounded-xl border border-line bg-panel px-3.5 py-2.5 text-sm font-semibold shadow-soft hover:border-violet/60">Minggu ini</Link>}
         <span className="rounded-xl bg-line/50 px-3 py-2.5 text-sm text-muted"><Icon name="calendar" size={16} className="mr-1.5 inline" />MTD {monthLabel}</span>
         {locked && <span className="rounded-xl bg-line/50 px-3 py-2.5 text-sm text-muted"><Icon name="lock" size={16} className="mr-1.5 inline" />Terkunci</span>}
-        <Link href="/data" className="ml-auto rounded-xl border border-ok/40 bg-ok/8 px-3.5 py-2.5 text-sm font-semibold text-ok hover:bg-ok/15">
-          ▦ Tarik data per minggu (Sheet) ↗
-        </Link>
+        <div className="ml-auto flex flex-wrap gap-2">
+          {tab === 'ringkasan' && (
+            <a href={`/api/ekspor-sap${ws !== current ? `?minggu=${ws}` : ''}`} title="Unduh tampilan Ringkasan ke Excel, siap ditempel ke PowerPoint"
+              className="rounded-xl border border-violet/40 bg-violet/8 px-3.5 py-2.5 text-sm font-semibold text-violet hover:bg-violet/15">⇩ Excel Ringkasan (untuk PPT)</a>
+          )}
+          <Link href="/data" className="rounded-xl border border-ok/40 bg-ok/8 px-3.5 py-2.5 text-sm font-semibold text-ok hover:bg-ok/15">
+            ▦ Tarik data per minggu (Sheet) ↗
+          </Link>
+        </div>
       </div>
 
       <Tabs items={TABS.map(([k, l]) => [link(k), l] as const)} active={link(tab)} />
@@ -269,31 +235,68 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
         </>
       )}
 
-      {tab === 'tabel' && (
-        week.length ? (
-          <Table head={['Peserta', 'Level', 'Observasi', 'Inspeksi', 'Hazard', `W${no}`, 'MTD', ...(manage && !locked ? ['Cuti'] : [])]}>
-            {week.map(r => {
-              const w = weekAch(r), m = pooled(mtdRows.filter(x => x.employee_id === r.employee_id));
-              const cell = (k: Metric) => (
-                <td className={`tabular whitespace-nowrap text-xs ${r.on_leave || !r[`${k}_target`] ? 'text-muted' : tone(ach(r[`${k}_act`], r[`${k}_target`]))}`}>
-                  {r[`${k}_act`]} / {r[`${k}_target`]}
-                </td>
-              );
-              return (
-                <tr key={r.employee_id}>
-                  <td className="min-w-44">{r.full_name}<div className="font-mono text-xs text-muted">{r.sap_section} · {r.nrp}</div></td>
-                  <td className="text-xs">{r.level}</td>
-                  {cell('obs')}{cell('insp')}{cell('hazard')}
-                  <td>{r.on_leave ? <span className="text-xs text-muted">Cuti</span> : <Pct v={w} />}</td>
-                  <td><Pct v={m} /></td>
-                  {manage && !locked && <td><ActionForm action={setSapLeave} label={r.on_leave ? 'Onsite' : 'Cuti'}
-                    hidden={{ employee_id: r.employee_id, week: ws, leave: r.on_leave ? 'no' : 'yes' }} /></td>}
-                </tr>
-              );
-            })}
-          </Table>
-        ) : <p className="text-sm text-muted">Belum ada peserta SAP pada minggu ini.</p>
-      )}
+      {tab === 'tabel' && (() => {
+        const fSec = SAP_SECTION.includes(sp.bagian as never) ? sp.bagian! : '';
+        const fLevel = LEVEL_ORDER.includes(sp.level ?? '') ? sp.level! : '';
+        const fStatus = ['onsite', 'cuti', 'belum', 'tercapai'].includes(sp.status ?? '') ? sp.status! : '';
+        const fQ = (sp.cari ?? '').trim().slice(0, 60);
+        const needle = fQ.toLowerCase();
+        const shown = week.filter(r =>
+          (!fSec || r.sap_section === fSec) && (!fLevel || r.level === fLevel)
+          && (!fStatus || (fStatus === 'cuti' ? r.on_leave : !r.on_leave && (fStatus === 'onsite' || ((weekAch(r) ?? 1) < 1) === (fStatus === 'belum'))))
+          && (!needle || r.full_name.toLowerCase().includes(needle) || r.nrp.toLowerCase().includes(needle)));
+        const filtered = !!(fSec || fLevel || fStatus || fQ);
+        const sel = 'min-h-10 rounded-lg border border-line bg-panel px-2.5 text-sm';
+        return (
+          <>
+            <form method="get" action="/she/sap" className="flex flex-wrap items-end gap-2 rounded-2xl border border-line bg-panel p-3 shadow-soft">
+              <input type="hidden" name="tab" value="tabel" />
+              {ws !== current && <input type="hidden" name="minggu" value={ws} />}
+              <label className="grid min-w-44 flex-1 gap-1 text-xs text-muted">Cari nama atau NRP
+                <input name="cari" defaultValue={fQ} placeholder="Ketik nama atau NRP" className={`${input} text-ink`} />
+              </label>
+              <label className="grid gap-1 text-xs text-muted">Section
+                <select name="bagian" defaultValue={fSec} className={`${sel} text-ink`}><option value="">Semua</option>{SAP_SECTION.map(x => <option key={x}>{x}</option>)}</select>
+              </label>
+              <label className="grid gap-1 text-xs text-muted">Level
+                <select name="level" defaultValue={fLevel} className={`${sel} text-ink`}><option value="">Semua</option>
+                  {LEVEL_ORDER.map(x => <option key={x} value={x}>{SAP_LEVEL[x] ?? x}</option>)}</select>
+              </label>
+              <label className="grid gap-1 text-xs text-muted">Status
+                <select name="status" defaultValue={fStatus} className={`${sel} text-ink`}><option value="">Semua</option>
+                  <option value="onsite">Onsite</option><option value="cuti">Cuti</option>
+                  <option value="belum">Belum target</option><option value="tercapai">Target tercapai</option></select>
+              </label>
+              <button type="submit" className={`${btnPrimary} px-4`}>Terapkan</button>
+              {filtered && <Link href={link('tabel')} className="grid min-h-10 place-items-center rounded-lg border border-line px-3 text-sm font-semibold text-muted hover:text-ink">Reset</Link>}
+            </form>
+            <p className="text-xs text-muted">Menampilkan {shown.length} dari {week.length} peserta{filtered ? ' (disaring)' : ''}.</p>
+            {shown.length ? (
+              <Table head={['Peserta', 'Level', 'Observasi', 'Inspeksi', 'Hazard', `W${no}`, 'MTD', ...(manage && !locked ? ['Cuti'] : [])]}>
+                {shown.map(r => {
+                  const w = weekAch(r), m = pooled(mtdRows.filter(x => x.employee_id === r.employee_id));
+                  const cell = (k: Metric) => (
+                    <td className={`tabular whitespace-nowrap text-xs ${r.on_leave || !r[`${k}_target`] ? 'text-muted' : tone(ach(r[`${k}_act`], r[`${k}_target`]))}`}>
+                      {r[`${k}_act`]} / {r[`${k}_target`]}
+                    </td>
+                  );
+                  return (
+                    <tr key={r.employee_id}>
+                      <td className="min-w-44">{r.full_name}<div className="font-mono text-xs text-muted">{r.sap_section} · {r.nrp}</div></td>
+                      <td className="text-xs">{r.level}</td>
+                      {cell('obs')}{cell('insp')}{cell('hazard')}
+                      <td>{r.on_leave ? <span className="text-xs text-muted">Cuti</span> : <Pct v={w} />}</td>
+                      <td><Pct v={m} /></td>
+                      {manage && !locked && <td><ActionForm action={setSapLeave} label={r.on_leave ? 'Onsite' : 'Cuti'}
+                        hidden={{ employee_id: r.employee_id, week: ws, leave: r.on_leave ? 'no' : 'yes' }} /></td>}
+                    </tr>
+                  );
+                })}
+              </Table>
+            ) : <p className="text-sm text-muted">{week.length ? 'Tidak ada peserta yang cocok dengan saringan. Ubah atau reset saringan.' : 'Belum ada peserta SAP pada minggu ini.'}</p>}
+          </>
+        );
+      })()}
 
       {tab === 'peserta' && (
         <>
