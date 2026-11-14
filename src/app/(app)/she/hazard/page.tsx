@@ -9,7 +9,7 @@ import { RISK } from '@/lib/compliance';
 import { fmtDate } from '@/lib/documents';
 import { HAZARD_TYPE, OPEN_CLOSED } from '@/lib/she';
 import { reportHazard } from '../actions';
-import { FilterBar, Thumbs, isDate, needle, photosFor, val } from '../filters';
+import { FilterBar, Thumbs, exportParams, isDate, needle, photosFor, val } from '../filters';
 import { AreaSelect, DeptSelect, Files, RiskSelect, SheTabs, sheMasters, today, EmployeeDatalist, EmployeeInput } from '../fields';
 
 export const metadata = { title: 'Hazard report' };
@@ -41,7 +41,9 @@ export default async function HazardPage({ searchParams }: { searchParams: Promi
 
   return (
     <>
-      <PageHeader eyebrow="SMKP 2.2 · Identifikasi bahaya" title="Hazard report"><ExportLinks dataset="hazard" /></PageHeader>
+      <PageHeader eyebrow="SMKP 2.2 · Identifikasi bahaya" title="Hazard report"><ExportLinks dataset="hazard" label="Unduh data" params={exportParams({
+          cari: f.cari, status: st !== 'semua' && st, jenis: f.jenis, risiko: f.risiko, pic: f.pic, area: f.area, terlambat: !!sp.terlambat && '1',
+          dari: isDate(f.dari) && f.dari, sampai: isDate(f.sampai) && f.sampai })} /></PageHeader>
       <SheTabs active="/she/hazard" />
       {s.can('she.report') && (
         <Panel title="Laporkan bahaya">

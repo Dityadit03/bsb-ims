@@ -74,3 +74,6 @@ export function Thumbs({ items }: { items?: Photo[] }) {
     </div>
   );
 }
+
+// Parameter unduhan Excel dari saringan yang sedang aktif (kunci kosong dibuang)
+export const exportParams = (o: Record<string, string | undefined | false>) => Object.fromEntries(Object.entries(o).filter(([, v]) => v)) as Record<string, string>;

@@ -5,7 +5,8 @@ import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { fmtDate } from '@/lib/documents';
 import { closeObservation, recordObservation } from '../actions';
-import { FilterBar, Thumbs, isDate, needle, photosFor, val } from '../filters';
+import { ExportLinks } from '@/components/export-links';
+import { FilterBar, Thumbs, exportParams, isDate, needle, photosFor, val } from '../filters';
 import { AreaSelect, DeptSelect, Files, SheTabs, sheMasters, today, EmployeeDatalist, EmployeeInput } from '../fields';
 
 export const metadata = { title: 'Observasi PTO' };
@@ -36,7 +37,11 @@ export default async function ObservationPage({ searchParams }: { searchParams: 
 
   return (
     <>
-      <PageHeader eyebrow="SMKP 5.1 · Planned Task Observation" title="Observasi PTO" />
+      <PageHeader eyebrow="SMKP 5.1 · Planned Task Observation" title="Observasi PTO">
+        <ExportLinks dataset="observasi" label="Unduh data" params={exportParams({
+          cari: f.cari, dept: depts.find(d => d.id === f.dept)?.code, area: areas.find(a => a.id === f.area)?.name, hasil: f.hasil, status: f.status,
+          dari: isDate(f.dari) && f.dari, sampai: isDate(f.sampai) && f.sampai })} />
+      </PageHeader>
       <SheTabs active="/she/observasi" />
       {s.can('she.report') && (
         <Panel title="Catat observasi">

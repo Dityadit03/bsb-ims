@@ -17,27 +17,29 @@ const photoCols = (phase: 'temuan' | 'perbaikan'): Column[] => [
 ];
 
 export type Column = [key: string, header: string, fmt?: (v: unknown) => unknown];
-export type Dataset = { key: string; label: string; group: string; view: string; order: string; desc?: boolean; feed: boolean; filter?: [param: string, column: string]; columns: Column[] };
+export type Dataset = { key: string; label: string; group: string; view: string; order: string; desc?: boolean; feed: boolean; filter?: [param: string, column: string];
+  // Saringan opsional dari URL (?cari=, ?dari=, ?sampai=, ?<param>=) supaya unduhan sama dengan daftar yang sedang disaring di layar
+  search?: string[]; date?: string; eq?: Record<string, string>; bool?: Record<string, string>; columns: Column[] };
 
 // feed: true hanya untuk register yang terbaca semua pengguna aktif (sama dengan daftar di fungsi feed_rows)
 export const DATASETS: Dataset[] = [
-  { key: 'hazard', label: 'Laporan hazard', group: 'SHE', view: 'she_hazard_register', order: 'created_at', desc: true, feed: true, columns: [
+  { key: 'hazard', label: 'Laporan hazard', group: 'SHE', view: 'she_hazard_register', order: 'created_at', desc: true, feed: true, search: ['hazard_no', 'description', 'reporter_name', 'location_note', 'work_area_name'], date: 'reported_on', eq: { status: 'status', jenis: 'hazard_type', risiko: 'risk_level', pic: 'pic_department_code', area: 'work_area_name' }, bool: { terlambat: 'is_overdue' }, columns: [
     ['hazard_no', 'No. hazard'], ['reported_on', 'Tanggal'], ['department_code', 'Dept'], ['work_area_name', 'Area'], ['location_note', 'Lokasi'],
     ['hazard_type', 'Jenis', lbl(HAZARD_TYPE)], ['description', 'Uraian'], ['recommendation', 'Rekomendasi'], ['risk_level', 'Risiko'],
     ['pic_department_code', 'Dept PIC'], ['pic_partner_name', 'Mitra kerja PIC'], ['due_date', 'Batas waktu'], ['status', 'Status', lbl(OPEN_CLOSED)], ['is_overdue', 'Terlambat', yn],
     ['reporter_name', 'Pelapor'], ['close_note', 'Tindakan perbaikan'], ['closed_at', 'Ditutup'],
     ...photoCols('temuan'), ...photoCols('perbaikan')] },
-  { key: 'temuan', label: 'Temuan inspeksi', group: 'SHE', view: 'she_finding_register', order: 'inspected_on', desc: true, feed: true, columns: [
+  { key: 'temuan', label: 'Temuan inspeksi', group: 'SHE', view: 'she_finding_register', order: 'inspected_on', desc: true, feed: true, search: ['inspection_no', 'object', 'description'], date: 'inspected_on', eq: { status: 'status', risiko: 'risk_level', pic: 'pic_department_code' }, bool: { terlambat: 'is_overdue' }, columns: [
     ['inspection_no', 'No. inspeksi'], ['inspected_on', 'Tanggal'], ['inspection_type', 'Jenis'], ['object', 'Objek'], ['seq', 'No.'],
     ['description', 'Temuan'], ['risk_level', 'Risiko'], ['recommendation', 'Rekomendasi'], ['pic_department_code', 'Dept PIC'], ['pic_partner_name', 'Mitra kerja PIC'],
     ['due_date', 'Batas waktu'], ['status', 'Status', lbl(OPEN_CLOSED)], ['is_overdue', 'Terlambat', yn], ['close_note', 'Tindakan perbaikan'], ['closed_at', 'Ditutup'],
     ...photoCols('temuan'), ...photoCols('perbaikan')] },
-  { key: 'observasi', label: 'Observasi keselamatan', group: 'SHE', view: 'she_observation_register', order: 'observed_on', desc: true, feed: true, columns: [
+  { key: 'observasi', label: 'Observasi keselamatan', group: 'SHE', view: 'she_observation_register', order: 'observed_on', desc: true, feed: true, search: ['obs_no', 'activity', 'worker_name', 'unsafe_behaviour', 'coaching'], date: 'observed_on', eq: { dept: 'department_code', area: 'work_area_name', hasil: 'result', status: 'status' }, columns: [
     ['obs_no', 'No. observasi'], ['observed_on', 'Tanggal'], ['department_code', 'Dept'], ['work_area_name', 'Area'], ['activity', 'Aktivitas'],
     ['worker_name', 'Pekerja'], ['worker_count', 'Jumlah pekerja'], ['result', 'Hasil', v => (v === 'safe' ? 'Aman' : v === 'unsafe' ? 'Tidak aman' : v)],
     ['unsafe_behaviour', 'Perilaku tidak aman'], ['coaching', 'Pembinaan'], ['status', 'Status', lbl(OPEN_CLOSED)], ['observer_name', 'Observer'], ['closed_at', 'Ditutup'],
     ...photoCols('temuan')] },
-  { key: 'inspeksi', label: 'Inspeksi', group: 'SHE', view: 'she_inspection_register', order: 'inspected_on', desc: true, feed: true, columns: [
+  { key: 'inspeksi', label: 'Inspeksi', group: 'SHE', view: 'she_inspection_register', order: 'inspected_on', desc: true, feed: true, search: ['inspection_no', 'object', 'note'], date: 'inspected_on', eq: { jenis: 'inspection_type', dept: 'department_code' }, columns: [
     ['inspection_no', 'No. inspeksi'], ['inspected_on', 'Tanggal'], ['inspection_type', 'Jenis'], ['department_code', 'Dept'], ['work_area_name', 'Area'],
     ['object', 'Objek'], ['note', 'Catatan'], ['inspector_name', 'Inspektor'], ['findings', 'Jumlah temuan'], ['findings_open', 'Temuan terbuka'],
     ...photoCols('temuan')] },

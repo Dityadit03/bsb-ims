@@ -15,6 +15,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ data
     // saring opsional, mis. ?run=<id> untuk slip satu proses gaji
     const f = d.filter && req.nextUrl.searchParams.get(d.filter[0]);
     if (f) query = query.eq(d.filter![1], f);
+    // saringan dari layar: cari, rentang tanggal, pilihan dan kotak centang
+    const sp = req.nextUrl.searchParams, clean = (v: string | null) => (v ?? '').trim();
+    const word = clean(sp.get('cari')).replace(/[,()%*_\\]/g, ' ').trim().slice(0, 60);
+    if (word && d.search) query = query.or(d.search.map(c => `${c}.ilike.%${word}%`).join(','));
+    if (d.date) {
+      const iso = /^\d{4}-\d{2}-\d{2}$/;
+      if (iso.test(clean(sp.get('dari')))) query = query.gte(d.date, clean(sp.get('dari')));
+      if (iso.test(clean(sp.get('sampai')))) query = query.lte(d.date, clean(sp.get('sampai')));
+    }
+    for (const [param, column] of Object.entries(d.eq ?? {})) if (clean(sp.get(param))) query = query.eq(column, clean(sp.get(param)));
+    for (const [param, column] of Object.entries(d.bool ?? {})) if (clean(sp.get(param))) query = query.eq(column, true);
     const { data, error } = await query.order(d.order, { ascending: !d.desc }).range(from, from + 999);
     if (error) return new NextResponse(error.message, { status: 400 });
     rows.push(...(data as unknown as Record<string, unknown>[]));

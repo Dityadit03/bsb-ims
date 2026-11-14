@@ -8,7 +8,8 @@ import { RISK } from '@/lib/compliance';
 import { fmtDate } from '@/lib/documents';
 import { INSPECTION_TYPE, OPEN_CLOSED } from '@/lib/she';
 import { recordInspection } from '../actions';
-import { FilterBar, Thumbs, isDate, needle, photosFor, val } from '../filters';
+import { ExportLinks } from '@/components/export-links';
+import { FilterBar, Thumbs, exportParams, isDate, needle, photosFor, val } from '../filters';
 import { AreaSelect, DeptSelect, Files, SheTabs, sheMasters, today, EmployeeDatalist, EmployeeInput } from '../fields';
 
 export const metadata = { title: 'Inspeksi' };
@@ -85,7 +86,9 @@ export default async function InspectionPage({ searchParams }: { searchParams: P
           </ActionForm>
         </Panel>
       )}
-      <Panel title="Temuan open">
+      <Panel title="Temuan open" action={<ExportLinks dataset="temuan" label="Unduh data" params={exportParams({
+        status: 'open', cari: t.cari, risiko: t.risiko, pic: t.pic, terlambat: !!(sp.t_terlambat || sp.terlambat) && '1',
+        dari: isDate(t.dari) && t.dari, sampai: isDate(t.sampai) && t.sampai })} />}>
         <FilterBar action="/she/inspeksi" prefix="t_" sp={sp} shown={findings?.length ?? 0} total={fCount ?? undefined} fields={[
           { name: 'cari', label: 'Cari nomor, objek, temuan', type: 'text', placeholder: 'Ketik kata kunci' },
           { name: 'risiko', label: 'Risiko', type: 'select', options: Object.entries(RISK).map(([k, [, l]]) => [k, l]) },
@@ -110,7 +113,8 @@ export default async function InspectionPage({ searchParams }: { searchParams: P
           </Table>
         ) : <p className="mt-3 text-sm text-muted">Tidak ada temuan open untuk saringan ini.</p>}
       </Panel>
-      <Panel title="Inspeksi terakhir">
+      <Panel title="Inspeksi terakhir" action={<ExportLinks dataset="inspeksi" label="Unduh data" params={exportParams({
+        cari: i.cari, jenis: i.jenis, dari: isDate(i.dari) && i.dari, sampai: isDate(i.sampai) && i.sampai })} />}>
         <FilterBar action="/she/inspeksi" prefix="i_" sp={sp} shown={recent.length} total={iCount ?? undefined} fields={[
           { name: 'cari', label: 'Cari nomor atau objek', type: 'text', placeholder: 'Ketik kata kunci' },
           { name: 'jenis', label: 'Jenis', type: 'select', options: Object.entries(INSPECTION_TYPE) },
