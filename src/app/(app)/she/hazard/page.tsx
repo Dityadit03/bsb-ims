@@ -47,7 +47,7 @@ export default async function HazardPage({ searchParams }: { searchParams: Promi
       <SheTabs active="/she/hazard" />
       {s.can('she.report') && (
         <Panel title="Laporkan bahaya">
-          <OfflineForm action={reportHazard} kind="hazard" queueTitle="Hazard" queueField="type" draftKey="hazard" label="Kirim hazard report" hidden={{ idem: randomUUID() }} className="max-w-3xl">
+          <OfflineForm action={reportHazard} kind="hazard" queueTitle="Hazard" queueField="type" draftKey={`hazard:${s.profile.id}`} label="Kirim hazard report" hidden={{ idem: randomUUID() }} className="max-w-3xl">
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="grid gap-1 text-sm">Tanggal<input type="date" name="date" required defaultValue={today()} max={today()} className={input} /></label>
               <DeptSelect label="Departemen pelapor" depts={depts} value={s.profile.department_id} />
@@ -65,7 +65,7 @@ export default async function HazardPage({ searchParams }: { searchParams: Promi
               <label className="grid gap-1 text-sm">Due date perbaikan<input type="date" name="due" required min={today()} className={input} /></label>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <EmployeeInput name="credit" label="Atas nama (opsional)" hint="Untuk SAP: isi bila formulir ini milik pengawas lain" />
+              <EmployeeInput name="credit" label="Atas nama pengawas lain (kosongkan bila ini laporan Anda)" hint="Biarkan kosong agar tercatat di SAP Anda sendiri. Isi hanya bila Anda menginput untuk pengawas lain." />
               <Files label="Foto temuan" />
             </div>
             <EmployeeDatalist />

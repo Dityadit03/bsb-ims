@@ -40,7 +40,7 @@ export default async function BreakdownPage({ searchParams }: { searchParams: Pr
       <PlantTabs active="/plant/breakdown" />
       {canReport && (
         <Panel title="Lapor breakdown unscheduled" sub="Untuk unit yang rusak di jalan atau area kerja. Work order breakdown langsung terbuka dan tim Plant diberi tahu. Bisa dikirim saat sinyal lemah.">
-          <OfflineForm action={reportBreakdown} kind="breakdown" queueTitle="Breakdown" queueField="unit" draftKey="breakdown" label="Kirim laporan" className="max-w-3xl">
+          <OfflineForm action={reportBreakdown} kind="breakdown" queueTitle="Breakdown" queueField="unit" draftKey={`breakdown:${s.profile.id}`} label="Kirim laporan" className="max-w-3xl">
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="grid gap-1 text-sm">No. lambung unit
                 <input name="unit" required list="bd-units" autoComplete="off" className={`${input} uppercase`} placeholder="mis. DT-21" />

@@ -62,7 +62,7 @@ export default async function ObservationPage({ searchParams }: { searchParams: 
             <label className="grid gap-1 text-sm">Perilaku tidak aman / catatan<textarea name="unsafe" rows={2} className={input} /></label>
             <label className="grid gap-1 text-sm">Coaching / tindakan yang diberikan<textarea name="coaching" rows={2} className={input} /></label>
             <div className="grid gap-3 sm:grid-cols-2">
-              <EmployeeInput name="credit" label="Atas nama (opsional)" hint="Untuk SAP: isi bila formulir ini milik pengawas lain" />
+              <EmployeeInput name="credit" label="Atas nama pengawas lain (kosongkan bila ini laporan Anda)" hint="Biarkan kosong agar tercatat di SAP Anda sendiri. Isi hanya bila Anda menginput untuk pengawas lain." />
               <Files label="Foto" />
             </div>
             <EmployeeDatalist />

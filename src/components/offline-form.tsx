@@ -8,6 +8,9 @@ type State = { error?: string; ok?: string };
 
 const TIMEOUT_MS = 25000;
 const DRAFT_TTL = 12 * 3600 * 1000;
+// Isian ini tidak pernah disimpan sebagai draf: departemen pelapor mengikuti akun yang login, dan "Atas nama" harus sengaja diisi tiap kali
+// (draf yang terbawa dari perangkat bersama membuat laporan ditolak atau dikreditkan ke orang lain)
+const NO_DRAFT = ['department', 'credit'];
 
 // Seperti ActionForm, tetapi aman untuk sinyal buruk: bila tidak ada jaringan (atau kiriman macet > 25 dtk) isian disimpan di
 // perangkat dan dikirim otomatis nanti. Isian juga disimpan sebagai draf sehingga tidak hilang saat halaman tertutup.
@@ -38,7 +41,7 @@ export function OfflineForm({ action, kind, queueTitle, queueField, label, child
       if (Date.now() - d.at > DRAFT_TTL) return void localStorage.removeItem(key);
       const form = ref.current; if (!form) return;
       for (const el of Array.from(form.elements) as HTMLInputElement[]) {
-        const vals = d.v[el.name]; if (!el.name || !vals || el.type === 'file' || el.type === 'hidden') continue;
+        const vals = d.v[el.name]; if (!el.name || !vals || NO_DRAFT.includes(el.name) || el.type === 'file' || el.type === 'hidden') continue;
         if (el.type === 'radio' || el.type === 'checkbox') el.checked = vals.includes(el.value);
         else el.value = vals[0];
       }
@@ -56,7 +59,7 @@ export function OfflineForm({ action, kind, queueTitle, queueField, label, child
         try {
           const v: Record<string, string[]> = {};
           for (const el of Array.from(form.elements) as HTMLInputElement[]) {
-            if (!el.name || el.type === 'file' || el.type === 'hidden' || el.type === 'submit') continue;
+            if (!el.name || NO_DRAFT.includes(el.name) || el.type === 'file' || el.type === 'hidden' || el.type === 'submit') continue;
             if ((el.type === 'radio' || el.type === 'checkbox') && !el.checked) continue;
             (v[el.name] ??= []).push(el.value);
           }

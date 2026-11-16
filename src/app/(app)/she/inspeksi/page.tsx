@@ -79,7 +79,7 @@ export default async function InspectionPage({ searchParams }: { searchParams: P
             </fieldset>
             <label className="grid gap-1 text-sm">Catatan<textarea name="note" rows={2} className={input} /></label>
             <div className="grid gap-3 sm:grid-cols-2">
-              <EmployeeInput name="credit" label="Atas nama (opsional)" hint="Untuk SAP: isi bila formulir ini milik pengawas lain" />
+              <EmployeeInput name="credit" label="Atas nama pengawas lain (kosongkan bila ini laporan Anda)" hint="Biarkan kosong agar tercatat di SAP Anda sendiri. Isi hanya bila Anda menginput untuk pengawas lain." />
               <Files label="Foto / checklist" />
             </div>
             <EmployeeDatalist />
