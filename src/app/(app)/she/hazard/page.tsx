@@ -10,7 +10,7 @@ import { fmtDate } from '@/lib/documents';
 import { HAZARD_TYPE, OPEN_CLOSED } from '@/lib/she';
 import { reportHazard } from '../actions';
 import { FilterBar, Thumbs, exportParams, isDate, needle, photosFor, val } from '../filters';
-import { AreaSelect, DeptSelect, Files, RiskSelect, SheTabs, sheMasters, today, EmployeeDatalist, EmployeeInput } from '../fields';
+import { AreaSelect, DeptSelect, Files, RiskSelect, SheTabs, sheMasters, today, EmployeeDatalist, EmployeeInput, reportDepts } from '../fields';
 
 export const metadata = { title: 'Hazard report' };
 
@@ -50,7 +50,7 @@ export default async function HazardPage({ searchParams }: { searchParams: Promi
           <OfflineForm action={reportHazard} kind="hazard" queueTitle="Hazard" queueField="type" draftKey={`hazard:${s.profile.id}`} label="Kirim hazard report" hidden={{ idem: randomUUID() }} className="max-w-3xl">
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="grid gap-1 text-sm">Tanggal<input type="date" name="date" required defaultValue={today()} max={today()} className={input} /></label>
-              <DeptSelect label="Departemen pelapor" depts={depts} value={s.profile.department_id} />
+              <DeptSelect label="Departemen pelapor" depts={reportDepts(depts, s.canIn)} value={s.profile.department_id} />
               <label className="grid gap-1 text-sm">Jenis
                 <select name="type" className={input}>{Object.entries(HAZARD_TYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
               </label>

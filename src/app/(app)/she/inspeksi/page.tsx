@@ -10,7 +10,7 @@ import { INSPECTION_TYPE, OPEN_CLOSED } from '@/lib/she';
 import { recordInspection } from '../actions';
 import { ExportLinks } from '@/components/export-links';
 import { FilterBar, Thumbs, exportParams, isDate, needle, photosFor, val } from '../filters';
-import { AreaSelect, DeptSelect, Files, SheTabs, sheMasters, today, EmployeeDatalist, EmployeeInput } from '../fields';
+import { AreaSelect, DeptSelect, Files, SheTabs, sheMasters, today, EmployeeDatalist, EmployeeInput, reportDepts } from '../fields';
 
 export const metadata = { title: 'Inspeksi' };
 
@@ -55,7 +55,7 @@ export default async function InspectionPage({ searchParams }: { searchParams: P
           <ActionForm action={recordInspection} label="Simpan inspeksi" primary hidden={{ idem: randomUUID() }}>
             <div className="grid gap-3 sm:grid-cols-4">
               <label className="grid gap-1 text-sm">Tanggal<input type="date" name="date" required defaultValue={today()} max={today()} className={input} /></label>
-              <DeptSelect label="Departemen inspektor" depts={depts} value={s.profile.department_id} />
+              <DeptSelect label="Departemen inspektor" depts={reportDepts(depts, s.canIn)} value={s.profile.department_id} />
               <label className="grid gap-1 text-sm">Jenis inspeksi
                 <select name="type" className={input}>{Object.entries(INSPECTION_TYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
               </label>

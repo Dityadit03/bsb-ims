@@ -12,42 +12,49 @@ export const getAlerts = cache(async () => {
   const supabase = await createClient();
   const head = { count: 'exact' as const, head: true };
   const count = (q: PromiseLike<{ count: number | null }>) => q.then(r => r.count ?? 0);
+  // Hanya kueri yang relevan untuk izin pengguna: pengguna lapangan tidak lagi memicu ~30 kueri tiap muat
+  // (puncak 16.00 WIB 16 Nov: database jenuh, 1.500 permintaan 503/504 dalam 8 menit)
+  const sess = await getSession();
+  const any = (...p: string[]) => p.some(x => sess.can(x));
+  const zero = Promise.resolve(0), empty = Promise.resolve({ data: [] as never[] });
+  const mgr = any('hr.manage', 'she.followup', 'she.investigate', 'mgmt.review', 'audit.read', 'sap.manage', 'plant.manage', 'prod.manage', 'log.manage', 'capa.manage');
+  const logi = any('log.approve', 'log.approve_high', 'log.ho_approve', 'log.purchase', 'log.warehouse', 'log.manage', 'log.ho');
+  const plant = any('plant.manage', 'plant.work', 'spip.manage');
   const [certs, spip, hazardOpen, hazardLate, capaLate, mrWait, poWait, prDeptWait, prWait, lowStock, tasks, unread, contractExp, contractSoon, leaveWait, otWait, claimWait, advWait, advLate, reqWait, perfWait, courseDue, compDue, fuelAnom, tyreReplace, tyreSoon, criticalLow] = await Promise.all([
-    supabase.from('employee_competency_view').select('employee_id, competency_id, category, valid_until, validity')
-      .neq('validity', 'revoked').limit(20000).returns<Cert[]>(),
-    supabase.from('commissioning_register').select('validity').in('validity', ['expired', 'expiring']).limit(5000),
-    count(supabase.from('she_hazard_register').select('*', head).eq('status', 'open')),
-    count(supabase.from('she_hazard_register').select('*', head).eq('is_overdue', true)),
-    count(supabase.from('capa_register').select('*', head).eq('is_overdue', true)),
-    count(supabase.from('mr_register').select('*', head).in('status', ['submitted', 'pending'])),
-    count(supabase.from('po_register').select('*', head).eq('status', 'awaiting_approval')),
-    count(supabase.from('pr_register').select('*', head).eq('status', 'dept_review')),
-    count(supabase.from('pr_register').select('*', head).eq('status', 'submitted')),
-    count(supabase.from('material_stock').select('*', head).eq('low_stock', true)),
+    mgr ? supabase.from('employee_competency_view').select('employee_id, competency_id, category, valid_until, validity')
+      .neq('validity', 'revoked').limit(20000).returns<Cert[]>() : empty,
+    plant || mgr ? supabase.from('commissioning_register').select('validity').in('validity', ['expired', 'expiring']).limit(5000) : empty,
+    mgr ? count(supabase.from('she_hazard_register').select('*', head).eq('status', 'open')) : zero,
+    mgr ? count(supabase.from('she_hazard_register').select('*', head).eq('is_overdue', true)) : zero,
+    any('capa.manage', 'capa.verify', 'capa.create', 'mgmt.review') ? count(supabase.from('capa_register').select('*', head).eq('is_overdue', true)) : zero,
+    logi || any('log.request') ? count(supabase.from('mr_register').select('*', head).in('status', ['submitted', 'pending'])) : zero,
+    logi ? count(supabase.from('po_register').select('*', head).eq('status', 'awaiting_approval')) : zero,
+    logi || any('log.request') ? count(supabase.from('pr_register').select('*', head).eq('status', 'dept_review')) : zero,
+    logi ? count(supabase.from('pr_register').select('*', head).eq('status', 'submitted')) : zero,
+    logi ? count(supabase.from('material_stock').select('*', head).eq('low_stock', true)) : zero,
     supabase.rpc('my_tasks').then(r => (r.data as unknown[] | null)?.length ?? 0),
     count(supabase.from('notifications').select('*', head).is('read_at', null)),
     // kontrak hanya terbaca HRGA (RLS), pengguna lain selalu 0
-    count(supabase.from('contract_register').select('*', head).eq('contract_status', 'expired')),
-    count(supabase.from('contract_register').select('*', head).eq('contract_status', 'expiring')),
+    any('hr.manage') ? count(supabase.from('contract_register').select('*', head).eq('contract_status', 'expired')) : zero,
+    any('hr.manage') ? count(supabase.from('contract_register').select('*', head).eq('contract_status', 'expiring')) : zero,
     count(supabase.from('leave_register').select('*', head).eq('can_decide', true)),
     count(supabase.from('overtime_register').select('*', head).eq('can_decide', true)),
     count(supabase.from('expense_claim_register').select('*', head).eq('can_decide', true)),
     count(supabase.from('cash_advance_register').select('*', head).eq('can_decide', true)),
-    count(supabase.from('cash_advance_register').select('*', head).eq('report_overdue', true)),
+    any('hr.manage', 'payroll.manage', 'payroll.approve') ? count(supabase.from('cash_advance_register').select('*', head).eq('report_overdue', true)) : zero,
     count(supabase.from('requisition_register').select('*', head).eq('can_decide', true)),
     count(supabase.from('perf_review_register').select('*', head).not('my_action', 'is', null)),
     count(supabase.from('course_register').select('*', head).eq('my_assigned', true).is('my_completed_at', null)),
-    count(supabase.from('component_view').select('*', head).eq('due', true)),
-    count(supabase.from('fuel_anomaly').select('*', head).eq('is_anomaly', true)),
-    count(supabase.from('tyre_status').select('*', head).eq('alert', 'replace')),
-    count(supabase.from('tyre_status').select('*', head).eq('alert', 'soon')),
-    count(supabase.from('stock_planning').select('*', head).eq('critical', true).eq('reorder_now', true)),
+    plant ? count(supabase.from('component_view').select('*', head).eq('due', true)) : zero,
+    logi || plant ? count(supabase.from('fuel_anomaly').select('*', head).eq('is_anomaly', true)) : zero,
+    plant ? count(supabase.from('tyre_status').select('*', head).eq('alert', 'replace')) : zero,
+    plant ? count(supabase.from('tyre_status').select('*', head).eq('alert', 'soon')) : zero,
+    logi || plant ? count(supabase.from('stock_planning').select('*', head).eq('critical', true).eq('reorder_now', true)) : zero,
   ]);
   // tahap kedua: tiga hal ini saling bebas, jalankan bersamaan (sebelumnya berurutan = tiga kali tunggu)
   const [{ data: picItems }, spipDue, { data: soonLeave }] = await Promise.all([
     supabase.rpc('my_pic_items'),
-    getSession().then(sess => (sess.canIn('spip.manage', 'PLT') || sess.canIn('spip.manage', 'HSE')
-      ? count(supabase.from('spip_weekly').select('*', head).eq('due', true)) : 0)),
+    sess.canIn('spip.manage', 'PLT') || sess.canIn('spip.manage', 'HSE') ? count(supabase.from('spip_weekly').select('*', head).eq('due', true)) : zero,
     supabase.rpc('upcoming_leave', { p_days: 7 }),
   ]);
   const pic = (picItems ?? []) as { overdue: boolean; assigned: boolean }[];

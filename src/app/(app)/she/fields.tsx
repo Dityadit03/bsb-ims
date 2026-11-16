@@ -20,6 +20,12 @@ export async function sheMasters() {
   return { depts: (depts ?? []) as Opt[], areas: (areas ?? []) as Opt[] };
 }
 
+// Departemen tempat pengguna boleh melapor (she.report); mencegah laporan ditolak "Tidak berwenang" karena salah pilih
+export const reportDepts = (depts: Opt[], canIn: (perm: string, code: string) => boolean) => {
+  const ok = depts.filter(d => canIn('she.report', d.code));
+  return ok.length ? ok : depts;
+};
+
 export const today = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
 
 export function DeptSelect({ name = 'department', label = 'Departemen', depts, value }: { name?: string; label?: string; depts: Opt[]; value?: string | null }) {

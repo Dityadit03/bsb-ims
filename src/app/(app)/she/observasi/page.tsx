@@ -7,7 +7,7 @@ import { fmtDate } from '@/lib/documents';
 import { closeObservation, recordObservation } from '../actions';
 import { ExportLinks } from '@/components/export-links';
 import { FilterBar, Thumbs, exportParams, isDate, needle, photosFor, val } from '../filters';
-import { AreaSelect, DeptSelect, Files, SheTabs, sheMasters, today, EmployeeDatalist, EmployeeInput } from '../fields';
+import { AreaSelect, DeptSelect, Files, SheTabs, sheMasters, today, EmployeeDatalist, EmployeeInput, reportDepts } from '../fields';
 
 export const metadata = { title: 'Observasi PTO' };
 
@@ -48,7 +48,7 @@ export default async function ObservationPage({ searchParams }: { searchParams: 
           <ActionForm action={recordObservation} label="Simpan observasi" primary hidden={{ idem: randomUUID() }} className="max-w-3xl">
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="grid gap-1 text-sm">Tanggal<input type="date" name="date" required defaultValue={today()} max={today()} className={input} /></label>
-              <DeptSelect depts={depts} value={s.profile.department_id} />
+              <DeptSelect depts={reportDepts(depts, s.canIn)} value={s.profile.department_id} />
               <AreaSelect areas={areas} />
             </div>
             <label className="grid gap-1 text-sm">Pekerjaan / aktivitas yang diobservasi<input name="activity" required className={input} /></label>

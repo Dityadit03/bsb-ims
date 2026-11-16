@@ -73,12 +73,13 @@ export function Sidebar({ permissions, name, email, role, unit, siteName, userKe
       }).catch(() => {});
     };
     load();
-    const t = setInterval(load, 120000);
+    // 5 menit, dan hanya saat tab terlihat (ratusan HP yang terbuka di latar belakang membebani database)
+    const t = setInterval(() => { if (!document.hidden) load(); }, 300000);
     return () => clearInterval(t);
   }, [userKey]);
-  // pindah halaman: segarkan bila data sudah lebih dari 45 detik
+  // pindah halaman: segarkan bila data sudah lebih dari 3 menit
   useEffect(() => {
-    if (Date.now() - lastLoad.current < 45000) return;
+    if (Date.now() - lastLoad.current < 180000) return;
     lastLoad.current = Date.now();
     fetch('/api/alerts', { credentials: 'same-origin' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j && Array.isArray(j.items)) setAl(j); }).catch(() => {});
   }, [path]);
