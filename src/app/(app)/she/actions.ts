@@ -22,11 +22,19 @@ async function call(fn: string, args: Record<string, unknown>, f?: FormData, fol
   return data as { id: string } & Record<string, unknown>;
 }
 
-// Formulir diisi atas nama karyawan lain (pengawas tanpa akun): kreditkan untuk SAP
-async function credit(table: string, id: string, f: FormData) {
+// Formulir diisi atas nama karyawan lain (pengawas tanpa akun): kreditkan untuk SAP.
+// Dicek SEBELUM laporan dibuat, agar error tidak meninggalkan laporan tersimpan lalu dikirim ulang (ganda).
+async function creditTarget(f: FormData) {
   const supabase = await createClient();
   const emp = await employeeIdFrom(supabase, str(f, 'credit'));
+  if (!emp) return null;
+  const { data: sp } = await supabase.from('sap_participants').select('employee_id').eq('employee_id', emp).maybeSingle();
+  if (!sp) throw new Error('Karyawan pada "Atas nama" bukan peserta SAP, jadi laporan tidak akan terhitung untuk siapa pun. Kosongkan kolom itu agar tercatat atas nama Anda.');
+  return emp;
+}
+async function credit(table: string, id: string, emp: string | null) {
   if (!emp) return;
+  const supabase = await createClient();
   const { error } = await supabase.rpc('she_credit', { p_table: table, p_id: id, p_employee: emp });
   if (error) throw new Error(error.message);
 }
@@ -41,12 +49,13 @@ async function run(path: string, ok: string, fn: () => Promise<unknown>): Promis
 export async function reportHazard(_: ActionState, f: FormData): Promise<ActionState> {
   let id: string;
   try {
+    const emp = await creditTarget(f);
     id = (await call('hazard_report', {
       p_reported_on: str(f, 'date'), p_department: str(f, 'department'), p_hazard_type: str(f, 'type'), p_description: str(f, 'description'),
       p_pic_department: str(f, 'pic_department'), p_due: str(f, 'due'), p_work_area: str(f, 'area'), p_location_note: str(f, 'location'),
       p_recommendation: str(f, 'recommendation'), p_risk: str(f, 'risk') ?? 'medium', p_idempotency_key: str(f, 'idem'),
     }, f, 'hazard')).id;
-    await credit('hazard_reports', id, f);
+    await credit('hazard_reports', id, emp);
   } catch (e) { return { error: (e as Error).message }; }
   // dikirim ulang dari antrean offline di latar belakang: jangan pindahkan halaman pengguna
   if (str(f, 'queued')) return { ok: 'Hazard dari antrean terkirim' };
@@ -61,12 +70,13 @@ export async function closeHazard(_: ActionState, f: FormData) {
 // ---------------------------------------------------------------- observasi PTO
 export async function recordObservation(_: ActionState, f: FormData) {
   return run('/she/observasi', 'Observasi tersimpan', async () => {
+    const emp = await creditTarget(f);
     const o = await call('observation_record', {
       p_observed_on: str(f, 'date'), p_department: str(f, 'department'), p_activity: str(f, 'activity'), p_result: str(f, 'result'),
       p_work_area: str(f, 'area'), p_worker_name: str(f, 'worker'), p_worker_count: num(f, 'count'),
       p_unsafe_behaviour: str(f, 'unsafe'), p_coaching: str(f, 'coaching'), p_idempotency_key: str(f, 'idem'),
     }, f, 'observasi');
-    await credit('observations', o.id, f);
+    await credit('observations', o.id, emp);
   });
 }
 
@@ -83,11 +93,12 @@ export async function recordInspection(_: ActionState, f: FormData): Promise<Act
   if (findings.some(x => !x.pic_department_id || !x.due_date)) return { error: 'Setiap temuan wajib punya departemen PIC dan due date' };
   let id: string;
   try {
+    const emp = await creditTarget(f);
     id = (await call('inspection_record', {
       p_inspected_on: str(f, 'date'), p_department: str(f, 'department'), p_type: str(f, 'type'), p_object: str(f, 'object'),
       p_findings: findings, p_work_area: str(f, 'area'), p_note: str(f, 'note'), p_idempotency_key: str(f, 'idem'),
     }, f, 'inspeksi')).id;
-    await credit('inspections', id, f);
+    await credit('inspections', id, emp);
   } catch (e) { return { error: (e as Error).message }; }
   redirect(`/she/inspeksi/${id}`);
 }
