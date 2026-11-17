@@ -29,12 +29,16 @@ export const fmtPct = (v: number | null) => (v == null ? 'N/A' : `${Math.round(v
 export const weekAch = (r: SapRow) => (r.on_leave ? null : avg(SAP_METRICS.map(m => ach(r[`${m.key}_act`], r[`${m.key}_target`]))));
 export const sum = (rows: SapRow[], m: SapMetric) => {
   const on = rows.filter(r => !r.on_leave);
-  return { act: on.reduce((t, r) => t + r[`${m}_act`], 0), plan: on.reduce((t, r) => t + r[`${m}_target`], 0), on: on.length };
+  return {
+    act: on.reduce((t, r) => t + r[`${m}_act`], 0), plan: on.reduce((t, r) => t + r[`${m}_target`], 0), on: on.length,
+    // aktual yang dihitung: per orang per minggu maksimal sebesar plan-nya, agar kelebihan satu orang tidak menutupi yang kosong
+    got: on.reduce((t, r) => t + Math.min(r[`${m}_act`], r[`${m}_target`]), 0),
+  };
 };
-// Capaian gabungan: per jenis = total act ÷ total plan peserta onsite, lalu rata-rata tiga jenis; N/A bila semua cuti
+// Capaian gabungan: per jenis = Σ min(act, plan) ÷ Σ plan peserta onsite, lalu rata-rata tiga jenis; N/A bila semua cuti
 export const pooled = (rows: SapRow[], m?: SapMetric): number | null => {
   if (!rows.some(r => !r.on_leave)) return null;
-  if (m) { const s = sum(rows, m); return ach(s.act, s.plan); }
+  if (m) { const s = sum(rows, m); return ach(s.got, s.plan); }
   return avg(SAP_METRICS.map(x => pooled(rows, x.key)));
 };
 // Month to date: minggu yang hari Jumat-nya jatuh di bulan yang sama

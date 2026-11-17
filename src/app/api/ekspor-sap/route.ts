@@ -139,7 +139,7 @@ export async function GET(req: NextRequest) {
         SAP_METRICS.forEach((m, i) => {
           const tt = sum(xs, m.key), on = xs.filter(x => !x.on_leave);
           putPct(lr, 2 + i * 2, on.length ? on.filter(x => x[`${m.key}_target`] > 0).length / on.length : null);
-          putPct(lr, 3 + i * 2, tt.on ? ach(tt.act, tt.plan) : null);
+          putPct(lr, 3 + i * 2, tt.on ? ach(tt.got, tt.plan) : null);
         });
       };
       for (const l of lv) { const xs = rs.filter(x => x.level === l); line(l, `${xs.filter(x => !x.on_leave).length}/${xs.length}`, xs, false); }

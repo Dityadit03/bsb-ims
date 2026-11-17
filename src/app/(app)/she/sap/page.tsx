@@ -197,7 +197,7 @@ export default async function SapPage({ searchParams }: { searchParams: Promise<
                       <td className="!px-3 font-mono text-xs font-semibold">{label}</td>
                       {METRICS.flatMap(m => {
                         const t = sum(xs, m.key);
-                        const v = t.on ? ach(t.act, t.plan) : null;
+                        const v = t.on ? ach(t.got, t.plan) : null;
                         const on = xs.filter(r => !r.on_leave);
                         const planned = on.length ? on.filter(r => r[`${m.key}_target`] > 0).length / on.length : null;
                         return [
