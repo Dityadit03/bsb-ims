@@ -2,6 +2,7 @@
 import { useActionState, useState } from 'react';
 import { btn, btnGhost, btnPrimary, input } from '@/components/ui';
 import { actOnTask } from './actions';
+import { friendlyError } from '@/lib/friendly-error';
 
 const APPROVE_LABEL: Record<string, string> = { review: 'Setujui review', verify: 'Lolos verifikasi', approve: 'Setujui dokumen' };
 
@@ -33,7 +34,7 @@ export function TaskActions({ taskId, subjectHash, kind }: { taskId: string; sub
             <button type="button" className={btnGhost} onClick={() => setMode('approve')}>Batal</button>
           </>
         )}
-        {state.error && <span role="alert" className="text-sm text-crit">{state.error}</span>}
+        {state.error && <span role="alert" className="text-sm text-crit">{friendlyError(state.error)}</span>}
       </div>
     </form>
   );

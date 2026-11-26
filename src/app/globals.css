@@ -85,3 +85,14 @@ button:active:not(:disabled), a:active { opacity: 0.92; }
   body > * header, body > * aside, body > * nav, [aria-label="Aksi cepat"] { display: none !important; }
   body { background: #fff !important; }
 }
+
+/* iPhone memperbesar halaman otomatis bila huruf isian < 16px; di layar HP isian memakai 16px */
+@media (max-width: 639px) {
+  input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea { font-size: 16px; }
+}
+
+/* Layar sentuh: kotak centang/pilihan lebih besar dan barisnya mudah diketuk dengan jari (sarung tangan) */
+@media (pointer: coarse) {
+  input[type=checkbox]:not(.sr-only), input[type=radio]:not(.sr-only) { width: 1.25rem; height: 1.25rem; flex-shrink: 0; }
+  label:has(> input[type=checkbox]), label:has(> input[type=radio]) { min-height: 2.5rem; }
+}

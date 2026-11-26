@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { clock } from '../hrga/waktu-actions';
 import { enqueue, formToFields, queueSupported } from '@/lib/offline/queue';
 import { flushQueue } from '@/lib/offline/replay';
+import { friendlyError } from '@/lib/friendly-error';
 
 type Pos = { lat: number; lng: number; accuracy: number };
 
@@ -140,7 +141,7 @@ export function ClockForm({ next, requirePhoto, locked = false }: { next: 'in' |
         className={`rounded-xl py-4 text-lg font-bold text-white shadow-sm disabled:opacity-40 ${kind === 'in' ? 'bg-ok' : 'bg-violet'}`}>
         {pending ? 'Mengirim…' : kind === 'in' ? 'Absen masuk' : 'Absen pulang'}
       </button>
-      {state.error && <p role="alert" className="text-center text-sm text-crit">{state.error}</p>}
+      {state.error && <p role="alert" className="text-center text-sm text-crit">{friendlyError(state.error)}</p>}
       {state.ok && <p className="text-center text-sm font-semibold text-ok">{state.ok}</p>}
     </form>
   );

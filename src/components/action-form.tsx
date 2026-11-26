@@ -1,6 +1,7 @@
 'use client';
 import { startTransition, useActionState, useEffect, useRef } from 'react';
 import { btnGhost, btnPrimary } from '@/components/ui';
+import { friendlyError } from '@/lib/friendly-error';
 
 type State = { error?: string; ok?: string };
 
@@ -31,8 +32,8 @@ export function ActionForm({ action, label, children, primary = false, hidden = 
       {children}
       <div className="flex flex-wrap items-center gap-3">
         <button className={primary ? btnPrimary : btnGhost} disabled={pending}>{pending ? 'Memproses…' : label}</button>
-        {state.error && <span role="alert" className="text-sm text-crit">{state.error}</span>}
-        {state.ok && <span className="text-sm text-ok">{state.ok}</span>}
+        {state.error && <span role="alert" className="text-sm text-crit">{friendlyError(state.error)}</span>}
+        {state.ok && <span role="status" className="text-sm text-ok">{state.ok}</span>}
       </div>
     </form>
   );

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { btnGhost, btnPrimary } from '@/components/ui';
 import { enqueue, formToFields, queueSupported, type QueueKind } from '@/lib/offline/queue';
 import { flushQueue } from '@/lib/offline/replay';
+import { friendlyError } from '@/lib/friendly-error';
 
 type State = { error?: string; ok?: string };
 
@@ -116,7 +117,7 @@ export function OfflineForm({ action, kind, queueTitle, queueField, label, child
       {children}
       <div className="flex flex-wrap items-center gap-3">
         <button className={kind === 'absen' ? btnGhost : btnPrimary} disabled={pending}>{pending ? 'Mengirim…' : label}</button>
-        {state.error && <span role="alert" className="text-sm text-crit">{state.error}</span>}
+        {state.error && <span role="alert" className="text-sm text-crit">{friendlyError(state.error)}</span>}
         {state.ok && <span className="text-sm text-ok">{state.ok}</span>}
       </div>
     </form>

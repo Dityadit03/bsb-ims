@@ -3,6 +3,7 @@ import { useActionState, useMemo, useState } from 'react';
 import { btnPrimary, input } from '@/components/ui';
 import { SMKP_ELEMENTS } from '@/lib/documents';
 import { requestDocument } from '../actions';
+import { friendlyError } from '@/lib/friendly-error';
 
 type Type = { code: string; name: string; category: string; workflow_code: string | null; needs_section: boolean; parent_types: string[] | null };
 type Dept = { id: string; code: string; name: string; sections: { id: string; code: string; name: string }[] };
@@ -78,7 +79,7 @@ export function RequestForm({ types, departments, parents, defaultDepartment }: 
           ))}
         </div>
       </fieldset>
-      {state.error && <p role="alert" className="text-sm text-crit">{state.error}</p>}
+      {state.error && <p role="alert" className="text-sm text-crit">{friendlyError(state.error)}</p>}
       <div><button className={btnPrimary} disabled={pending}>{type?.workflow_code ? 'Buat pengajuan' : 'Registrasi & terbitkan nomor'}</button></div>
     </form>
   );
