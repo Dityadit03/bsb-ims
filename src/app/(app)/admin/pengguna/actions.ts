@@ -80,3 +80,13 @@ async function activateByPosition(nik: boolean, _: { error?: string }, form: For
 
 export async function activateUserByPosition(prev: { error?: string }, form: FormData) { return activateByPosition(false, prev, form); }
 export async function activateNikByPosition(prev: { error?: string }, form: FormData) { return activateByPosition(true, prev, form); }
+
+// Buka kunci login NIK lebih awal (setelah 5x sandi salah akun terkunci sementara)
+export async function unlockNik(_: { error?: string; ok?: string }, form: FormData): Promise<{ error?: string; ok?: string }> {
+  const supabase = await createClient();
+  if (!(await sessionOk(supabase))) return { error: EXPIRED };
+  const nrp = String(form.get('nrp') ?? '').trim().toUpperCase();
+  if (!nrp) return { error: 'Isi NIK' };
+  const { error } = await supabase.rpc('nik_login_unlock', { p_nrp: nrp });
+  return error ? { error: error.message } : { ok: `Kunci login NIK ${nrp} dibuka` };
+}

@@ -1341,7 +1341,7 @@ await test('impor karyawan & sertifikat memakai kode departemen, nama jabatan da
 await test('anon hanya bisa memanggil verifikasi dokumen & feed spreadsheet', async () => {
   const r = await db.query(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')`);
-  eq(r.rows.map(x => x.proname).sort().join(','), 'feed_rows,login_sites,verify_document');
+  eq(r.rows.map(x => x.proname).sort().join(','), 'feed_rows,login_sites,nik_login_failed,nik_login_gate,verify_document');
 });
 
 console.log('HRIS: Core HR');
@@ -2859,7 +2859,25 @@ await test('anon tidak punya hak apa pun atas tabel/view public; fungsi anon han
   eq((await db.query(`select count(*)::int c from information_schema.role_table_grants where grantee = 'anon' and table_schema = 'public'`)).rows[0].c, 0);
   const fn = (await db.query(`select string_agg(p.proname, ',' order by p.proname) s from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.prosecdef and has_function_privilege('anon', p.oid, 'execute')`)).rows[0].s;
-  eq(fn, 'feed_rows,login_sites,verify_document');
+  eq(fn, 'feed_rows,login_sites,nik_login_failed,nik_login_gate,verify_document');
+});
+await test('login NIK: 5x salah dikunci 30 menit, salah lagi setelah terkunci berlipat, NIK tak dikenal tidak dicatat', async () => {
+  const nrp = (await db.query(`select nrp from public.employees where nrp is not null order by nrp limit 1`)).rows[0].nrp;
+  await db.query(`delete from app.nik_login_attempts`);
+  for (let i = 1; i <= 4; i++) eq((await anon(`select public.nik_login_failed($1) s`, [nrp.toLowerCase()])).rows[0].s, 0);
+  const s5 = (await anon(`select public.nik_login_failed($1) s`, [nrp])).rows[0].s;
+  if (s5 < 1790 || s5 > 1800) throw new Error(`kunci pertama harus 30 menit, didapat ${s5} dtk`);
+  eq((await anon(`select public.nik_login_gate($1) > 0 g`, [nrp])).rows[0].g, true);
+  // waktu kunci habis, lalu salah sekali lagi -> 60 menit
+  await db.query(`update app.nik_login_attempts set locked_until = now() - interval '1 second' where nrp = upper($1)`, [nrp]);
+  eq((await anon(`select public.nik_login_gate($1) g`, [nrp])).rows[0].g, 0);
+  const s6 = (await anon(`select public.nik_login_failed($1) s`, [nrp])).rows[0].s;
+  if (s6 < 3590 || s6 > 3600) throw new Error(`kunci kedua harus 60 menit, didapat ${s6} dtk`);
+  eq((await anon(`select public.nik_login_failed('ZZ.99.999') s`)).rows[0].s, 0);
+  eq((await db.query(`select count(*)::int c from app.nik_login_attempts where nrp = 'ZZ.99.999'`)).rows[0].c, 0);
+  await expectError('42501', async () => anon(`select * from app.nik_login_attempts`));
+  await expectError('42501', async () => anon(`select public.nik_login_unlock($1)`, [nrp]));
+  await db.query(`delete from app.nik_login_attempts`);
 });
 await test('pengguna tanpa audit.read tidak melihat audit log', async () => {
   eq((await as(db, staffId, `select 1 from public.audit_logs`)).rowCount, 0);

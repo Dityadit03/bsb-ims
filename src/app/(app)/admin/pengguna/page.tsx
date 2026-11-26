@@ -4,6 +4,9 @@ import { requirePermission } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { ActivateForm, PositionForm, type AccessInfo, type PositionOption } from './activate-form';
 import { RejectForm, ResetPasswordForm } from './nik-panel';
+import { ActionForm } from '@/components/action-form';
+import { input } from '@/components/ui';
+import { unlockNik } from './actions';
 
 export const metadata = { title: 'Pengguna & peran' };
 
@@ -107,6 +110,12 @@ export default async function PenggunaPage({ searchParams }: { searchParams: Pro
           </ul>
         </Panel>
       )}
+      <Panel title="Buka kunci login NIK">
+        <p className="mb-2 text-sm text-muted">Setelah 5 kali sandi salah, login NIK terkunci 30 menit (berlipat bila salah lagi). Buka lebih awal hanya setelah memastikan orangnya.</p>
+        <ActionForm action={unlockNik} label="Buka kunci" className="flex max-w-md flex-wrap items-end gap-2">
+          <label className="grid flex-1 gap-1 text-sm">NIK<input name="nrp" required placeholder="24.05.064" className={input} /></label>
+        </ActionForm>
+      </Panel>
       <Panel title="Semua pengguna">
         <Table head={['Nama', 'Email', 'Peran', 'Status']}>
           {(users ?? []).map(u => {
