@@ -84,7 +84,7 @@ export function OfflineForm({ action, kind, queueTitle, queueField, label, child
     setState({});
     const queue = async () => {
       if (!queueSupported()) return setState({ error: 'Tidak ada jaringan. Coba lagi saat sinyal ada.' });
-      await enqueue(kind, `${queueTitle}${queueField ? ' ' + String(fd.get(queueField) ?? '').slice(0, 40) : ''}`.trim(), formToFields(fd));
+      await enqueue(kind, `${queueTitle}${queueField ? ' ' + String(fd.get(queueField) ?? '').slice(0, 40) : ''}`.trim(), await formToFields(fd));
       done();
       setState({ ok: 'Tersimpan di perangkat. Akan dikirim otomatis saat ada sinyal.' });
     };

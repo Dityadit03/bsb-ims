@@ -52,8 +52,9 @@ export function OfflineSync({ userId }: { userId: string }) {
                   <span className="shrink-0 text-xs text-muted">{new Date(i.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })}</span>
                 </div>
                 {i.error && <p className="mt-1 text-xs text-crit">{i.tries >= MAX_TRIES ? 'Ditolak server' : 'Gagal, dicoba lagi'}: {i.error}</p>}
-                {i.error && i.tries >= MAX_TRIES && (
-                  <button onClick={() => removeItem(i.id)} className="mt-1 text-xs text-crit underline">Hapus dari antrean</button>
+                {(i.tries >= MAX_TRIES || Date.now() - i.createdAt > 864e5) && (
+                  <button onClick={() => { if (confirm('Hapus butir ini dari antrean? Isi ulang laporannya bila belum tercatat.')) void removeItem(i.id); }}
+                    className="mt-1 text-xs text-crit underline">Hapus dari antrean</button>
                 )}
               </li>
             ))}

@@ -68,7 +68,7 @@ export function ClockForm({ next, requirePhoto, locked = false }: { next: 'in' |
     setState({});
     const queue = async () => {
       if (!queueSupported()) return setState({ error: 'Tidak ada jaringan. Coba lagi saat sinyal ada.' });
-      await enqueue('absen', kind === 'in' ? 'Absen masuk' : 'Absen pulang', formToFields(fd));
+      await enqueue('absen', kind === 'in' ? 'Absen masuk' : 'Absen pulang', await formToFields(fd));
       setCid(crypto.randomUUID());
       setState({ ok: 'Tersimpan di perangkat dengan jam saat ini. Dikirim otomatis saat ada sinyal.' });
     };

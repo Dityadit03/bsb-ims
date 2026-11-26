@@ -21,15 +21,20 @@ export async function flushQueue(): Promise<{ sent: number; left: number }> {
   try {
     for (const item of await listQueue()) {
       if (item.error && item.tries >= MAX_TRIES) continue;
-      const fd = fieldsToForm(item.fields);
+      let fd: FormData;
+      try { fd = await fieldsToForm(item.fields); } catch {
+        await updateItem({ ...item, tries: MAX_TRIES, error: 'Foto di antrean tidak bisa dibaca lagi oleh ponsel. Hapus butir ini lalu isi ulang laporannya.' });
+        continue;
+      }
       fd.set('queued', '1');
       try {
         const r = await ACTIONS[item.kind]({}, fd);
         if (saved(r)) { await removeItem(item.id); sent++; }
         else await updateItem({ ...item, tries: item.tries + 1, error: r.error });
-      } catch {
-        await updateItem({ ...item, tries: item.tries + 1 });
-        break; // jaringan/sesi bermasalah: coba lagi nanti
+      } catch (e) {
+        // galat jaringan/sesi: catat agar terlihat, dan jangan biarkan satu butir menahan butir lain selamanya
+        await updateItem({ ...item, tries: item.tries + 1, error: `Gagal terkirim (${(e as Error)?.message || 'jaringan'})` });
+        if (!navigator.onLine) break;
       }
     }
   } finally { running = false; }

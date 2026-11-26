@@ -5,8 +5,13 @@
 export type QueueKind = 'p2h' | 'hazard' | 'absen' | 'breakdown';
 export type QueueItem = {
   id: string; uid: string; kind: QueueKind; label: string; createdAt: number;
-  fields: [string, string | File][]; tries: number; error?: string;
+  fields: [string, Field][]; tries: number; error?: string;
 };
+// Foto disimpan sebagai byte biasa, bukan File: di iPhone (Safari) File di IndexedDB bisa tak terbaca lagi setelah halaman dimuat ulang,
+// sehingga kiriman macet selamanya. Butir lama yang masih berisi File tetap didukung.
+export type StoredFile = { __file: true; name: string; type: string; data: ArrayBuffer };
+type Field = string | File | StoredFile;
+const isStored = (v: unknown): v is StoredFile => typeof v === 'object' && v !== null && (v as StoredFile).__file === true;
 
 // Pemilik antrean = pengguna yang sedang masuk (diisi OfflineSync). Antrean orang lain tidak pernah dikirim dengan sesi ini.
 export const setUid = (uid: string) => { try { localStorage.setItem('bsb-uid', uid); } catch { /* abaikan */ } };
@@ -38,15 +43,23 @@ async function tx<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBReq
 
 const changed = () => window.dispatchEvent(new Event('bsb-queue-changed'));
 
-export function formToFields(fd: FormData): [string, string | File][] {
-  const out: [string, string | File][] = [];
-  fd.forEach((v, k) => { if (!(v instanceof File) || v.size > 0) out.push([k, v]); });
+export async function formToFields(fd: FormData): Promise<[string, Field][]> {
+  const out: [string, Field][] = [];
+  for (const [k, v] of Array.from(fd.entries())) {
+    if (!(v instanceof File)) out.push([k, v]);
+    else if (v.size > 0) out.push([k, { __file: true, name: v.name, type: v.type, data: await v.arrayBuffer() }]);
+  }
   return out;
 }
 
-export function fieldsToForm(fields: QueueItem['fields']): FormData {
+// Melempar galat bila foto lama di antrean sudah tidak bisa dibaca perangkat
+export async function fieldsToForm(fields: QueueItem['fields']): Promise<FormData> {
   const fd = new FormData();
-  for (const [k, v] of fields) fd.append(k, v);
+  for (const [k, v] of fields) {
+    if (typeof v === 'string') fd.append(k, v);
+    else if (isStored(v)) fd.append(k, new File([v.data], v.name, { type: v.type }));
+    else fd.append(k, new File([await v.arrayBuffer()], v.name, { type: v.type }));
+  }
   return fd;
 }
 
