@@ -100,6 +100,7 @@ export async function recordInspection(_: ActionState, f: FormData): Promise<Act
     }, f, 'inspeksi')).id;
     await credit('inspections', id, emp);
   } catch (e) { return { error: (e as Error).message }; }
+  if (str(f, 'queued')) return { ok: 'Inspeksi dari antrean terkirim' };
   redirect(`/she/inspeksi/${id}`);
 }
 

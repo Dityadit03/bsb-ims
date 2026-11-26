@@ -150,7 +150,7 @@ export function Sidebar({ permissions, name, email, role, unit, siteName, userKe
             <Link href="/cari" className={`${iconBtn(false)} md:hidden`} aria-label="Cari"><Icon d={I.search} /></Link>
             <button onClick={() => toggle('alerts')} className={iconBtn(pop === 'alerts')} aria-expanded={pop === 'alerts'} aria-label={`Peringatan, ${alertTotal}`}>
               <Icon d={I.bell} />
-              {alertTotal > 0 && <span className="absolute -right-2 -top-2 min-w-5 rounded-full bg-crit px-1 text-center text-xs font-bold leading-5 text-white">{alertTotal > 999 ? '999+' : alertTotal}</span>}
+              {alertTotal > 0 && <span className="absolute -right-2 -top-2 min-w-5 rounded-full bg-crit px-1 text-center text-xs font-bold leading-5 text-white">{alertTotal > 99 ? '99+' : alertTotal}</span>}
             </button>
             <button onClick={() => toggle('settings')} className={`${iconBtn(pop === 'settings')} hidden sm:grid`} aria-expanded={pop === 'settings'} aria-label="Pengaturan"><Icon d={I.gear} /></button>
             <button onClick={() => toggle('profile')} aria-expanded={pop === 'profile'} aria-label="Profil"

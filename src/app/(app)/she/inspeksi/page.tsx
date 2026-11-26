@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { randomUUID } from 'node:crypto';
 import { ActionForm } from '@/components/action-form';
+import { OfflineForm } from '@/components/offline-form';
 import { PageHeader, Panel, Pill, Table, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
@@ -52,7 +53,7 @@ export default async function InspectionPage({ searchParams }: { searchParams: P
       <SheTabs active="/she/inspeksi" />
       {s.can('she.report') && (
         <Panel title="Catat inspeksi">
-          <ActionForm action={recordInspection} label="Simpan inspeksi" primary hidden={{ idem: randomUUID() }}>
+          <OfflineForm action={recordInspection} kind="inspeksi" queueTitle="Inspeksi" queueField="object" draftKey={`inspeksi:${s.profile.id}`} label="Simpan inspeksi" hidden={{ idem: randomUUID() }}>
             <div className="grid gap-3 sm:grid-cols-4">
               <label className="grid gap-1 text-sm">Tanggal<input type="date" name="date" required defaultValue={today()} max={today()} className={input} /></label>
               <DeptSelect label="Departemen inspektor" depts={reportDepts(depts, s.canIn)} value={s.profile.department_id} />
@@ -83,7 +84,7 @@ export default async function InspectionPage({ searchParams }: { searchParams: P
               <Files label="Foto / checklist" />
             </div>
             <EmployeeDatalist />
-          </ActionForm>
+          </OfflineForm>
         </Panel>
       )}
       <Panel title="Temuan open" action={<ExportLinks dataset="temuan" label="Unduh data" params={exportParams({

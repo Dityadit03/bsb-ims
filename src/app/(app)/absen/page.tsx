@@ -26,7 +26,8 @@ export default async function AbsenPage() {
   const since = new Date(Date.now() - 36 * 3600 * 1000).toISOString();
   const [{ data: day }, { data: logs }, { data: setting }, { data: locs }, { data: mode }] = await Promise.all([
     supabase.from('attendance_daily').select('work_date, roster_code, start_at, end_at, clock_in, clock_out, status, late_minutes')
-      .eq('employee_id', me.id).lte('work_date', today).order('work_date', { ascending: false }).limit(2),
+      .eq('employee_id', me.id).gte('work_date', new Date(Date.parse(today) - 7 * 864e5).toISOString().slice(0, 10)).lte('work_date', today)
+      .order('work_date', { ascending: false }).limit(2), // dibatasi 7 hari: view absensi berat bila tanpa batas bawah (sempat timeout)
     supabase.from('attendance_logs').select('id, at, kind, source, in_geofence, distance_m, location_id').eq('employee_id', me.id)
       .gte('at', since).order('at', { ascending: false }).returns<Log[]>(),
     supabase.from('app_settings').select('value').eq('key', 'attendance_require_photo').maybeSingle(),

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { ActionForm } from '@/components/action-form';
+import { OfflineForm } from '@/components/offline-form';
 import { PageHeader, Panel, Pill, Table, input } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
@@ -45,7 +46,7 @@ export default async function ObservationPage({ searchParams }: { searchParams: 
       <SheTabs active="/she/observasi" />
       {s.can('she.report') && (
         <Panel title="Catat observasi">
-          <ActionForm action={recordObservation} label="Simpan observasi" primary hidden={{ idem: randomUUID() }} className="max-w-3xl">
+          <OfflineForm action={recordObservation} kind="observasi" queueTitle="Observasi" queueField="activity" draftKey={`observasi:${s.profile.id}`} label="Simpan observasi" hidden={{ idem: randomUUID() }} className="max-w-3xl">
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="grid gap-1 text-sm">Tanggal<input type="date" name="date" required defaultValue={today()} max={today()} className={input} /></label>
               <DeptSelect depts={reportDepts(depts, s.canIn)} value={s.profile.department_id} />
@@ -67,7 +68,7 @@ export default async function ObservationPage({ searchParams }: { searchParams: 
             </div>
             <EmployeeDatalist />
             <p className="text-xs text-muted">Observasi dihitung sebagai Act Observasi di SAP Anda. Perilaku tidak aman tanpa coaching tetap open.</p>
-          </ActionForm>
+          </OfflineForm>
         </Panel>
       )}
       <FilterBar action="/she/observasi" sp={sp} shown={rows?.length ?? 0} total={count ?? undefined} fields={[

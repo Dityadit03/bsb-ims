@@ -96,7 +96,7 @@ export async function AttachmentList({ table, ids }: { table: string; ids: strin
   if (!data?.length) return null;
   return (
     <ul className="flex flex-wrap gap-2 text-xs">
-      {data.map(a => <li key={a.id}><a href={`/api/lampiran/${a.id}`} target="_blank" className="rounded border border-line px-2 py-1 font-mono hover:border-accent"><Icon name="clip" size={14} className="mr-1 inline" />{a.file_name}</a></li>)}
+      {data.map(a => <li key={a.id}><a href={`/api/lampiran/${a.id}`} target="_blank" className="inline-flex min-h-9 items-center gap-1 rounded border border-line px-2.5 py-1.5 font-mono hover:border-accent"><Icon name="clip" size={14} />{a.file_name}</a></li>)}
     </ul>
   );
 }

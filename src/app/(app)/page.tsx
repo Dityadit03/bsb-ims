@@ -5,6 +5,7 @@ import { Panel, Stat, btnGhost, btnPrimary } from '@/components/ui';
 import { getSession } from '@/lib/session';
 import { createClient } from '@/lib/supabase/server';
 import { getAlerts } from '@/lib/alerts';
+import { PushPrompt } from '@/components/push-prompt';
 
 export const metadata = { title: 'Ringkasan' };
 
@@ -87,6 +88,7 @@ export default async function HomePage() {
           </div>
         )}
       </header>
+      <PushPrompt />
 
       {s.can('she.report') && (
         <nav aria-label="Aksi cepat" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">

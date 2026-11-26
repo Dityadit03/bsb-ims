@@ -4,7 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 import { getSession } from '@/lib/session';
 
 export type AlertTone = 'crit' | 'warn' | 'accent';
-export type Alert = { n: number; tone: AlertTone; title: string; sub: string; href: string };
+export type Alert = { n: number; tone: AlertTone; title: string; sub: string; href: string; mine?: boolean };
+const PERSONAL = ['notifikasi baru', 'tugas menunggu Anda', 'cuti Anda', 'menunggu persetujuan Anda', 'menunggu keputusan Anda', 'menunggu tindakan Anda',
+  'kursus e-learning', 'temuan SHE', 'MR menunggu', 'menunggu setuju departemen', 'PR menunggu', 'PO menunggu', 'objek SPIP belum diinspeksi'];
 type Cert = { employee_id: string; competency_id: string; category: string; valid_until: string | null; validity: string };
 
 // Hal yang perlu ditindaklanjuti, dipakai lonceng peringatan, menu samping dan beranda (sekali per request).
@@ -113,6 +115,7 @@ export const getAlerts = cache(async () => {
     [c.lowStock, 'warn', 'barang di bawah stok minimum', 'Perlu PR isi ulang', '/logistik?rendah=1'],
   ] as [number, AlertTone, string, string, string][])
     .filter(([n]) => n > 0)
-    .map(([n, tone, title, sub, href]): Alert => ({ n, tone, title: `${n.toLocaleString('id-ID')} ${title}`, sub, href }));
-  return { counts: c, items, total: items.reduce((t, a) => t + a.n, 0) };
+    .map(([n, tone, title, sub, href]): Alert => ({ n, tone, title: `${n.toLocaleString('id-ID')} ${title}`, sub, href, mine: PERSONAL.some(k => title.includes(k)) }));
+  // Angka di lonceng hanya hal yang menunggu tindakan pengguna ini; statistik perusahaan (sertifikat, stok, ban) tetap tampil di daftar.
+  return { counts: c, items, total: items.filter(a => a.mine).reduce((t, a) => t + a.n, 0) };
 });
