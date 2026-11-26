@@ -84,7 +84,7 @@ export function Explorer({ models, current, groups, parts }: { models: CModel[];
                       <title>{g.name}</title>
                       {on && <rect x={m.x - 26} y={m.y - 15} width="52" height="30" rx="15" fill="#7A1FD0" opacity=".25" className="animate-pulse motion-reduce:animate-none" />}
                       <rect x={m.x - 22} y={m.y - 11} width="44" height="22" rx="11" fill={on ? '#7A1FD0' : '#3B2BC9'} stroke="#fff" strokeWidth="2" />
-                      <text x={m.x} y={m.y + 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff" className="font-mono">{code}</text>
+                      <text x={m.x} y={m.y + 4} textAnchor="middle" fontSize="12" fontWeight="700" fill="#fff" className="font-mono">{code}</text>
                     </g>
                   );
                 })}

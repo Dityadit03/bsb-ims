@@ -118,7 +118,7 @@ export async function LinkedCapa({ table, id, sourceType, refNo, clauseCode, can
           {rows.map(a => <li key={a.id}><Link href={`/capa/${a.id}`} className="font-mono text-xs hover:text-accent">{a.action_no}</Link> {a.title} <span className="text-xs text-muted">({a.status})</span></li>)}
         </ul>
       ) : <p className="text-sm text-muted">Belum ada action plan.</p>}
-      {canCreate && <Link href={`/capa/baru?${qs}`} className="text-sm text-accent hover:underline">+ Buat action plan dari rekaman ini</Link>}
+      {canCreate && <Link href={`/capa/baru?${qs}`} className="inline-flex min-h-9 items-center text-sm text-accent hover:underline">+ Buat action plan dari rekaman ini</Link>}
     </div>
   );
 }

@@ -35,7 +35,7 @@ export default async function BreakdownPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader eyebrow="Plant · Maintenance" title="Breakdown di lapangan">
-        <Link href="/plant/wo" className="text-sm text-accent hover:underline">Work order →</Link>
+        <Link href="/plant/wo" className="inline-flex min-h-9 items-center text-sm text-accent hover:underline">Work order →</Link>
       </PageHeader>
       <PlantTabs active="/plant/breakdown" />
       {canReport && (
@@ -57,7 +57,7 @@ export default async function BreakdownPage({ searchParams }: { searchParams: Pr
         </Panel>
       )}
       <Panel title={sp.semua ? 'Semua laporan' : 'Menunggu verifikasi Plant'} action={
-        <Link href={sp.semua ? '/plant/breakdown' : '/plant/breakdown?semua=1'} className="text-sm text-accent hover:underline">{sp.semua ? 'Hanya yang menunggu' : 'Lihat semua'}</Link>}>
+        <Link href={sp.semua ? '/plant/breakdown' : '/plant/breakdown?semua=1'} className="inline-flex min-h-9 items-center text-sm text-accent hover:underline">{sp.semua ? 'Hanya yang menunggu' : 'Lihat semua'}</Link>}>
         {rows?.length ? (
           <Table head={['Laporan', 'Unit', 'Kerusakan', 'Lokasi', 'HM / KM', 'Foto', 'Status', '']}>
             {rows.map(r => (

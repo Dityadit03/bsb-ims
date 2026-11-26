@@ -30,7 +30,7 @@ export default async function SmkpPage() {
   return (
     <>
       <PageHeader eyebrow="SMKP Minerba · Kepmen ESDM 1827 K/30/MEM/2018" title="Matriks 7 elemen">
-        <Link href="/legal" className="text-sm text-accent hover:underline">Legal register →</Link>
+        <Link href="/legal" className="inline-flex min-h-9 items-center text-sm text-accent hover:underline">Legal register →</Link>
       </PageHeader>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="Subelemen terpenuhi" value={`${fulfilled}/${applicable.length}`} note="Ada bukti diterima, tanpa action plan lewat target" />

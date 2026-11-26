@@ -36,7 +36,7 @@ export default async function SpipPage({ searchParams }: { searchParams: Promise
       <PageHeader eyebrow="SMKP 4.4 · Komisioning sarana, prasarana, instalasi & peralatan" title="Komisioning SPIP">
         <ExportLinks dataset="spip" />
         <Link href="/plant/spip/inspeksi" className="text-sm font-medium text-accent hover:underline">Inspeksi mingguan →</Link>
-        <Link href="/plant" className="text-sm text-accent hover:underline">← Unit</Link>
+        <Link href="/plant" className="inline-flex min-h-9 items-center text-sm text-accent hover:underline">← Unit</Link>
       </PageHeader>
       <PlantTabs active="/plant/spip" />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

@@ -57,7 +57,7 @@ function Filter({ tab, sp, statuses, depts }: { tab: string; sp: Record<string, 
       <select aria-label="Status" name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-44`}><option value="">Semua status</option>
         {Object.entries(statuses).map(([k, v]) => <option key={k} value={k}>{v[1]}</option>)}</select>
       <select aria-label="Departemen" name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-32`}><option value="">Semua dept</option>{depts.map(d => <option key={d}>{d}</option>)}</select>
-      <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button>
+      <button className="min-h-10 rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button>
     </form>
   );
 }

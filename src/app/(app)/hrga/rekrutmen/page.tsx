@@ -65,7 +65,7 @@ async function Requisitions({ rows: all, sp, supabase }: { rows: ReqRow[]; sp: R
       <Panel title="Permintaan tenaga kerja" sub="Alur: atasan departemen mengajukan → HRGA verifikasi terhadap MPP → PJO / manajemen menyetujui → rekrutmen dibuka"
         action={<form className="flex flex-wrap gap-2"><select aria-label="Status" name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-52`}><option value="">Semua status</option>
           {Object.entries(REQ_STATUS).map(([k, v]) => <option key={k} value={k}>{v[1]}</option>)}</select>
-          <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button></form>}>
+          <button className="min-h-10 rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button></form>}>
         {rows.length ? (
           <>
             <Table head={['No.', 'Jabatan', 'Jumlah', 'Alasan', 'Dibutuhkan', 'MPP', 'Pelamar', 'Status']}>
@@ -114,7 +114,7 @@ function Applicants({ rows: all, sp }: { rows: AppRow[]; sp: Record<string, stri
     <Panel title="Pelamar" action={<form className="flex flex-wrap gap-2"><input type="hidden" name="tab" value="pelamar" />
       <select aria-label="Tahap" name="stage" defaultValue={stage} className={`${input} max-w-48`}><option value="aktif">Dalam proses</option><option value="all">Semua</option>
         {Object.entries(APP_STAGE).map(([k, v]) => <option key={k} value={k}>{v[1]}</option>)}</select>
-      <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button></form>}>
+      <button className="min-h-10 rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button></form>}>
       {rows.length ? (
         <>
           <Table head={['Nama', 'FPTK', 'Pendidikan', 'Pengalaman', 'Psikotes', 'Wawancara', 'Tahap']}>
@@ -153,7 +153,7 @@ async function Candidates({ sp, supabase }: { sp: Record<string, string | undefi
       <Panel title="Bank kandidat" sub="Data pribadi pelamar; hanya HRGA. Massal: Impor data → Bank kandidat."
         action={<form className="flex flex-wrap gap-2"><input type="hidden" name="tab" value="kandidat" />
           <input name="q" defaultValue={sp.q ?? ''} placeholder="Nama / NIK" className={`${input} max-w-48`} />
-          <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Cari</button></form>}>
+          <button className="min-h-10 rounded-lg border border-line px-3 text-sm hover:border-violet/60">Cari</button></form>}>
         {pg.rows.length ? (
           <>
             <Table head={['Nama', 'NIK', 'HP', 'Pendidikan', 'Pengalaman', 'Domisili', 'Sumber']}>

@@ -45,7 +45,7 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
       <form className="flex flex-wrap gap-2">
         <select name="dept" defaultValue={dept} className={`${input} !w-auto`} aria-label="Departemen">{depts.map(d => <option key={d.id} value={d.code}>{d.code}</option>)}</select>
         <input type="date" name="dari" defaultValue={from} className={`${input} !w-auto`} aria-label="Mulai" />
-        <button className="text-sm text-accent">Tampilkan</button>
+        <button className="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-sm font-semibold text-accent hover:border-accent">Tampilkan</button>
       </form>
       {emps?.length ? (
         <div className="overflow-x-auto rounded-lg border border-line bg-panel">

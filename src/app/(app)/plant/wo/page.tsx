@@ -29,7 +29,7 @@ export default async function WoPage({ searchParams }: { searchParams: Promise<R
     <>
       <PageHeader eyebrow="Plant · Maintenance" title="Work order">
         <ExportLinks dataset="wo" />
-        <Link href="/plant" className="text-sm text-accent hover:underline">← Register unit</Link>
+        <Link href="/plant" className="inline-flex min-h-9 items-center text-sm text-accent hover:underline">← Register unit</Link>
       </PageHeader>
       <PlantTabs active="/plant/wo" />
       {pm?.length ? (
@@ -52,7 +52,7 @@ export default async function WoPage({ searchParams }: { searchParams: Promise<R
         <select name="jenis" defaultValue={sp.jenis ?? ''} className={`${input} !w-auto`} aria-label="Jenis">
           <option value="">Semua jenis</option>{Object.entries(WO_TYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
-        <button className="text-sm text-accent">Saring</button>
+        <button className="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-sm font-semibold text-accent hover:border-accent">Saring</button>
       </form>
       {rows?.length ? (
         <Table head={['Nomor', 'Unit', 'Jenis', 'Uraian', 'Prioritas', 'Mekanik', 'Downtime', 'Status']}>

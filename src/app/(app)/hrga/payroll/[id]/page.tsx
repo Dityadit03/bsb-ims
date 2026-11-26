@@ -124,7 +124,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
             <input name="q" defaultValue={sp.q ?? ''} placeholder="Nama / NRP" className={`${input} max-w-40`} />
             <select name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-28`}><option value="">Semua dept</option>{(recap ?? []).map(r => <option key={r.department_code}>{r.department_code}</option>)}</select>
             <select name="f" defaultValue={sp.f ?? ''} className={`${input} max-w-36`}><option value="">Semua</option><option value="warn">Ada catatan</option>{run.parallel && <option value="diff">Beda dgn sistem lama</option>}</select>
-            <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button>
+            <button className="min-h-10 rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button>
           </form>
           <ExportLinks dataset="slip_gaji" params={{ run: id }} />
         </div>}>

@@ -51,7 +51,7 @@ export default async function WoDetail({ params }: { params: Promise<{ id: strin
             {w.cancel_reason && <p className="text-sm text-crit">Dibatalkan: {w.cancel_reason}</p>}
             <Link href={`/cetak/wo/${w.id}`} target="_blank" className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm font-medium hover:border-accent hover:text-accent">Cetak formulir WO</Link>
             <DocScans table="work_orders" id={w.id} path={`/plant/wo/${w.id}`} canUpload={work} />
-            {open && s.can('log.request') && <Link href={`/logistik/mr?wo=${w.id}`} className="text-sm text-accent hover:underline">Minta suku cadang (MR) →</Link>}
+            {open && s.can('log.request') && <Link href={`/logistik/mr?wo=${w.id}`} className="inline-flex min-h-9 items-center text-sm text-accent hover:underline">Minta suku cadang (MR) →</Link>}
           </Panel>
           {work && (w.status === 'open' || w.status === 'waiting_part') && (
             <Panel title="Mulai kerjakan"><ActionForm action={startWo} label={w.status === 'open' ? 'Mulai kerjakan' : 'Part tersedia, lanjutkan'} primary hidden={{ id: w.id }} /></Panel>

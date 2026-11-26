@@ -62,7 +62,7 @@ export default async function LogistikPage({ searchParams }: { searchParams: Pro
         <label className="flex items-center gap-1 text-sm"><input type="checkbox" name="rendah" value="1" defaultChecked={!!sp.rendah} /> Stok rendah</label>
         <label className="flex items-center gap-1 text-sm"><input type="checkbox" name="pesan" value="1" defaultChecked={!!sp.pesan} /> Perlu dipesan</label>
         <label className="flex items-center gap-1 text-sm"><input type="checkbox" name="kritis" value="1" defaultChecked={!!sp.kritis} /> Kritis</label>
-        <button className="text-sm text-accent">Saring</button>
+        <button className="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-sm font-semibold text-accent hover:border-accent">Saring</button>
       </form>
       {shown.length ? (
         <Table head={['Kode', 'Nama', 'Rak', 'Stok', 'Hari cukup', 'ROP', 'Usulan pesan', 'ABC', 'Nilai']}>

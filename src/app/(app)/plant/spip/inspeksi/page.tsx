@@ -30,7 +30,7 @@ export default async function SpipWeekly({ searchParams }: { searchParams: Promi
   return (
     <>
       <PageHeader eyebrow="SMKP 4.4 · Inspeksi mingguan" title="Inspeksi SPIP mingguan">
-        <Link href="/plant/spip" className="text-sm text-accent hover:underline">← Register komisioning</Link>
+        <Link href="/plant/spip" className="inline-flex min-h-9 items-center text-sm text-accent hover:underline">← Register komisioning</Link>
       </PageHeader>
       <PlantTabs active="/plant/spip" />
       <div className="grid grid-cols-3 gap-3">

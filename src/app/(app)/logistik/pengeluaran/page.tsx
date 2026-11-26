@@ -77,7 +77,7 @@ export default async function PengeluaranPage({ searchParams }: { searchParams: 
         <select name="status" defaultValue={sp.status ?? ''} className={`${input} !w-auto`} aria-label="Penerimaan">
           <option value="">Semua</option><option value="belum">Belum dikonfirmasi</option><option value="sudah">Sudah diterima</option>
         </select>
-        <button className="text-sm text-accent">Saring</button>
+        <button className="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-sm font-semibold text-accent hover:border-accent">Saring</button>
       </form>
       <p className="text-sm text-muted">{rows?.length ?? 0} pengeluaran · nilai {rp(total)} · {pending} menunggu konfirmasi penerimaan</p>
       {rows?.length ? (

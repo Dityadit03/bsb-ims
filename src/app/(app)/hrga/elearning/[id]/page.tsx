@@ -143,7 +143,7 @@ async function Participants({ id, sp, supabase }: { id: string; sp: Record<strin
         <form className="flex flex-wrap gap-2"><input type="hidden" name="tab" value="peserta" />
           <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-44`}><option value="">Semua status</option>
             {Object.entries(ASSIGN_STATUS).map(([k, v]) => <option key={k} value={k}>{v[1]}</option>)}</select>
-          <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button></form>}>
+          <button className="min-h-10 rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button></form>}>
         {rows.length ? (
           <>
             <Table head={['Karyawan', 'Tenggat', 'Status', 'Percobaan', 'Nilai terbaik', 'Sertifikat', '']}>

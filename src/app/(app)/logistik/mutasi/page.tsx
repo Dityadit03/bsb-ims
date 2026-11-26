@@ -28,7 +28,7 @@ export default async function MutasiPage({ searchParams }: { searchParams: Promi
           <option value="">Semua mutasi</option>{Object.entries(MOVE).map(([k, [, l]]) => <option key={k} value={k}>{l}</option>)}
         </select>
         <input name="unit" defaultValue={sp.unit ?? ''} className={`${input} w-32 uppercase`} placeholder="No. unit" />
-        <button className="text-sm text-accent">Saring</button>
+        <button className="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-sm font-semibold text-accent hover:border-accent">Saring</button>
       </form>
       {rows?.length ? (
         <Table head={['Waktu', 'Nomor', 'Jenis', 'Barang', 'Jumlah', 'Nilai', 'Referensi', 'Oleh']}>

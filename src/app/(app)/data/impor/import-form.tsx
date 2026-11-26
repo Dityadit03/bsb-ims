@@ -34,7 +34,7 @@ export function ImportForm({ kinds, initial }: { kinds: Kind[]; initial?: string
               hint="Seret berkas .xlsx / .csv ke sini atau ketuk untuk memilih" />}
         <div className="flex flex-wrap items-center gap-3">
           <button className={btnPrimary} disabled={pending}>{pending && !state.rows ? 'Memeriksa…' : 'Periksa data'}</button>
-          <button type="button" onClick={() => setPaste(!paste)} className="text-sm text-accent">
+          <button type="button" onClick={() => setPaste(!paste)} className="inline-flex min-h-9 items-center text-sm text-accent">
             {paste ? 'Unggah berkas saja' : 'Atau tempel dari Excel'}</button>
           {state.error && <span role="alert" className="text-sm text-crit">{state.error}</span>}
         </div>

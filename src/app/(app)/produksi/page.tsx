@@ -35,7 +35,7 @@ export default async function ProduksiPage({ searchParams }: { searchParams: Pro
     <>
       <PageHeader eyebrow="SMKP 4.3 · Pengelolaan operasional" title="Produksi hauling">
         <ExportLinks dataset="produksi" />
-        {s.can('prod.manage') && <Link href="/produksi/master" className="text-sm text-accent hover:underline">Rute & target →</Link>}
+        {s.can('prod.manage') && <Link href="/produksi/master" className="inline-flex min-h-9 items-center text-sm text-accent hover:underline">Rute & target →</Link>}
       </PageHeader>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="Tonase disetujui" value={ton(done)} note={goal ? `${((done / goal) * 100).toFixed(1)}% dari target ${ton(goal)}` : 'Target belum ditetapkan'} />
@@ -56,7 +56,7 @@ export default async function ProduksiPage({ searchParams }: { searchParams: Pro
       )}
       <form className="flex flex-wrap gap-2">
         <input type="month" name="bulan" defaultValue={month} className={`${input} !w-auto`} aria-label="Bulan" />
-        <button className="text-sm text-accent">Tampilkan</button>
+        <button className="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-sm font-semibold text-accent hover:border-accent">Tampilkan</button>
       </form>
       {rows?.length ? (
         <Table head={['Nomor', 'Tanggal', 'Shift', 'Pengawas', 'Unit', 'Ritase', 'Tonase', 'Ton·km', 'Hambatan', 'Status']}>

@@ -71,7 +71,7 @@ export default async function HomePage() {
   const first = (s.profile.full_name ?? s.profile.email).split(' ')[0];
   const greet = now.hour < 11 ? 'pagi' : now.hour < 15 ? 'siang' : now.hour < 18 ? 'sore' : 'malam';
   const date = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
-  const open = (href: string) => <Link href={href} className="shrink-0 text-xs font-semibold text-violet underline underline-offset-2">Buka →</Link>;
+  const open = (href: string) => <Link href={href} className="inline-flex min-h-9 shrink-0 items-center px-1 text-sm font-semibold text-violet underline underline-offset-2">Buka →</Link>;
 
   return (
     <>

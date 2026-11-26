@@ -102,7 +102,7 @@ export default async function ReadinessPage({ searchParams }: { searchParams: Pr
         <select name="vendor" defaultValue={sp.vendor ?? ''} className={`${input} max-w-60`} aria-label="Asal tenaga kerja">
           <option value="">BSB & vendor</option><option value="0">Karyawan BSB</option><option value="1">Karyawan vendor</option></select>
         <label className="flex items-center gap-1 text-sm"><input type="checkbox" name="belum" value="1" defaultChecked={!!sp.belum} /> Hanya yang belum siap</label>
-        <button className="text-sm text-accent">Saring</button>
+        <button className="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-sm font-semibold text-accent hover:border-accent">Saring</button>
       </form>
       <Table head={['Karyawan', 'Jabatan', 'Induksi', 'MCU', 'Kompetensi', 'ID card', 'SIMPER', 'Hari ini', 'Status']}>
         {pg.rows.map(r => (

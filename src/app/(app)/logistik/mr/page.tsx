@@ -37,7 +37,7 @@ export default async function MrPage({ searchParams }: { searchParams: Promise<R
         <select name="status" defaultValue={sp.status ?? ''} className={`${input} !w-auto`} aria-label="Status">
           <option value="">Masih berjalan</option>{Object.entries(MR_STATUS).map(([k, [, l]]) => <option key={k} value={k}>{l}</option>)}
         </select>
-        <button className="text-sm text-accent">Saring</button>
+        <button className="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-sm font-semibold text-accent hover:border-accent">Saring</button>
       </form>
       {rows?.length ? (
         <Table head={['Nomor', 'Dept', 'Keperluan', 'Unit', 'WO', 'Peminta', 'Nilai', 'Status']}>

@@ -2,7 +2,7 @@
 // Setiap titik/batang punya tooltip bawaan (<title>) dan grafik punya ringkasan teks untuk pembaca layar.
 
 const W = 720;
-const PAD = { l: 46, r: 16, t: 14, b: 30 };
+const PAD = { l: 58, r: 16, t: 14, b: 30 };
 const compact = new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 });
 const full = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 });
 
@@ -21,7 +21,7 @@ function Grid({ max, h, suffix = '' }: { max: number; h: number; suffix?: string
         return (
           <g key={t}>
             <line x1={PAD.l} x2={W - PAD.r} y1={y} y2={y} stroke="var(--color-line)" strokeWidth={1} />
-            <text x={PAD.l - 8} y={y + 4} textAnchor="end" fontSize={11} className="fill-current font-mono">{compact.format(max * t)}{suffix}</text>
+            <text x={PAD.l - 8} y={y + 4} textAnchor="end" fontSize={14} className="fill-current font-mono">{compact.format(max * t)}{suffix}</text>
           </g>
         );
       })}
@@ -60,7 +60,7 @@ export function AreaChart({ data, color = 'var(--color-accent)', height = 240, s
           const p = pts[i];
           return (
             <g key={d.label}>
-              <text x={x(i)} y={height - 8} textAnchor="middle" fontSize={11} className="fill-current font-mono text-muted">{d.label}</text>
+              <text x={x(i)} y={height - 8} textAnchor="middle" fontSize={14} className="fill-current font-mono text-muted">{d.label}</text>
               {p && (
                 <g>
                   <title>{`${d.label}: ${full.format(d.value!)}${suffix}`}</title>
@@ -111,7 +111,7 @@ export function GroupedBars({ labels, series, height = 220, label }: {
                 return <path key={s.name} fill={s.color}
                   d={`M${bx},${by + h}V${by + r}Q${bx},${by} ${bx + r},${by}H${bx + bw - r}Q${bx + bw},${by} ${bx + bw},${by + r}V${by + h}Z`} />;
               })}
-              <text x={cx} y={height - 8} textAnchor="middle" fontSize={11} className="fill-current font-mono text-muted">{l}</text>
+              <text x={cx} y={height - 8} textAnchor="middle" fontSize={14} className="fill-current font-mono text-muted">{l}</text>
             </g>
           );
         })}

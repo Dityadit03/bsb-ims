@@ -47,7 +47,7 @@ export default async function HrgaPage({ searchParams }: { searchParams: Promise
           <option value="">Semua departemen</option>{depts.map(d => <option key={d.id} value={d.code}>{d.code}</option>)}
         </select>
         <label className="flex items-center gap-1 text-sm"><input type="checkbox" name="keluar" value="1" defaultChecked={!!sp.keluar} /> Karyawan keluar</label>
-        <button className="text-sm text-accent">Saring</button>
+        <button className="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-sm font-semibold text-accent hover:border-accent">Saring</button>
       </form>
       {all.length ? (
         <Table head={['NRP', 'Nama', 'Dept', 'Jabatan', 'Status kerja', 'Akun', 'Kompetensi wajib']}>

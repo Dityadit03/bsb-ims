@@ -47,7 +47,7 @@ export default async function LemburPage({ searchParams }: { searchParams: Promi
             <option value="all">Semua</option><option value="submitted">Menunggu</option><option value="approved">Disetujui</option>
             <option value="rejected">Ditolak</option><option value="cancelled">Batal</option></select>
           <select aria-label="Departemen" name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-32`}><option value="">Semua dept</option>{depts.map(d => <option key={d}>{d}</option>)}</select>
-          <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button>
+          <button className="min-h-10 rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button>
         </form>}>
         {rows.length ? <><OvertimeTable rows={pg.rows} canCancel={isHr} /><Pager {...pg} params={{ bln: month, status, dept: sp.dept }} /></>
           : <p className="text-sm text-muted">Belum ada SPL pada bulan ini.</p>}

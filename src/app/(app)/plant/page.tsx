@@ -38,7 +38,7 @@ export default async function PlantPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader eyebrow="SMKP 4.4 · Sarana, prasarana, instalasi & peralatan" title="Unit & work order">
-        <span className="flex items-center gap-3"><Link href="/plant/qr" className="text-sm text-accent">Stiker QR</Link><ExportLinks dataset="unit" /></span>
+        <span className="flex items-center gap-3"><Link href="/plant/qr" className="inline-flex min-h-9 items-center text-sm text-accent">Stiker QR</Link><ExportLinks dataset="unit" /></span>
       </PageHeader>
       <PlantTabs active="/plant" />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -59,7 +59,7 @@ export default async function PlantPage({ searchParams }: { searchParams: Promis
           <select name="jenis" defaultValue={sp.jenis ?? ''} className={`${input} !w-auto`} aria-label="Jenis">
             <option value="">Semua jenis</option>{Object.entries(UNIT_TYPE).map(([k, l]) => <option key={k} value={k}>{k} · {l}</option>)}
           </select>
-          <button className="text-sm text-accent">Saring</button>
+          <button className="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-sm font-semibold text-accent hover:border-accent">Saring</button>
         </form>
       </div>
       {all.length ? (

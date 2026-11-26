@@ -54,7 +54,7 @@ export default async function ComponentsPage({ searchParams }: { searchParams: P
         <select name="jenis" defaultValue={sp.jenis ?? ''} className={`${input} !w-auto`} aria-label="Jenis">
           <option value="">Semua jenis</option>{Object.entries(COMP_TYPE).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
-        <button className="text-sm text-accent">Saring</button>
+        <button className="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-sm font-semibold text-accent hover:border-accent">Saring</button>
       </form>
       {all.length ? (
         <div className="grid gap-3">

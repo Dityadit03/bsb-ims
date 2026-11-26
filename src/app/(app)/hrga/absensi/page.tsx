@@ -64,7 +64,7 @@ async function Daily({ date, sp, base, supabase }: { date: string; sp: Record<st
         <form className="flex flex-wrap gap-2"><input type="hidden" name="tab" value="harian" />
           <input aria-label="Tanggal" type="date" name="tgl" defaultValue={date} className={`${input} !w-auto`} />
           <select aria-label="Departemen" name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-40`}><option value="">Semua dept</option>{depts.map(d => <option key={d}>{d}</option>)}</select>
-          <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Lihat</button></form>
+          <button className="min-h-10 rounded-lg border border-line px-3 text-sm hover:border-violet/60">Lihat</button></form>
         <Link href={base({ tgl: addDays(date, 1) })} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:border-violet/60" aria-label="Hari berikutnya">›</Link>
         <span className="text-sm text-muted">{fmtDate(date)}</span>
       </div>
@@ -139,7 +139,7 @@ async function Monthly({ month, sp, supabase }: { month: string; sp: Record<stri
       action={<form className="flex flex-wrap gap-2"><input type="hidden" name="tab" value="rekap" />
         <input aria-label="Periode" type="month" name="bln" defaultValue={month} className={`${input} !w-auto`} />
         <select aria-label="Departemen" name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-36`}><option value="">Semua dept</option>{depts.map(d => <option key={d}>{d}</option>)}</select>
-        <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Lihat</button></form>}>
+        <button className="min-h-10 rounded-lg border border-line px-3 text-sm hover:border-violet/60">Lihat</button></form>}>
       {rows.length ? (
         <>
           <Table head={['Karyawan', 'Dept', 'Jadwal', 'Hadir', 'Terlambat', 'Alpa', 'Cuti', 'Sakit', 'Izin', 'Menit telat', 'Jam kerja', 'Kehadiran']}>
@@ -296,7 +296,7 @@ async function Selfies({ date, sp, base, supabase }: { date: string; sp: Record<
           <input aria-label="Tanggal" type="date" name="tgl" defaultValue={date} className={`${input} !w-auto`} />
           <select aria-label="Saring" name="status" defaultValue={sp.status ?? ''} className={`${input} !w-auto`}>
             <option value="">Semua foto</option><option value="belum">Belum diperiksa</option><option value="invalid">Ditandai tidak valid</option><option value="luar">Di luar area</option></select>
-          <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Lihat</button></form>
+          <button className="min-h-10 rounded-lg border border-line px-3 text-sm hover:border-violet/60">Lihat</button></form>
         <Link href={base({ tgl: addDays(date, 1) })} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:border-violet/60" aria-label="Hari berikutnya">›</Link>
         <span className="text-sm text-muted">{fmtDate(date)} · {rows.length} foto · {rows.filter(r => !r.review_status).length} belum diperiksa</span>
       </div>

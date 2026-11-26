@@ -98,7 +98,7 @@ export default async function KinerjaPage({ searchParams }: { searchParams: Prom
                 {Object.entries(PERF_STATUS).map(([k, v]) => <option key={k} value={k}>{v[1]}</option>)}</select>
               <select aria-label="Departemen" name="dept" defaultValue={sp.dept ?? ''} className={`${input} max-w-32`}><option value="">Semua dept</option>
                 {[...new Set(all.map(r => r.department_code))].sort().map(d => <option key={d}>{d}</option>)}</select>
-              <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button>
+              <button className="min-h-10 rounded-lg border border-line px-3 text-sm hover:border-violet/60">Saring</button>
             </form>
           }>
             {rows.length ? <><ReviewTable rows={pg.rows} /><Pager {...pg} params={{ siklus: cyc.id, status: sp.status, dept: sp.dept }} /></>

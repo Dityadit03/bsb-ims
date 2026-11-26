@@ -117,7 +117,7 @@ async function Kehadiran({ id, month: m, supabase }: { id: string; month?: strin
       <div className="flex flex-wrap items-center justify-between gap-2">
         <form className="flex flex-wrap gap-2"><input type="hidden" name="tab" value="absen" />
           <input type="month" name="bln" defaultValue={month} className={`${input} !w-auto`} />
-          <button className="rounded-lg border border-line px-3 text-sm hover:border-violet/60">Lihat</button></form>
+          <button className="min-h-10 rounded-lg border border-line px-3 text-sm hover:border-violet/60">Lihat</button></form>
         <Link href="/absen" className="rounded-lg bg-violet px-4 py-2 text-sm font-semibold text-white">Absen sekarang</Link>
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
@@ -197,7 +197,7 @@ async function Gaji({ id, supabase }: { id: string; supabase: Client }) {
               <td className="tabular text-sm">{rp(s.earnings)}</td>
               <td className="tabular text-sm">{rp(s.pph21)}</td>
               <td className="tabular text-sm font-semibold">{rp(s.net)}</td>
-              <td><Link href={`/slip/${s.id}`} className="text-sm text-accent hover:underline">Buka</Link></td>
+              <td><Link href={`/slip/${s.id}`} className="inline-flex min-h-9 items-center text-sm text-accent hover:underline">Buka</Link></td>
             </tr>
           ))}
         </Table>
