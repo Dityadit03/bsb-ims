@@ -31,7 +31,7 @@ export const today = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice
 export function DeptSelect({ name = 'department', label = 'Departemen', depts, value }: { name?: string; label?: string; depts: Opt[]; value?: string | null }) {
   return (
     <label className="grid gap-1 text-sm">{label}
-      <select name={name} required className={input} defaultValue={value ?? ''}>
+      <select name={name} required className={input} defaultValue={value ?? (depts.length === 1 ? depts[0].id : '')}>
         <option value="" disabled>Pilih</option>
         {depts.map(d => <option key={d.id} value={d.id}>{d.code} · {d.name}</option>)}
       </select>
