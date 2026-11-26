@@ -273,7 +273,7 @@ await test('usulan dokumen: batalkan butuh alasan, pemilik/DC saja, tak bisa bil
 });
 await test('belum disetujui → tidak bisa diterbitkan', async () => {
   const a = await upload(dcId);
-  await expectError('22023', async () => as(db, dcId, `select public.document_release($1, '2026-10-24', $2)`, [sopVer, a.id]));
+  await expectError('22023', async () => as(db, dcId, `select public.document_release($1, current_date, $2)`, [sopVer, a.id]));
 });
 await test('review → verifikasi DC → approval Dept Head', async () => {
   await runApproval(sopVer, sopSha, [spvHse]);
@@ -285,7 +285,7 @@ await test('review → verifikasi DC → approval Dept Head', async () => {
 });
 await test('selain Document Controller tidak bisa menerbitkan', async () => {
   const a = await upload(dhHse);
-  await expectError('42501', async () => as(db, dhHse, `select public.document_release($1, '2026-10-24', $2)`, [sopVer, a.id]));
+  await expectError('42501', async () => as(db, dhHse, `select public.document_release($1, current_date, $2)`, [sopVer, a.id]));
 });
 let sopNumber;
 await test('rilis: nomor resmi SOP terbit, jadwal tinjauan 3 tahun', async () => {
@@ -293,9 +293,9 @@ await test('rilis: nomor resmi SOP terbit, jadwal tinjauan 3 tahun', async () =>
   const pre2 = await as(db, dcId, `select public.document_reserve_number($1) n`, [sopVer]);
   eq(pre.rows[0].n, 'SOP-BSB-HSE-ENV-001'); eq(pre2.rows[0].n, pre.rows[0].n);
   const a = await upload(dcId);
-  const r = await as(db, dcId, `select (d).document_number, (d).status, (d).next_review_at::text nr from public.document_release($1, '2026-10-24', $2) d`, [sopVer, a.id]);
+  const r = await as(db, dcId, `select (d).document_number, (d).status, (d).next_review_at::text nr from public.document_release($1, current_date, $2) d`, [sopVer, a.id]);
   sopNumber = r.rows[0].document_number;
-  eq(sopNumber, 'SOP-BSB-HSE-ENV-001'); eq(r.rows[0].status, 'effective'); eq(r.rows[0].nr, '2029-10-24');
+  eq(sopNumber, 'SOP-BSB-HSE-ENV-001'); eq(r.rows[0].status, 'effective'); eq(r.rows[0].nr, (await db.query(`select (current_date + interval '3 years')::date::text d`)).rows[0].d);
 });
 await test('formulir menginduk ke SOP mendapat nomor F.01/<SOP>', async () => {
   const r = await as(db, ownerId, `select (d).current_version_id v from public.document_request('F', $1, 'Formulir Manifest Limbah B3', null, $2) d`, [HSE, sop]);
@@ -304,7 +304,7 @@ await test('formulir menginduk ke SOP mendapat nomor F.01/<SOP>', async () => {
   await as(db, ownerId, `select public.document_submit($1)`, [v]);
   await runApproval(v, a.sha256, [spvHse, dcId, dhHse]);
   const f = await upload(dcId);
-  const out = await as(db, dcId, `select (d).document_number n from public.document_release($1, '2026-10-24', $2) d`, [v, f.id]);
+  const out = await as(db, dcId, `select (d).document_number n from public.document_release($1, current_date, $2) d`, [v, f.id]);
   eq(out.rows[0].n, 'F.01/SOP-BSB-HSE-ENV-001');
 });
 await test('distribusi ke departemen HSE + tanda terima', async () => {
@@ -1925,7 +1925,9 @@ console.log('HRIS: Klaim & kasbon');
     eq(Number((await as(db, payEmpUser, `select balance from public.cash_advance_register where id = $1`, [adv.id])).rows[0].balance), 500000);
   });
   await test('proses gaji menarik klaim (pajak sesuai jenis) dan cicilan; tercatat lunas saat slip terbit', async () => {
-    krun = (await as(db, payOff, RUN, ['2026-11', 'regular', '2026-11-25', false])).rows[0];
+    // periode bulan depan: klaim/kasbon yang cair hari ini pasti masuk (tidak bergantung tanggal uji dijalankan)
+    const np = (await db.query(`select to_char(d, 'YYYY-MM') p, (date_trunc('month', d) + interval '24 days')::date::text pay from (select current_date + interval '1 month' d) x`)).rows[0];
+    krun = (await as(db, payOff, RUN, [np.p, 'regular', np.pay, false])).rows[0];
     await as(db, payOff, `select public.payroll_calculate($1)`, [krun.id]);
     const inp = (await db.query(`select component_code, amount from public.payroll_inputs where run_id = $1 and employee_id = $2 order by component_code, amount`,
       [krun.id, pe.id])).rows.map(r => `${r.component_code}:${Number(r.amount)}`).join(',');
